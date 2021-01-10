@@ -160,9 +160,11 @@ dyn_garbage_clear = {
     } forEach (allMissionObjects "CraterLong");
 
     sleep 1;
+    _deadVicLimiter = 0;
     {
-        if ((_x distance2D player) > 600) then {
+        if ((_x distance2D player) > 2000 and _deadVicLimiter <= 8) then {
             deleteVehicle _x;
+            _deadVicLimiter = _deadVicLimiter + 1;
         };
     } forEach (allDead - allDeadMen);
 
@@ -184,4 +186,16 @@ dyn_forget_targets = {
             _wGrp forgetTarget _x;
         } forEach _units;
     } forEach (allGroups select {side _x == playerSide});  
+};
+
+dyn_get_cardinal = {
+    params ["_ang"];
+    private ["_compass"];
+    _ang = _this select 0;
+    _ang = _ang + 11.25; 
+    if (_ang > 360) then {_ang = _ang - 360};
+    _points = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+    _num = floor (_ang / 22.5);
+    _compass = _points select _num;
+    _compass  
 };
