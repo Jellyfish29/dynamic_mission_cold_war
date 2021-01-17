@@ -221,6 +221,12 @@ dyn_spawn_hq_garrison = {
     _grp = [_pos, east, dyn_standart_fire_team] call BIS_fnc_spawnGroup;
     [_hq, _grp, _dir] spawn dyn_garrison_building;
 
+    _atkTrg = createTrigger ["EmptyDetector", _pos, true];
+    _atkTrg setTriggerActivation ["WEST", "PRESENT", false];
+    _atkTrg setTriggerStatements ["this", " ", " "];
+    _atkTrg setTriggerArea [65, 65, 0, false];
+
+    private _grps = [];
     for "_i" from 0 to ([0, 1] call BIS_fnc_randomInt) do {
         _netPos = [[[getPos _hq, 20]], [[getPos _hq, 10], "water"]] call BIS_fnc_randomPos;
         _net = "land_gm_camonet_02_east" createVehicle _netpos;
@@ -229,7 +235,10 @@ dyn_spawn_hq_garrison = {
         _grp = [_netPos, east, dyn_standart_fire_team] call BIS_fnc_spawnGroup;
         _grp setFormation "DIAMOND";
         _grp setBehaviour "SAFE";
+        _grps pushBack _grp;
     };
+
+    [_atkTrg, _grps] spawn dyn_attack_nearest_enemy;
 
     _tentPos = [10 * (sin _dir), 10 * (cos _dir), 0] vectorAdd (getPos _hq);
     _tent = "gm_gc_tent_5x5m" createVehicle _tentPos;
@@ -561,12 +570,10 @@ dyn_spawn_raod_block = {
 dyn_spawn_supply_convoy = {
     params ["_trg", "_hqPos", "_dir"];
 
-    waitUntil {sleep 1, triggerActivated _trg};
-
-    // sleep ([60, 180] call BIS_fnc_randomInt);
     _dir = player getDir _hqPos;
 
-    _rearPos = [800 * (sin (_dir - 90)), 800 * (cos (_dir - 90)), 0] vectorAdd _hqPos;
+    _spawnDir = _dir - ([-90, 90] call BIS_fnc_randomInt);
+    _rearPos = [1400 * (sin _spawnDir), 1400 * (cos _spawnDir), 0] vectorAdd _hqPos;
 
     // debug
     // _m = createMarker [str (random 1), _rearPos];
@@ -578,9 +585,11 @@ dyn_spawn_supply_convoy = {
     _road = _roads#0;
     _usedRoads = [];
     private _vics = [];
+    private _grps = [];
+    _vicType = selectRandom (dyn_standart_trasnport_vehicles + [dyn_standart_light_amored_vic]);
     for "_i" from 0 to 1 step 1 do {
         _road = ((roadsConnectedTo _road) - [_road]) select 0;
-        _vic = vehicle (leader ([getPos _road, 0, ["cwr3_o_ural"]] call dyn_spawn_parked_vehicle));
+        _vic = vehicle (leader ([getPos _road, 0, [_vicType]] call dyn_spawn_parked_vehicle));
         _vics pushBack _vic;
         _near = roadsConnectedTo _road;
         _near = [_near, [], {(getPos _x) distance2D _hqPos}, "DESCEND"] call BIS_fnc_sortBy;
@@ -591,14 +600,29 @@ dyn_spawn_supply_convoy = {
             _x assignAsCargo _vic;
             _x moveInCargo _vic;
         } forEach (units _grp);
+        _vic setVariable ["dyn_supply_con_trasnported_grp", _grp];
     };
+
+    waitUntil {sleep 1, triggerActivated _trg};
+
+    // sleep ([60, 180] call BIS_fnc_randomInt);
 
     {
         _g = (group (driver _x));
-        _wp = _g addWaypoint [_hqPos, 20];
-        _wp setWaypointType "TR UNLOAD";
-        _x limitSpeed 50;
-        _g setBehaviour "SAFE";
+        _wpPos = [[[_hqPos, 50]],[], {isOnRoad _this}] call BIS_fnc_randomPos;
+        _wp = _g addWaypoint [_wpPos, 2];
+        _wp setWaypointType "UNLOAD";
+        _x limitSpeed 35;
+        _g setBehaviour "CARELESS";
+        [_x, _wp] spawn {
+            params ["_vic", "_wp"];
+            waitUntil {sleep 1; ((_vic distance2D (waypointPosition _wp)) < 25) or !(alive _vic)};
+            doStop _vic;
+            sleep 10;
+            _tGrp = _vic getVariable ["dyn_supply_con_trasnported_grp", grpNull];
+            _tGrp leaveVehicle _vic;
+            [objNull, [_tGrp]] spawn dyn_attack_nearest_enemy;
+        }; 
     } forEach _vics;
 };
 
@@ -951,9 +975,31 @@ dyn_attack_nearest_enemy = {
         {
             _x enableAI "PATH";
             _x doFollow (leader _grp);
+            _x setUnitPos "Auto";
         } forEach (units _grp);
 
+        _grp setSpeedMode "Full";
         _wp = _grp addWaypoint [_atkPos, 20];
         _wp setWaypointType "SAD";
     } forEach _grps;
+};
+
+dyn_spawn_def_waves = {
+    params ["_trg", "_building", "_endTrg"];
+
+    _pos = getPos _building;
+    _spawnEndTrg = createTrigger ["EmptyDetector", _pos, true];
+    _spawnEndTrg setTriggerActivation ["WEST", "PRESENT", false];
+    _spawnEndTrg setTriggerStatements ["this", " ", " "];
+    _spawnEndTrg setTriggerArea [45, 45, 0, false];
+
+    waitUntil {sleep 1; triggerActivated _trg};
+
+    while {!(triggerActivated _spawnEndTrg) and !(triggerActivated _endTrg)} do {
+        _grp = [[0,0,0], east, dyn_standart_fire_team] call BIS_fnc_spawnGroup;
+        [_building, _grp, 0] spawn dyn_garrison_building;
+        sleep 5;
+        [objNull, [_grp]] spawn dyn_attack_nearest_enemy;
+        sleep ([120, 200] call BIS_fnc_randomInt);
+    };                                                                                                                                                                                                                                                                                                         
 };

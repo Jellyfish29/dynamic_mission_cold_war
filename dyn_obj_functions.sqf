@@ -414,7 +414,7 @@ dyn_recon_convoy = {
 
 
 dyn_town_defense = {
-    params ["_aoPos"];
+    params ["_aoPos", "_endTrg"];
     private ["_dir", "_watchPos", "_validBuildings", "_patrollPos", "_allGrps"];
     _dir = 360 + ((triggerArea _aoPos)#2);
     _watchPos = [1400 * (sin _dir), 1400 * (cos _dir), 0] vectorAdd (getPos _aoPos);
@@ -562,9 +562,9 @@ dyn_town_defense = {
     };
 
     // Supply Convoy
-    if ((random 1) > 0.4) then {
+    // if ((random 1) > 0.35) then {
         [_aoPos, getPos _hq, _dir - 180] spawn dyn_spawn_supply_convoy;
-    };
+    // };
 
     // create Alarmposten
 
@@ -610,6 +610,9 @@ dyn_town_defense = {
     // side Town Guards
     [_aoPos, getPos _aoPos, [800, 1300] call BIS_fnc_randomInt, _watchPos] spawn dyn_spawn_side_town_guards;
 
+    // Continuos Inf Spawn 
+    [_aoPos, (_validBuildings#((count _validBuildings) - 2)), _endTrg] spawn dyn_spawn_def_waves;
+
     _allGrps
 };
 
@@ -626,8 +629,8 @@ dyn_defense = {
     _lineMarker setMarkerBrush "Horizontal";
     _lineMarker setMarkerColor "colorBLUFOR";
 
-    // sleep _waitTime;
-    sleep 2;
+    sleep _waitTime;
+    // sleep 2;
 
     [playerSide, "HQ"] sideChat format ["SPOTREP: Soviet MotRifBtl at GRID: %1 advancing towards %2", mapGridPosition _defPos, [round (_defPos getDir _atkPos)] call dyn_get_cardinal];
 

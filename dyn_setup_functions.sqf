@@ -297,7 +297,7 @@ dyn_main_setup = {
     _startPair = selectRandom _startPairs;
 
     // debug override
-    // _startPair = ["start_0", "obj_0"];
+    // _startPair = ["start_5", "obj_5"];
 
     _playerStart = getMarkerPos (_startPair#0);
     _startLoc = nearestLocation [getMarkerPos (_startPair#1), ""];
@@ -406,9 +406,9 @@ dyn_main_setup = {
             dyn_defense_active = false;
 
             _dyn_defense_atkPos = getPos player;
-            _startDefense = true;
+            // _startDefense = true;
             
-            if (((random 1) > 0.35 and (_dyn_defense_atkPos distance2D (getPos _loc)) > 3000 and _i > 0) or _startDefense) then {
+            if (((random 1) > 0.25 and (_dyn_defense_atkPos distance2D (getPos _loc)) > 3000 and _i > 0) or _startDefense) then {
                 _waitTime = 900;
                 if (_startDefense) then {_waitTime = 360};
                 [_dyn_defense_atkPos, getPos _loc, _waitTime] spawn dyn_defense;
@@ -431,7 +431,7 @@ dyn_main_setup = {
             _endTrg = createTrigger ["EmptyDetector", (getPos _loc), true];
             _endTrg setTriggerActivation ["WEST SEIZED", "PRESENT", false];
             _endTrg setTriggerStatements ["this", " ", " "];
-            _endTrg setTriggerArea [250, 250, _dir, false];
+            _endTrg setTriggerArea [350, 350, _dir, false];
             _endTrg setTriggerTimeout [120, 180, 240, false];
 
             if (_i > 0) then {
@@ -462,11 +462,11 @@ dyn_main_setup = {
             [getPos _loc, _dir, _endTrg] spawn dyn_ambiance;
 
             [west, format ["task_%1", _i], ["Offensive", format ["Capture %1", _locationName], ""], getPos _loc, "ASSIGNED", 1, true, "attack", false] call BIS_fnc_taskCreate;
-            _townDefenseGrps = [_trg] call dyn_town_defense;
+            _townDefenseGrps = [_trg, _endTrg] call dyn_town_defense;
 
             if (_midDefenses) then {
 
-                _defenseType = selectRandom ["line", "point", "mobileTank", "roadem", "recon"];
+                _defenseType = selectRandom ["line", "point", "roadem"];
 
                 // debug
                 // _defenseType = "mobileTank";
@@ -479,6 +479,12 @@ dyn_main_setup = {
                     case "recon" : {[_midPoint, _trg, _dir] call dyn_recon_convoy};
                     default {[_midPoint, _trg, _dir, true] call dyn_defense_line}; 
                 };
+
+                [_midPoint, 2000, [2, 3] call BIS_fnc_randomInt, _trg] spawn dyn_spawn_forest_patrol;
+
+                [_midPoint, 2000, 400, _midPoint] spawn dyn_spawn_bridge_defense;
+
+                [_midPoint, 2000, 1, _trg] spawn dyn_spawn_hill_overwatch;
 
                 if (dyn_debug) then {
                     _m = createMarker [str (random 1), _midPoint];
@@ -554,6 +560,7 @@ dyn_main_setup = {
             [] spawn dyn_garbage_clear;
 
             [format ["task_%1", _i], "SUCCEEDED", true] call BIS_fnc_taskSetState;
+            
             if !(dyn_debug) then {sleep 60};
         };
     };
