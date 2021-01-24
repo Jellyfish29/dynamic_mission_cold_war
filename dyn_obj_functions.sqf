@@ -73,11 +73,11 @@ dyn_defense_line = {
     };
 
     //create counterattack;
-    if ((random 1) > 0.25) then {
+    // if ((random 1) > 0.25) then {
         [_aoPos, getPos _aoPos, getPos _townTrg, [4, 5] call BIS_fnc_randomInt, [3, 4] call BIS_fnc_randomInt, 2] spawn dyn_spawn_counter_attack;
         // [_aoPos, _grps] spawn dyn_attack_nearest_enemy;
         [getPos _townTrg, _grps, _aoPos, 700] spawn dyn_spawn_delay_action;
-    };
+    // };
 
     // Retreat
     [_townTrg, getPos _townTrg, _grps, false] spawn dyn_retreat;
@@ -373,8 +373,8 @@ dyn_recon_convoy = {
         };  
     };
 
-    [_allGrps, _atkTrg, _grad, _townTrg] spawn {
-        params ["_allGrps", "_atkTrg", "_grad", "_townTrg"];
+    [_allGrps, _atkTrg, _grad, _townTrg, _locPos, _dir] spawn {
+        params ["_allGrps", "_atkTrg", "_grad", "_townTrg", "_locPos", "_dir"];
 
         _targetRaod = getPos ([getPos _atkTrg, 600] call BIS_fnc_nearestRoad);
         waitUntil { sleep 1; triggerActivated _atkTrg };
@@ -391,24 +391,35 @@ dyn_recon_convoy = {
 
         [objNull, _allGrps] spawn dyn_attack_nearest_enemy;
 
+        _fireSupport = selectRandom [1,2,3];
 
-        if ((random 1) > 0.75) then {
-            _units = allUnits+vehicles select {side _x == west};
-            _units = [_units, [], {_x distance2D _grad}, "ASCEND"] call BIS_fnc_sortBy;
-            _target = _units#0;
-            _targetPos = getPos _target;
-            for "_i" from 0 to 3 do {
-                _artyPos = [[[_targetPos, 350]], [[_targetPos, 80]]] call BIS_fnc_randomPos;
-                _grad commandArtilleryFire [_artyPos, "CUP_40Rnd_GRAD_HE", 10];
-                sleep 15;
-            };
-        };
+        //debug
+        // _fireSupport = 3;
+
+        switch (_fireSupport) do { 
+            case 1 : {
+                _units = allUnits+vehicles select {side _x == west};
+                _units = [_units, [], {_x distance2D _grad}, "ASCEND"] call BIS_fnc_sortBy;
+                _target = _units#0;
+                _targetPos = getPos _target;
+                for "_i" from 0 to 3 do {
+                    _artyPos = [[[_targetPos, 350]], [[_targetPos, 80]]] call BIS_fnc_randomPos;
+                    _grad commandArtilleryFire [_artyPos, "CUP_40Rnd_GRAD_HE", 10];
+                    sleep 15;
+                };
+                _grad doMove _locPos;
+            }; 
+            case 2 : {[true] spawn dyn_arty};
+            case 3 : {[_locPos, _dir] spawn dyn_spawn_heli_attack};
+            default {}; 
+         }; 
+
 
         //create counterattack;
-        if ((random 1) > 0.25) then {
+        // if ((random 1) > 0.25) then {
             [objNull, getPos _atkTrg, getPos _townTrg, [5, 7] call BIS_fnc_randomInt, [4, 5] call BIS_fnc_randomInt, 2] spawn dyn_spawn_counter_attack;
             // [_aoPos, _grps] spawn dyn_attack_nearest_enemy;
-        };
+        // };
     };
 };
 
@@ -629,15 +640,15 @@ dyn_defense = {
     _lineMarker setMarkerBrush "Horizontal";
     _lineMarker setMarkerColor "colorBLUFOR";
 
-    sleep _waitTime;
-    // sleep 2;
+    // sleep _waitTime;
+    sleep 2;
 
     [playerSide, "HQ"] sideChat format ["SPOTREP: Soviet MotRifBtl at GRID: %1 advancing towards %2", mapGridPosition _defPos, [round (_defPos getDir _atkPos)] call dyn_get_cardinal];
 
     _arrowPos = [(_defPos distance2d _atkPos) / 2 * (sin (_defPos getDir _atkPos)), (_defPos distance2d _atkPos) / 2 * (cos (_defPos getDir _atkPos)), 0] vectorAdd _defPos;
     _arrowMarker = createMarker [format ["arrow%1", _atkPos], _arrowPos];
     _arrowMarker setMarkerType "marker_CATK";
-    _arrowMarker setMarkerSize [1.5, 1.5];
+    _arrowMarker setMarkerSize [1, 1];
     _arrowMarker setMarkerColor "colorOPFOR";
     _arrowMarker setMarkerDir ((_defPos getDir _atkPos) - 90);
 
@@ -645,6 +656,10 @@ dyn_defense = {
 
     if (random 1 < 0.5) then {
         [true] spawn dyn_arty;
+    }
+    else
+    {
+        [_defPos, _defPos getDir _atkPos] spawn dyn_spawn_heli_attack;
     };
 
     _waves = [1, 3] call BIS_fnc_randomInt;

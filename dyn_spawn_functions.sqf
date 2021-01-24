@@ -9,6 +9,7 @@ dyn_standart_light_amored_vic = "cwr3_o_btr80";
 dyn_standart_flag = "cwr3_flag_ussr";
 dyn_standart_statics_high = ["cwr3_o_nsv_high"];
 dyn_standart_statics_low = ["cwr3_o_nsv_low", "cwr3_o_ags30", "cwr3_o_spg9"];
+dyn_attack_heli = "cwr3_o_mi24d";
 
 dyn_spawn_covered_vehicle = {
     params ["_pos", "_vicType", "_dir"];
@@ -509,7 +510,11 @@ dyn_spawn_side_town_guards = {
             _validBuildings = [_validBuildings, [], {_x distance2D (getPos player)}, "ASCEND"] call BIS_fnc_sortBy;
 
             _dir = (getPos _x) getDir player;
-            for "_i" from 0 to ([0,1] call BIS_fnc_randomInt) do {
+            _amount = [0,1] call BIS_fnc_randomInt;
+            if (type _x == "NameCityCapital") then {
+                _amount = [2, 4] call BIS_fnc_randomInt;
+            };
+            for "_i" from 0 to _amount do {
                 _grp = [getPos _x, east, dyn_standart_fire_team] call BIS_fnc_spawnGroup;
                 dyn_all_side_town_guards pushBack _grp;
                 _buildingIdx = [0, 7] call BIS_fnc_randomInt;
@@ -950,6 +955,45 @@ dyn_spawn_rocket_arty = {
         _grad commandArtilleryFire [_artyPos, "CUP_40Rnd_GRAD_HE", 15];
         sleep 15;
     };
+};
+
+dyn_spawn_heli_attack = {
+        params ["_locPos", "_dir"];
+
+        _rearPos = [3000 * (sin (_dir - 180)), 3000 * (cos (_dir - 180)), 0] vectorAdd _locPos;
+        _units = allUnits+vehicles select {side _x == west};
+        _targetPos = getPos (_units#0);
+
+        // _frontPos = [3000 * (sin _dir), 3000 * (cos _dir), 0] vectorAdd _targetPos;
+
+        for "_i" from 0 to 1 do {
+
+            [_rearPos, _targetPos, _dir] spawn {
+                params ["_rearPos", "_targetPos", "_dir"];
+
+                _casGroup = createGroup east;
+                _p = [_rearPos, _dir, dyn_attack_heli, _casGroup] call BIS_fnc_spawnVehicle;
+                _plane = _p#0;
+                [_plane, 80] call BIS_fnc_setHeight;
+                // _plane forceSpeed 140;
+                _plane flyInHeight 80;
+                _wp = _casGroup addWaypoint [_targetPos, 0];
+                _time = time + 300;
+
+                waitUntil {(_plane distance2D (waypointPosition _wp)) <= 200 or time >= _time};
+
+                _wp = _casGroup addWaypoint [_rearPos, 0];
+                _time = time + 300;
+
+                waitUntil {(_plane distance2D (waypointPosition _wp)) <= 200 or time >= _time};
+
+                {
+                    deleteVehicle _x;
+                } forEach (units _casGroup);
+                deleteVehicle _plane;
+            };
+            sleep 10;
+        };
 };
 
 dyn_attack_nearest_enemy = {

@@ -297,7 +297,7 @@ dyn_main_setup = {
     _startPair = selectRandom _startPairs;
 
     // debug override
-    // _startPair = ["start_5", "obj_5"];
+    // _startPair = ["start_10", "obj_10"];
 
     _playerStart = getMarkerPos (_startPair#0);
     _startLoc = nearestLocation [getMarkerPos (_startPair#1), ""];
@@ -408,7 +408,7 @@ dyn_main_setup = {
             _dyn_defense_atkPos = getPos player;
             // _startDefense = true;
             
-            if (((random 1) > 0.25 and (_dyn_defense_atkPos distance2D (getPos _loc)) > 3000 and _i > 0) or _startDefense) then {
+            if (((random 1) > 0 and (_dyn_defense_atkPos distance2D (getPos _loc)) > 3000 and _i > 0) or _startDefense) then {
                 _waitTime = 900;
                 if (_startDefense) then {_waitTime = 360};
                 [_dyn_defense_atkPos, getPos _loc, _waitTime] spawn dyn_defense;
@@ -486,6 +486,8 @@ dyn_main_setup = {
 
                 [_midPoint, 2000, 1, _trg] spawn dyn_spawn_hill_overwatch;
 
+                [_endTrg, _midPoint, 2000, _midPoint] spawn dyn_spawn_side_town_guards;
+
                 if (dyn_debug) then {
                     _m = createMarker [str (random 1), _midPoint];
                     _m setMarkerType "mil_marker";
@@ -509,6 +511,8 @@ dyn_main_setup = {
                     default {[getPos _loc, _trg, _dir] call dyn_defense_line}; 
                 };
             };
+
+            // [getPos _loc, _dir] spawn dyn_spawn_heli_attack;
 
             sleep 5;
 
