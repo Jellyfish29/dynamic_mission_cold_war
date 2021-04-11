@@ -660,8 +660,8 @@ dyn_defense = {
     _lineMarker setMarkerBrush "Horizontal";
     _lineMarker setMarkerColor "colorBLUFOR";
 
-    // sleep _waitTime;
-    sleep 2;
+    sleep _waitTime;
+    // sleep 2;
 
     [playerSide, "HQ"] sideChat format ["SPOTREP: Soviet MotRifBtl at GRID: %1 advancing towards %2", mapGridPosition _defPos, [round (_defPos getDir _atkPos)] call dyn_get_cardinal];
 

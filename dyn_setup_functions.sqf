@@ -406,16 +406,17 @@ dyn_main_setup = {
             dyn_defense_active = false;
 
             _dyn_defense_atkPos = getPos player;
-            // _startDefense = true;
+            if (_i > 0) then {_dyn_defense_atkPos = getPos (_locations#(_i - 1))};
+            _startDefense = false;
             
-            if (((random 1) > 0 and (_dyn_defense_atkPos distance2D (getPos _loc)) > 3000 and _i > 0) or _startDefense) then {
+            if (((random 1) > 0.55 and (_dyn_defense_atkPos distance2D (getPos _loc)) > 3000 and _i > 0) or _startDefense) then {
                 _waitTime = 900;
                 if (_startDefense) then {_waitTime = 360};
                 [_dyn_defense_atkPos, getPos _loc, _waitTime] spawn dyn_defense;
                 sleep 5;
                 _defDir = _dyn_defense_atkPos getDir (getPos _loc);
                 _linePos = [300 * (sin _defDir), 300 * (cos _defDir), 0] vectorAdd _dyn_defense_atkPos;
-                [west, format ["defTask_%1", _i], ["Deffensive", "Take and Hold Position", ""], _linePos, "ASSIGNED", 1, true, "defend", false] call BIS_fnc_taskCreate;
+                [west, format ["defTask_%1", _i], ["Deffensive", "Defend against Counter Attack", ""], _linePos, "ASSIGNED", 1, true, "defend", false] call BIS_fnc_taskCreate;
 
                 waitUntil {!(dyn_defense_active)};
 
