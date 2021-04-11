@@ -1,18 +1,18 @@
-dyn_standart_squad = configFile >> "CfgGroups" >> "East" >> "CWR3_RUS" >> "Infantry" >> "cwr3_o_rifle_squad";
-dyn_standart_fire_team = configFile >> "CfgGroups" >> "East" >> "CWR3_RUS" >> "Infantry" >> "cwr3_o_fire_team";
-dyn_standart_at_team = configFile >> "CfgGroups" >> "East" >> "CWR3_RUS" >> "Infantry" >> "cwr3_o_at_team";
-dyn_standart_trasnport_vehicles = ["cwr3_o_ural_open", "cwr3_o_ural"];
-dyn_standart_combat_vehicles = ["cwr3_o_bmp1", "cwr3_o_bmp2", "cwr3_o_t55"];
-dyn_standart_light_armed_transport = ["cwr3_o_uaz_dshkm", "cwr3_o_uaz_ags30"];
-dyn_standart_MBT = "cwr3_o_t72a";
-dyn_standart_light_amored_vic = "cwr3_o_btr80";
-dyn_standart_flag = "cwr3_flag_ussr";
-dyn_standart_statics_high = ["cwr3_o_nsv_high"];
-dyn_standart_statics_low = ["cwr3_o_nsv_low", "cwr3_o_ags30", "cwr3_o_spg9"];
-dyn_attack_heli = "cwr3_o_mi24d";
+// dyn_standart_squad = configFile >> "CfgGroups" >> "East" >> "CWR3_RUS" >> "Infantry" >> "cwr3_o_rifle_squad";
+// dyn_standart_fire_team = configFile >> "CfgGroups" >> "East" >> "CWR3_RUS" >> "Infantry" >> "cwr3_o_fire_team";
+// dyn_standart_at_team = configFile >> "CfgGroups" >> "East" >> "CWR3_RUS" >> "Infantry" >> "cwr3_o_at_team";
+// dyn_standart_trasnport_vehicles = ["cwr3_o_ural_open", "cwr3_o_ural"];
+// dyn_standart_combat_vehicles = ["cwr3_o_bmp1", "cwr3_o_bmp2", "cwr3_o_t55"];
+// dyn_standart_light_armed_transport = ["cwr3_o_uaz_dshkm", "cwr3_o_uaz_ags30"];
+// dyn_standart_MBT = "cwr3_o_t72a";
+// dyn_standart_light_amored_vic = "cwr3_o_btr80";
+// dyn_standart_flag = "cwr3_flag_ussr";
+// dyn_standart_statics_high = ["cwr3_o_nsv_high"];
+// dyn_standart_statics_low = ["cwr3_o_nsv_low", "cwr3_o_ags30", "cwr3_o_spg9"];
+// dyn_attack_heli = "cwr3_o_mi24d";
 
 dyn_spawn_covered_vehicle = {
-    params ["_pos", "_vicType", "_dir"];
+    params ["_pos", "_vicType", "_dir", ["_netOn", true]];
     _grp = grpNull;
     _pos = _pos findEmptyPosition [0, 100, _vicType];
     if ((count _pos) > 0) then {
@@ -30,10 +30,12 @@ dyn_spawn_covered_vehicle = {
         };
         // _net =  createVehicle (getPos _vic);
 
-        _net = createVehicle ["Land_CamoNetVar_EAST", getPosATL _vic, [], 0, "CAN_COLLIDE"];
-        _net allowDamage false;
-        _net setDir (_dir - 90);
-        // _net allowDamage true;
+        if (_netOn) then {
+            _net = createVehicle ["Land_CamoNetVar_EAST", getPosATL _vic, [], 0, "CAN_COLLIDE"];
+            // _net allowDamage false;
+            _net setDir (_dir - 90);
+            // _net allowDamage true;
+        };
     };
     _grp
 };
@@ -67,7 +69,10 @@ dyn_spawn_parked_vehicle = {
 dyn_spawn_covered_inf = {
     params ["_pos", "_dir", ["_tree", false], ["_net", false], ["_sandBag", false], ["_bushes", false], ["_trench", false]];
     if (_tree) then {
-        _pos = getPos ((nearestTerrainObjects [_pos, ["TREE", "FOREST BORDER", "FOREST TRIANGLE", "FOREST SQUARE", "FOREST"], 300, true, true]) select 0);
+        _trees = nearestTerrainObjects [_pos, ["TREE", "FOREST BORDER", "FOREST TRIANGLE", "FOREST SQUARE", "FOREST"], 80, true, true];
+        if ((count _trees) > 0) then {
+            _pos = getPos (_trees#0);
+        };
     };
     if (_pos isEqualTo []) exitWith {grpNull};
     _grp = grpNull;
@@ -203,7 +208,7 @@ dyn_spawn_dimounted_inf = {
 };
 
 dyn_spawn_hq_garrison = {
-    params ["_pos", "_area"];
+    params ["_pos", "_area", "_atkDir"];
 
     _buildings = nearestObjects [_pos, ["house"], _area];
 
@@ -225,8 +230,9 @@ dyn_spawn_hq_garrison = {
     _atkTrg = createTrigger ["EmptyDetector", _pos, true];
     _atkTrg setTriggerActivation ["WEST", "PRESENT", false];
     _atkTrg setTriggerStatements ["this", " ", " "];
-    _atkTrg setTriggerArea [65, 65, 0, false];
+    _atkTrg setTriggerArea [100, 100, 0, false];
 
+    // qrf groups
     private _grps = [];
     for "_i" from 0 to ([0, 1] call BIS_fnc_randomInt) do {
         _netPos = [[[getPos _hq, 20]], [[getPos _hq, 10], "water"]] call BIS_fnc_randomPos;
@@ -239,7 +245,36 @@ dyn_spawn_hq_garrison = {
         _grps pushBack _grp;
     };
 
-    [_atkTrg, _grps] spawn dyn_attack_nearest_enemy;
+    // [_atkTrg, _grps] spawn dyn_attack_nearest_enemy;
+
+    // sorounding garrisons
+    _validBuildings = [_validBuildings, [], {_x distance2D (getPos _hq)}, "ASCEND"] call BIS_fnc_sortBy;
+
+    for "_i" from 1 to ([2, 3] call BIS_fnc_randomInt) do {
+        _grp = [_pos, east, dyn_standart_fire_team] call BIS_fnc_spawnGroup;
+        [(_validBuildings#_i), _grp, _dir] spawn dyn_garrison_building;   
+    };
+
+    // hq Vehicles
+    _roads = (getPos _hq) nearRoads 70;
+    _roads = [_roads, [], {_x distance2D (getPos _hq)}, "ASCEND"] call BIS_fnc_sortBy;
+
+    for "_i" from 0 to ([0, 1] call BIS_fnc_randomInt) do {
+        _vic = createVehicle [selectRandom dyn_hq_vehicles, getPos (_roads#_i), [], 0, "CAN_COLLIDE"];
+        _roadDir = (getPos ((roadsConnectedTo (_roads#0)) select 0)) getDir getPos (_roads#_i);
+        _vic setDir _roadDir;
+    };
+
+    // Roadblocks
+    _roads = [_roads, [], {_x distance2D player}, "ASCEND"] call BIS_fnc_sortBy;
+    _grp = [_roads#0, 20, true, true] spawn dyn_spawn_dimounted_inf;
+    reverse _roads;
+    _grp = [_roads#0, 20, true, true] spawn dyn_spawn_dimounted_inf;
+
+    // static Weapon
+    _stDir = _atkDir + ([-20, 20] call BIS_fnc_randomInt);
+    _stPos = [18 * (sin _stDir), 18 * (cos _stDir), 0] vectorAdd (getPos _hq);
+    [_stPos, _stDir, false, false] spawn dyn_spawn_static_weapon;
 
     _tentPos = [10 * (sin _dir), 10 * (cos _dir), 0] vectorAdd (getPos _hq);
     _tent = "gm_gc_tent_5x5m" createVehicle _tentPos;
@@ -250,8 +285,9 @@ dyn_spawn_hq_garrison = {
     _hq
 };
 
+
 dyn_spawn_static_weapon = {
-    params ["_pos", "_dir", ["_low", false]];
+    params ["_pos", "_dir", ["_low", false], ["_camo", true]];
 
     private _weapon = selectRandom dyn_standart_statics_high;
     if (_low) then {
@@ -273,7 +309,7 @@ dyn_spawn_static_weapon = {
     _sCover =  _comp createVehicle _sPos;
     _sCover setDir _dir;
     _sCover attachTo [_static, [0,2,-1]];
-    if !(_low) then {
+    if (!_low and _camo) then {
         for "_i" from 0 to 1 do {
             _bPos = [1 * (sin _dir), 1 * (cos _dir), 0] vectorAdd _sPos;
             _bush = "gm_b_crataegus_monogyna_01_summer" createVehicle _bPos;
@@ -287,8 +323,8 @@ dyn_spawn_aa = {
     params ["_pos", "_dir"];
 
     _rearPos = [150 * (sin (_dir - 180)), 150 * (cos (_dir - 180)), 0] vectorAdd _pos;
-    _rearPos = _rearPos findEmptyPosition [0, 200, "cwr3_o_zu23"];
-    _aa = "cwr3_o_zu23" createVehicle _rearPos;
+    _rearPos = _rearPos findEmptyPosition [0, 200, "cwr3_o_mtlb_sa13"];
+    _aa = "cwr3_o_mtlb_sa13" createVehicle _rearPos;
     _aa setDir _dir;
     createVehicleCrew _aa;
     _iPos = getPos _aa;
@@ -865,6 +901,7 @@ dyn_spawn_delay_action = {
 
         if (vehicle (leader _grp) != (leader _grp)) then {
             _vic = vehicle (leader _grp);
+            _vic setFuel 1;
             [_vic, "SmokeLauncher"] call BIS_fnc_fire;
         };
 
@@ -874,6 +911,8 @@ dyn_spawn_delay_action = {
             _x disableAI "AUTOTARGET";
             _x disableAI "TARGET";
             _x enableAI "PATH";
+            _x doFollow (leader _grp);
+            _x setUnitPos "Auto";
         } forEach (units _grp);
         // _grp setBehaviour "AWARE";
 
@@ -958,7 +997,11 @@ dyn_spawn_rocket_arty = {
 };
 
 dyn_spawn_heli_attack = {
-        params ["_locPos", "_dir"];
+        params ["_locPos", "_dir", ["_trg", objNull]];
+
+        if !(isNull _trg) then {
+            waitUntil { sleep 1; triggerActivated _trg };
+        };
 
         _rearPos = [3000 * (sin (_dir - 180)), 3000 * (cos (_dir - 180)), 0] vectorAdd _locPos;
         _units = allUnits+vehicles select {side _x == west};
@@ -974,9 +1017,9 @@ dyn_spawn_heli_attack = {
                 _casGroup = createGroup east;
                 _p = [_rearPos, _dir, dyn_attack_heli, _casGroup] call BIS_fnc_spawnVehicle;
                 _plane = _p#0;
-                [_plane, 80] call BIS_fnc_setHeight;
+                [_plane, 60] call BIS_fnc_setHeight;
                 // _plane forceSpeed 140;
-                _plane flyInHeight 80;
+                _plane flyInHeight 60;
                 _wp = _casGroup addWaypoint [_targetPos, 0];
                 _time = time + 300;
 
@@ -1020,6 +1063,7 @@ dyn_attack_nearest_enemy = {
             _x enableAI "PATH";
             _x doFollow (leader _grp);
             _x setUnitPos "Auto";
+            _x disableAI "AUTOCOMBAT"
         } forEach (units _grp);
 
         _grp setSpeedMode "Full";
@@ -1046,4 +1090,19 @@ dyn_spawn_def_waves = {
         [objNull, [_grp]] spawn dyn_attack_nearest_enemy;
         sleep ([120, 200] call BIS_fnc_randomInt);
     };                                                                                                                                                                                                                                                                                                         
+};
+
+dyn_intel_markers = [];
+
+dyn_spawn_intel_markers = {
+    params ["_trg", "_pos", "_type", "_text"];
+
+    waitUntil {sleep 1; triggerActivated _trg};
+
+    _hqMarker = createMarker [format ["im%1", random 2], _pos];
+    _hqMarker setMarkerType _type;
+    _hqMarker setMarkerSize [0.7, 0.7];
+    _hqMarker setMarkerText _text;
+
+    dyn_intel_markers pushBack _hqMarker;
 };

@@ -499,7 +499,7 @@ dyn_main_setup = {
                 _defenseType = selectRandom ["line", "mobileTank", "recon"];
 
                 // debug
-                // _defenseType = "recon";
+                // _defenseType = "line";
 
                 switch (_defenseType) do { 
                     case "line" : {[getPos _loc, _trg, _dir] call dyn_defense_line}; 
@@ -555,11 +555,16 @@ dyn_main_setup = {
 
             if !(dyn_debug) then {
                 waitUntil {sleep 1; triggerActivated _endTrg};
+
             }
             else
             {
                 waitUntil {sleep 1; triggerActivated _trg};
             };
+            
+            {
+                deleteMarker _x;
+            } forEach dyn_intel_markers;
 
             [] spawn dyn_garbage_clear;
 
