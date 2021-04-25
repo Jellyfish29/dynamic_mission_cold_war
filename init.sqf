@@ -14,6 +14,7 @@ dyn_standart_statics_low = ["cwr3_o_nsv_low", "cwr3_o_ags30", "cwr3_o_spg9"];
 dyn_attack_heli = "cwr3_o_mi24d";
 dyn_recon_convoy = ["cwr3_o_btr80", "cwr3_o_btr80", "cwr3_o_brdm2_atgm", "cwr3_o_brdm2um", "cwr3_o_brdm2"];
 dyn_hq_vehicles = ["cwr3_o_bmp2_hq", "cwr3_o_ural_hq", "cwr3_o_ural_refuel"];
+dyn_map_center = [worldSize / 2, worldsize / 2, 0];
 
 execVM "dyn_ai_functions.sqf";
 execVM "dyn_spawn_functions.sqf";

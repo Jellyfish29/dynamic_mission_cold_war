@@ -407,6 +407,7 @@ dyn_main_setup = {
 
             _dyn_defense_atkPos = getPos player;
             if (_i > 0) then {_dyn_defense_atkPos = getPos (_locations#(_i - 1))};
+
             _startDefense = false;
             
             if (((random 1) > 0.55 and (_dyn_defense_atkPos distance2D (getPos _loc)) > 3000 and _i > 0) or _startDefense) then {
@@ -432,8 +433,8 @@ dyn_main_setup = {
             _endTrg = createTrigger ["EmptyDetector", (getPos _loc), true];
             _endTrg setTriggerActivation ["WEST SEIZED", "PRESENT", false];
             _endTrg setTriggerStatements ["this", " ", " "];
-            _endTrg setTriggerArea [350, 350, _dir, false];
-            _endTrg setTriggerTimeout [120, 180, 240, false];
+            _endTrg setTriggerArea [300, 300, _dir, false];
+            _endTrg setTriggerTimeout [240, 300, 360, false];
 
             if (_i > 0) then {
                 [getPos _loc, _dir, _endTrg, _campaignDir, getPos (_locations#(_i - 1))] spawn dyn_create_markers;
@@ -463,7 +464,7 @@ dyn_main_setup = {
             [getPos _loc, _dir, _endTrg] spawn dyn_ambiance;
 
             [west, format ["task_%1", _i], ["Offensive", format ["Capture %1", _locationName], ""], getPos _loc, "ASSIGNED", 1, true, "attack", false] call BIS_fnc_taskCreate;
-            _townDefenseGrps = [_trg, _endTrg] call dyn_town_defense;
+            _townDefenseGrps = [_trg, _endTrg, _dir] call dyn_town_defense;
 
             if (_midDefenses) then {
 
@@ -497,14 +498,14 @@ dyn_main_setup = {
 
             if (_outerDefenses) then {
 
-                _defenseType = selectRandom ["line", "mobileTank", "recon"];
+                _defenseType = selectRandom ["line", "mobileTank", "recon", "point"];
 
                 // debug
-                // _defenseType = "line";
+                _defenseType = "point";
 
                 switch (_defenseType) do { 
                     case "line" : {[getPos _loc, _trg, _dir] call dyn_defense_line}; 
-                    // case "point" : {[getPos _loc, _trg, _dir] call dyn_strong_point_defence};
+                    case "point" : {[getPos _loc, _trg, _dir] call dyn_strong_point_defence};
                     case "mobileTank" : {[getPos _loc, _trg, _dir] call dyn_mobile_armor_defense};
                     // case "roadem" : {[getPos _loc, _trg, _dir] call dyn_road_emplacemnets};
                     case "recon" : {[getPos _loc, _trg, _dir] call dyn_recon_convoy};

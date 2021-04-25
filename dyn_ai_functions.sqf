@@ -199,3 +199,13 @@ dyn_get_cardinal = {
     _compass = _points select _num;
     _compass  
 };
+
+dyn_is_forest = {
+    params ["_pos"];
+
+    _trees = nearestTerrainObjects [_pos, ["Tree"], 50];
+
+    if (count _trees > 25) exitWith {true};
+
+    false
+};
