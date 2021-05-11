@@ -316,7 +316,10 @@ dyn_main_setup = {
         {
             deleteMarker (_x#0);
             deleteMarker (_x#1);
-        } forEach _startPairs
+        } forEach _startPairs;
+
+        deleteMarker "test_m_1";
+        deleteMarker "test_m_2";
     };
 
 
@@ -501,7 +504,7 @@ dyn_main_setup = {
                 _defenseType = selectRandom ["line", "mobileTank", "recon", "point"];
 
                 // debug
-                _defenseType = "point";
+                // _defenseType = "line";
 
                 switch (_defenseType) do { 
                     case "line" : {[getPos _loc, _trg, _dir] call dyn_defense_line}; 
