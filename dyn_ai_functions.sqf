@@ -129,6 +129,8 @@ dyn_garrison_building = {
     };
 };
 
+
+
 dyn_suppressing_grps = 0;
 
 dyn_select_atk_mode = {
@@ -311,4 +313,49 @@ dyn_is_forest = {
     if (count _trees > 25) exitWith {true};
 
     false
+};
+
+dyn_attack_nearest_enemy = {
+    params ["_trg", "_grps"];
+
+    if !(isNull _trg) then {
+        waitUntil { sleep 1, triggerActivated _trg };
+    };
+
+    {
+        _grp = _x;
+        {
+            _x enableAI "PATH";
+            _x doFollow (leader _grp);
+            _x setUnitPos "Auto";
+            _x disableAI "AUTOCOMBAT"
+        } forEach (units _grp);
+
+        _grp setSpeedMode "Full";
+        _grp setBehaviour "AWARE";
+
+        [_grp] spawn {
+            params ["_grp"];
+
+            while {({alive _x} count (units _grp)) > 0} do {
+
+                _units = allUnits+vehicles select {side _x == playerSide};
+                _units = [_units, [], {_x distance2D (leader _grp)}, "ASCEND"] call BIS_fnc_sortBy;
+                _atkPos = getPos (_units#0);
+
+                [_grp, (currentWaypoint _grp)] setWaypointType "MOVE";
+                [_grp, (currentWaypoint _grp)] setWaypointPosition [getPosASL (leader _grp), -1];
+                sleep 0.1;
+                deleteWaypoint [_grp, (currentWaypoint _grp)];
+                for "_i" from count waypoints _grp - 1 to 0 step -1 do {
+                    deleteWaypoint [_grp, _i];
+                };
+
+                _wp = _grp addWaypoint [_atkPos, 20];
+                _wp setWaypointType "SAD";
+
+                sleep 60;
+            };
+        };
+    } forEach _grps;
 };

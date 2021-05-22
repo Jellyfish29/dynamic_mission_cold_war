@@ -11,6 +11,50 @@ addMissionEventHandler ["TeamSwitch", {
     _newUnit synchronizeObjectsAdd [_hcc];
     _hcc synchronizeObjectsAdd [_hcs];
     [] call dyn_add_all_groups;
+
+    _newUnit addEventHandler ["GetInMan", {
+        params ["_unit", "_role", "_vehicle", "_turret"];
+        private ["_group"];
+        _group = group player;
+        _vicGroup = group (driver (vehicle player));
+        if (_vicGroup != (group player)) then {
+            player setVariable ["pl_player_vicGroup", _vicGroup];
+            // _vicGroup setVariable ["setSpecial", true];
+            // _vicGroup setVariable ["specialIcon", "\A3\ui_f\data\igui\cfg\simpleTasks\types\truck_ca.paa"];
+            _vicGroup setVariable ["pl_has_cargo", true];
+            // _group setVariable ["pl_show_info", false];
+            [_group] call pl_hide_group_icon;
+            // player hcRemoveGroup _group;
+        };
+    }];
+
+    _newUnit addEventHandler ["GetOutMan", {
+        params ["_unit", "_role", "_vehicle", "_turret"];
+        private ["_group"];
+        _group = group player;
+        _vicGroup = player getVariable ["pl_player_vicGroup", (group player)];
+        _group setVariable ["setSpecial", false];
+        _group setVariable ["onTask", false];
+        // _group setVariable ["pl_show_info", true];
+        if !(_group getVariable ["pl_show_info", false]) then {
+            [_group, "hq"] call pl_show_group_icon;
+        };
+        // player hcSetGroup [_group];
+
+        _cargo = fullCrew [(vehicle ((units _vicGroup)#0)), "cargo", false];
+        if ((count _cargo == 0)) exitWith {
+            // _vicGroup setVariable ["setSpecial", false];
+            _vicGroup setVariable ["pl_has_cargo", false];
+        };
+        if (({(group (_x#0)) isEqualTo _group} count _cargo) > 0) then {
+            [_vicGroup, _cargo, _group] spawn {
+                params ["_vicGroup", "_cargo", "_group"];
+                waitUntil {sleep 1; (({(group (_x#0)) isEqualTo _group} count (fullCrew [(vehicle ((units _vicGroup)#0)), "cargo", false])) == 0)};
+                // _vicGroup setVariable ["setSpecial", false];
+                _vicGroup setVariable ["pl_has_cargo", false];
+            };
+        };
+    }];
 }];
 
 dyn_add_all_groups = {

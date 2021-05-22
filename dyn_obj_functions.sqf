@@ -604,13 +604,13 @@ dyn_town_defense = {
     [_aoPos, _solitaryBuildings, [2, 3] call BIS_fnc_randomInt, _dir] spawn dyn_spawn_strongpoint;
 
     //create Tank/APC
-    if ((random 1) > 0.25) then {
-        private _vGrps = [];
-        for "_i" from 0 to ([0, 1] call BIS_fnc_randomInt) do {
-            _grp = [getPos _aoPos, 150] call dyn_spawn_parked_vehicle;
-            _vGrps pushBack _grp;
-            _allGrps pushBack _grp;
-        };
+    private _vGrps = [];
+    for "_i" from 0 to ([2, 4] call BIS_fnc_randomInt) do {
+        _grp = [getPos _aoPos, 250, dyn_standart_combat_vehicles + [dyn_standart_MBT] + [dyn_standart_light_amored_vic]] call dyn_spawn_parked_vehicle;
+        _vGrps pushBack _grp;
+        _allGrps pushBack _grp;
+    };
+    if ((random 1) > 0.75) then {
         [_aoPos, _vGrps] spawn dyn_attack_nearest_enemy;
     };
 

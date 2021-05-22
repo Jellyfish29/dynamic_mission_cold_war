@@ -42,18 +42,21 @@ dyn_spawn_covered_vehicle = {
 
 dyn_spawn_parked_vehicle = {
     params ["_pos", "_area", ["_vicTypes", dyn_standart_combat_vehicles], ["_roadDir", 0]];
-    private ["_vPos"];
+    private ["_vPos", "_roadDir"];
     _vicType = selectRandom _vicTypes;
     private _r = grpNull;
     if (_area > 0) then {
         _road = selectRandom (_pos nearRoads _area);
-        _vpos = getPos _road;
-        _vpos = _vpos vectorAdd [1 - random 2, 1 - random 2, 0];
-        _roadDir = (getPos ((roadsConnectedTo _road) select 0)) getDir _vpos;
+        _info = getRoadInfo _road;    
+        _endings = [_info#6, _info#7];
+        _endings = [_endings, [], {_x distance2D player}, "ASCEND"] call BIS_fnc_sortBy;
+        _vPos = _endings#0;
+        _roadDir = (_endings#1) getDir (_endings#0);
     }
     else
     {
         _vPos = _pos findEmptyPosition [0, 65, _vicType];
+        _roadDir = 0;
     };
     if !(_vPos isEqualTo []) then {
         _vic = _vicType createVehicle _vPos;
@@ -799,7 +802,8 @@ dyn_spawn_supply_convoy = {
         _near = [_near, [], {(getPos _x) distance2D _hqPos}, "DESCEND"] call BIS_fnc_sortBy;
         _vDir = (getPos (_near#0)) getDir (getPos _road);
         _vic setDir _vDir;
-        _grp = [_rearPos, east, dyn_standart_fire_team] call BIS_fnc_spawnGroup;
+        _grp = [_rearPos, east, dyn_standart_squad] call BIS_fnc_spawnGroup;
+        _grp setFormation "DIAMOND";
         {
             _x assignAsCargo _vic;
             _x moveInCargo _vic;
@@ -1250,38 +1254,38 @@ dyn_spawn_smoke = {
     _smoke setVariable ["type", "SmokeShell"]
 };
 
-dyn_attack_nearest_enemy = {
-    params ["_trg", "_grps"];
+// dyn_attack_nearest_enemy = {
+//     params ["_trg", "_grps"];
 
-    if !(isNull _trg) then {
-        waitUntil { sleep 1, triggerActivated _trg };
-    };
+//     if !(isNull _trg) then {
+//         waitUntil { sleep 1, triggerActivated _trg };
+//     };
 
-    _units = allUnits+vehicles select {side _x == playerSide};
-    {
-        _grp = _x;
-        _units = [_units, [], {_x distance2D (leader _grp)}, "ASCEND"] call BIS_fnc_sortBy;
-        _atkPos = getPos (_units#0);
+//     _units = allUnits+vehicles select {side _x == playerSide};
+//     {
+//         _grp = _x;
+//         _units = [_units, [], {_x distance2D (leader _grp)}, "ASCEND"] call BIS_fnc_sortBy;
+//         _atkPos = getPos (_units#0);
 
-        [_grp, (currentWaypoint _grp)] setWaypointType "MOVE";
-        [_grp, (currentWaypoint _grp)] setWaypointPosition [getPosASL (leader _grp), -1];
-        sleep 0.1;
-        deleteWaypoint [_grp, (currentWaypoint _grp)];
-        for "_i" from count waypoints _grp - 1 to 0 step -1 do {
-            deleteWaypoint [_grp, _i];
-        };
-        {
-            _x enableAI "PATH";
-            _x doFollow (leader _grp);
-            _x setUnitPos "Auto";
-            _x disableAI "AUTOCOMBAT"
-        } forEach (units _grp);
+//         [_grp, (currentWaypoint _grp)] setWaypointType "MOVE";
+//         [_grp, (currentWaypoint _grp)] setWaypointPosition [getPosASL (leader _grp), -1];
+//         sleep 0.1;
+//         deleteWaypoint [_grp, (currentWaypoint _grp)];
+//         for "_i" from count waypoints _grp - 1 to 0 step -1 do {
+//             deleteWaypoint [_grp, _i];
+//         };
+//         {
+//             _x enableAI "PATH";
+//             _x doFollow (leader _grp);
+//             _x setUnitPos "Auto";
+//             _x disableAI "AUTOCOMBAT"
+//         } forEach (units _grp);
 
-        _grp setSpeedMode "Full";
-        _wp = _grp addWaypoint [_atkPos, 20];
-        _wp setWaypointType "SAD";
-    } forEach _grps;
-};
+//         _grp setSpeedMode "Full";
+//         _wp = _grp addWaypoint [_atkPos, 20];
+//         _wp setWaypointType "SAD";
+//     } forEach _grps;
+// };
 
 
 dyn_spawn_def_waves = {
