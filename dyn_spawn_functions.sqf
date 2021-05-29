@@ -172,6 +172,7 @@ dyn_spawn_covered_inf = {
                         _bush = "gm_b_crataegus_monogyna_01_summer" createVehicle _wPos;
                         _bush setDir ([0, 360] call BIS_fnc_randomInt);
                         _bush setPos ([0,0, -0.3] vectorAdd (getPos _bush));
+                        _bush enableSimulation false;
                     };
                 };
             };

@@ -1,6 +1,6 @@
 dyn_defense_line = {
     params ["_locPos", "_townTrg", "_dir", ["_exactPos", false]];
-    private ["_aoPos", "_defPos", "_objs", "_objAmount", "_road", "_dir", "_patrollPos", "_rearPos", "_grps", "_blkPos", "_width"];
+    private ["_aoPos", "_defPos", "_objs", "_objAmount", "_road", "_dir", "_patrollPos", "_rearPos", "_grps", "_blkPos", "_width", "_pPos"];
 
     _width = 1000;
 
@@ -30,19 +30,31 @@ dyn_defense_line = {
     _area = [400, 600] call BIS_fnc_randomInt;;
     for "_i" from -40 to 40 step (80 / _objAmount) do {
         _pPos = [_area * (sin (_dir + _i)), _area * (cos (_dir + _i)), 0] vectorAdd _defPos;
+
+        _trees = nearestTerrainObjects [_pPos, ["TREE"], 60, true, true];
+        if ((count _trees) > 0) then {
+            _pPos = getPos (_trees#0);
+        };
+
         _pDir = _dir + _i;
         _grp = [_pPos, _pDir, true, 20] call dyn_spawn_small_trench;
         _grps pushBack _grp;
         _patrollPos pushBack (getPos (leader _grp));
         _leftRight = selectRandom [90, -90];
         _vPos = [10 * (sin (_pDir - _leftRight)), 10 * (cos (_pDir - _leftRight)), 0] vectorAdd (getPos (leader _grp));
-        _vGrp = [_vPos, selectRandom dyn_standart_light_amored_vics, _pDir, false] call dyn_spawn_covered_vehicle;
+        _vGrp = [_vPos, selectRandom dyn_standart_light_amored_vics, _pDir, true] call dyn_spawn_covered_vehicle;
         _grps pushBack _vGrp;
         // natowire
         {
             _rPos = [18 * (sin (_pDir + _x)), 18 * (cos (_pDir + _x)), 0] vectorAdd _pPos;
             _razor =  "Land_Razorwire_F" createVehicle _rPos;
-            _razor setDir (_pDir + _x);  
+            _razor setDir (_pDir + _x);
+            for "_j" from 0 to 4 do {
+                _bush = "gm_b_crataegus_monogyna_01_summer" createVehicle _rPos;
+                _bush setDir ([0, 360] call BIS_fnc_randomInt);
+                // _bush setPos ([0,0, -0.3] vectorAdd (getPos _bush));
+                _bush enableSimulation false;
+            };  
         } forEach [90, -90];
 
         // debug
@@ -195,7 +207,7 @@ dyn_mobile_armor_defense = {
     // _m = createMarker [str (random 1), _trgPos];
     // _m setMarkerType "mil_dot";
 
-    for "_i" from 0 to ([4, 5] call BIS_fnc_randomInt) do {
+    for "_i" from 0 to ([3, 4] call BIS_fnc_randomInt) do {
         _vPos = [(70 * _i) * (sin (_dir + 90)), (70 * _i) * (cos (_dir + 90)), 0] vectorAdd _stagingPos;
         _grp = [_vPos, 0, [dyn_standart_MBT], _dir] call dyn_spawn_parked_vehicle;
         (vehicle (leader _grp)) limitSpeed 30;
@@ -484,10 +496,10 @@ dyn_town_defense = {
 
     _validBuildings = [_validBuildings, [], {_x distance2D _watchPos}, "ASCEND"] call BIS_fnc_sortBy;
 
-    _garAmount = [3, 5] call BIS_fnc_randomInt;
+    _garAmount = [2, 3] call BIS_fnc_randomInt;
 
     // front Garrison
-    for "_i" from 0 to (_garAmount - 1) step 1 do {
+    for "_i" from 0 to (_garAmount - 1) step ([1, 3] call BIS_fnc_randomInt) do {
         _grp = [getPos _aoPos, east, dyn_standart_fire_team] call BIS_fnc_spawnGroup;
         [(_validBuildings#_i), _grp, _dir] spawn dyn_garrison_building;
         if ((random 1) > 0.5) then {_patrollPos pushBack (getPos (_validBuildings#_i))};
@@ -495,11 +507,11 @@ dyn_town_defense = {
     };
 
     // Flank Attack
-    // if ((random 1) >= 0.4) then {
-    //     _side = selectRandom [90, -90];
-    //     _flankPos = [1500 * (sin (_dir + _side)), 1500 * (cos (_dir + _side)), 0] vectorAdd (getPos (_validBuildings#0));
-    //     [_aoPos, getPos _aoPos, _flankPos, 3, 1, 0, true, [dyn_standart_MBT], 0, [true, 100], true, false] spawn dyn_spawn_counter_attack;
-    // };
+    if ((random 1) >= 0.4) then {
+        _side = selectRandom [90, -90];
+        _flankPos = [1500 * (sin (_dir + _side)), 1500 * (cos (_dir + _side)), 0] vectorAdd (getPos (_validBuildings#0));
+        [_aoPos, getPos _aoPos, _flankPos, 3, 1, 0, true, [dyn_standart_MBT], 0, [true, 100], true, false] spawn dyn_spawn_counter_attack;
+    };
 
     // create roádblock
     _bRoad = [getPos (_validBuildings#0), 80] call BIS_fnc_nearestRoad;
@@ -508,7 +520,7 @@ dyn_town_defense = {
     // create static Vehicle
     _validInfBuilding = + _validBuildings;
 
-    for "_i" from 0 to ([1, 3] call BIS_fnc_randomInt) do {
+    for "_i" from 0 to ([1, 2] call BIS_fnc_randomInt) do {
         _vicB = _validInfBuilding#([0, 12] call BIS_fnc_randomInt);
         _validInfBuilding deleteAt (_validInfBuilding find _vicB);
         _vicPos = getPos _vicB;
@@ -559,7 +571,7 @@ dyn_town_defense = {
     _solitaryBuildings = [_solitaryBuildings, [], {_x distance2D _watchPos}, "ASCEND"] call BIS_fnc_sortBy;
 
     // small trench Inf
-    for "_i" from 0 to ([3, 4] call BIS_fnc_randomInt) do {
+    for "_i" from 0 to ([1, 2] call BIS_fnc_randomInt) do {
         _infB = (_solitaryBuildings#([0, 7] call BIS_fnc_randomInt));
         _solitaryBuildings deleteAt (_solitaryBuildings find _infB);
         _infPos = getPos _infB;
@@ -573,23 +585,23 @@ dyn_town_defense = {
 
 
     // large trench Inf
-    if ((random 1) > 0.25) then {
-        _distance = [70, 100] call BIS_fnc_randomInt;
-        _tDir = [-30, 30] call BIS_fnc_randomInt;
-        _infPos = getPos (_validBuildings#0);
-        _infPos = [_distance * (sin (_dir + _tDir)), _distance * (cos (_dir + _tDir) ), 0] vectorAdd _infPos;
-        _grp = [_infPos, _dir, false, false, false, true, true] call dyn_spawn_covered_inf;
-        _allGrps pushBack _grp;
-    };
+    // if ((random 1) > 0.25) then {
+    //     _distance = [70, 100] call BIS_fnc_randomInt;
+    //     _tDir = [-30, 30] call BIS_fnc_randomInt;
+    //     _infPos = getPos (_validBuildings#0);
+    //     _infPos = [_distance * (sin (_dir + _tDir)), _distance * (cos (_dir + _tDir) ), 0] vectorAdd _infPos;
+    //     _grp = [_infPos, _dir, false, false, false, true, true] call dyn_spawn_covered_inf;
+    //     _allGrps pushBack _grp;
+    // };
 
     // create static Weapons
-    for "_i" from 0 to ([0, 1] call BIS_fnc_randomInt) do {
-        _sPos = getPos (_validInfBuilding#_i);
-        _distance = [30, 60] call BIS_fnc_randomInt;
-        _sDir = [-20, 20] call BIS_fnc_randomInt;
-        _sPos = [_distance * (sin (_dir + _sDir)), _distance * (cos (_dir + _sDir)), 0] vectorAdd _sPos;
-        [_sPos, _dir] call dyn_spawn_static_weapon;
-    };
+    // for "_i" from 0 to ([0, 1] call BIS_fnc_randomInt) do {
+    //     _sPos = getPos (_validInfBuilding#_i);
+    //     _distance = [30, 60] call BIS_fnc_randomInt;
+    //     _sDir = [-20, 20] call BIS_fnc_randomInt;
+    //     _sPos = [_distance * (sin (_dir + _sDir)), _distance * (cos (_dir + _sDir)), 0] vectorAdd _sPos;
+    //     [_sPos, _dir] call dyn_spawn_static_weapon;
+    // };
 
     // create HQ
     reverse _solitaryBuildings;
@@ -601,11 +613,11 @@ dyn_town_defense = {
     // [_aoPos, getPos _hq, "o_hq", "CP"] spawn dyn_spawn_intel_markers;
 
     // create Strongpoint
-    [_aoPos, _solitaryBuildings, [2, 3] call BIS_fnc_randomInt, _dir] spawn dyn_spawn_strongpoint;
+    [_aoPos, _solitaryBuildings, [1, 2] call BIS_fnc_randomInt, _dir] spawn dyn_spawn_strongpoint;
 
     //create Tank/APC
     private _vGrps = [];
-    for "_i" from 0 to ([2, 4] call BIS_fnc_randomInt) do {
+    for "_i" from 0 to ([1, 2] call BIS_fnc_randomInt) do {
         _grp = [getPos _aoPos, 250, dyn_standart_combat_vehicles + [dyn_standart_MBT] + [dyn_standart_light_amored_vic]] call dyn_spawn_parked_vehicle;
         _vGrps pushBack _grp;
         _allGrps pushBack _grp;
@@ -628,7 +640,7 @@ dyn_town_defense = {
     [getPos _aoPos, 2000, [1, 2] call BIS_fnc_randomInt, _aoPos] spawn dyn_spawn_forest_patrol;
 
     // Hill Cover
-    [getPos _aoPos, 2000, 1, _aoPos] spawn dyn_spawn_hill_overwatch;
+    // [getPos _aoPos, 2000, 1, _aoPos] spawn dyn_spawn_hill_overwatch;
 
     // Bridge Defense
     [getPos _aoPos, 2000, 400, _watchPos] spawn dyn_spawn_bridge_defense;
@@ -637,8 +649,7 @@ dyn_town_defense = {
     [_aoPos, getPos _aoPos, [800, 1300] call BIS_fnc_randomInt, _watchPos] spawn dyn_spawn_side_town_guards;
 
     // Continuos Inf Spawn 
-    // [_aoPos, (_validBuildings#((count _validBuildings) - 2)), _endTrg] spawn dyn_spawn_def_waves;
-    // [_aoPos, _hq, _endTrg] spawn dyn_spawn_def_waves;
+    [_aoPos, _hq, _endTrg] spawn dyn_spawn_def_waves;
 
 
     _allGrps
