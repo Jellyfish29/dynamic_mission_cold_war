@@ -308,7 +308,7 @@ dyn_get_cardinal = {
 dyn_is_forest = {
     params ["_pos"];
 
-    _trees = nearestTerrainObjects [_pos, ["Tree"], 50];
+    _trees = nearestTerrainObjects [_fPos, ["Tree"], 50, false, true];
 
     if (count _trees > 25) exitWith {true};
 
@@ -358,4 +358,17 @@ dyn_attack_nearest_enemy = {
             };
         };
     } forEach _grps;
+};
+
+dyn_opfor_change_uniform = {
+    params ["_comp"];
+    _uniformType = dyn_uniforms_dic get _comp;
+    {
+        _unit = _x;
+        if (vehicle _unit == _unit) then {
+            _mags = getMagazineCargo uniformContainer _unit;     
+            _unit addUniform _uniformType;
+            _unit addMagazines [(_mags#0)#0, (_mags#1)#0];
+        };
+    } forEach (allUnits select {side _x isEqualTo east});   
 };
