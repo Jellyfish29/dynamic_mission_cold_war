@@ -187,7 +187,7 @@ dyn_auto_suppress = {
                 _x doSuppressiveFire _targetPos;
             };
         } forEach _units;
-        sleep 8;
+        sleep 20;
         if (_grp getVariable ["dyn_is_retreating", false]) exitWith {};
     };
     _grp setVariable ["dyn_is_suppressing", false];
@@ -308,7 +308,7 @@ dyn_get_cardinal = {
 dyn_is_forest = {
     params ["_pos"];
 
-    _trees = nearestTerrainObjects [_fPos, ["Tree"], 50, false, true];
+    _trees = nearestTerrainObjects [_pos, ["Tree"], 50, false, true];
 
     if (count _trees > 25) exitWith {true};
 
@@ -371,4 +371,15 @@ dyn_opfor_change_uniform = {
             _unit addMagazines [(_mags#0)#0, (_mags#1)#0];
         };
     } forEach (allUnits select {side _x isEqualTo east});   
+};
+
+dyn_opfor_change_uniform_grp = {
+    params ["_grp"];
+    _uniformType = dyn_uniforms_dic get (dyn_en_comp#0);
+    {    
+        _unit = _x;
+        _mags = getMagazineCargo uniformContainer _unit;     
+        _unit addUniform _uniformType;
+        _unit addMagazines [(_mags#0)#0, (_mags#1)#0];
+    } forEach (units _grp);
 };

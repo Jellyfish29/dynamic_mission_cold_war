@@ -372,7 +372,7 @@ dyn_spawn_hq_garrison = {
 
 
 dyn_spawn_strongpoint = {
-    params ["_trg", "_validBuildings", "_amount", "_dir"];
+    params ["_trg", "_validBuildings", "_amount", "_dir", "_endTrg"];
     private ["_vicType", "_vicGrp"];
 
     _validBuildings = [_validBuildings, [], {count ([_x] call BIS_fnc_buildingPositions)}, "DESCEND"] call BIS_fnc_sortBy;
@@ -406,6 +406,9 @@ dyn_spawn_strongpoint = {
             (driver _vic) disableAI "PATH";
         };
 
+        // Continious Inf Spawn (90 degrees)
+        [_trg, _building, _endTrg] spawn dyn_spawn_def_waves;
+
         // small trench
 
         _tPos = [10 * (sin (_bDir + 90)), 10 * (cos (_bDir + 90)), 0] vectorAdd _vPos;
@@ -416,7 +419,7 @@ dyn_spawn_strongpoint = {
             _rPos = [8 * (sin (_bDir + _x)), 8 * (cos (_bDir + _x)), 0] vectorAdd (getPos _building);
             _razor =  "Land_Razorwire_F" createVehicle _rPos;
             _razor setDir (_bDir + _x);
-        } forEach [90, -90, 180];
+        } forEach [-90, 180];
 
         // garrison
         _grp = [[0,0,0], east, dyn_standart_fire_team] call BIS_fnc_spawnGroup;
@@ -425,8 +428,8 @@ dyn_spawn_strongpoint = {
         (units _grp) joinSilent _vicGrp;
 
         // Inf
-        _infPos = [10 * (sin (_dir - 180)), 10 * (cos (_dir - 180)), 0] vectorAdd (getPos _building);
-        [_infPos, _dir, false, false, false, false, false, dyn_standart_at_team] spawn dyn_spawn_covered_inf;
+        // _infPos = [10 * (sin (_dir - 180)), 10 * (cos (_dir - 180)), 0] vectorAdd (getPos _building);
+        // [_infPos, _dir, false, false, false, false, false, dyn_standart_at_team] spawn dyn_spawn_covered_inf;
 
         // Roadblock
         _road = [getPos _building, 80] call BIS_fnc_nearestRoad;
@@ -676,7 +679,7 @@ dyn_spawn_forest_position = {
 
     _grp = [(_forest#0)#0, _dir, true, false, false] call dyn_spawn_covered_inf;
 
-    [_trg, getPos _trg, _grp, false] spawn dyn_retreat;
+    [_trg, getPos _trg, [_grp], false] spawn dyn_retreat;
 };
 
 dyn_spawn_hill_overwatch = {
@@ -914,16 +917,17 @@ dyn_spawn_sandbag_positions = {
         _info = getRoadInfo _road;    
         _endings = [_info#6, _info#7];
         _endings = [_endings, [], {_x distance2D player}, "ASCEND"] call BIS_fnc_sortBy;
+        _roadWidth = _info#1;
         _bPos = ASLToATL (_endings#0);
         _roadDir = (_endings#1) getDir (_endings#0);
 
-        _sPos = [4 * (sin (_roadDir - 90)), 4 * (cos (_roadDir - 90)), -0.2] vectorAdd _bPos;
+        _sPos = [(_roadWidth / 2) * (sin (_roadDir - 90)), (_roadWidth / 2) * (cos (_roadDir - 90)), -0.2] vectorAdd _bPos;
 
         _sCover =  "land_gm_sandbags_01_wall_01" createVehicle _sPos;
         _sCover setDir _roadDir;
 
         _mgPos = [1.1 * (sin (_roadDir - 180)), 1.1 * (cos (_roadDir - 180)), 0] vectorAdd _sPos;
-        _lPos = [1.3 * (sin (_roadDir - 90)), 1.3 * (cos (_roadDir - 90)), 0] vectorAdd _mgPos;
+        _lPos = [1.4 * (sin (_roadDir - 90)), 1.4 * (cos (_roadDir - 90)), 0] vectorAdd _mgPos;
 
         _mgSoldier = _vGrp createUnit [dyn_standart_mg, _mgPos, [], 0, "NONE"];
         // _leSoldier = _vGrp createUnit [dyn_standart_soldier, _lPos, [], 0, "NONE"];
@@ -1112,6 +1116,7 @@ dyn_spawn_counter_attack = {
             private _grp = grpNull;
             if (_iPosFinal isEqualTo dyn_map_center) then {
                 _grp = [_iPos, east, dyn_standart_squad,[],[],[],[],[], (_dir - 180)] call BIS_fnc_spawnGroup;
+                [_grp] call dyn_opfor_change_uniform_grp;
             }
             else
             {
@@ -1121,6 +1126,7 @@ dyn_spawn_counter_attack = {
                     _vic setDir (_dir -180);
                     _grp = createVehicleCrew _vic;
                     _infGrp = [_iPosFinal, east, dyn_standart_squad,[],[],[],[],[], (_dir - 180)] call BIS_fnc_spawnGroup;
+                    [_infGrp] call dyn_opfor_change_uniform_grp;
                     {
                         _x assignAsCargo _vic;
                         _x moveInAny _vic;
@@ -1134,6 +1140,7 @@ dyn_spawn_counter_attack = {
                 else
                 {
                     _grp = [_iPosFinal, east, dyn_standart_squad,[],[],[],[],[], (_dir - 180)] call BIS_fnc_spawnGroup;
+                    [_grp] call dyn_opfor_change_uniform_grp;
                 };
             };
             [_grp] spawn dyn_select_atk_mode;
@@ -1165,6 +1172,7 @@ dyn_spawn_counter_attack = {
                 (units _grp2) joinSilent _grp;
                 _grp setFormation "LINE";
                 _grp setSpeedMode "FULL";
+                [_grp] call dyn_opfor_change_uniform_grp;
                 {
                     _x disableAI "AUTOCOMBAT";
                     _x disableAI "COVER";
@@ -1485,25 +1493,31 @@ dyn_spawn_def_waves = {
         _net = createVehicle ["land_gm_camonet_02_east", getPosATL _tVic, [], 0, "CAN_COLLIDE"];
         _net setVectorUp surfaceNormal position _net;
         _net setDir getDir _tVic;
+
+        _tPos = [10 * (sin _vDir), 10 * (cos _vDir), 0] vectorAdd (getPos _tVic);
+        [_tPos, _vDir] spawn dyn_spawn_small_trench;
+
         _spawnEndTrg = createTrigger ["EmptyDetector", getPos _tVic, true];
         _spawnEndTrg setTriggerActivation ["WEST", "PRESENT", false];
         _spawnEndTrg setTriggerStatements ["this", " ", " "];
-        _spawnEndTrg setTriggerArea [45, 45, 0, false];
+        _spawnEndTrg setTriggerArea [100, 100, 0, false];
 
         waitUntil {sleep 1; triggerActivated _trg};
 
         while {!(triggerActivated _spawnEndTrg) and !(triggerActivated _endTrg)} do {
             _grp = [_pos, east, dyn_standart_squad] call BIS_fnc_spawnGroup;
-            _grp setFormation "DIAMOND";
+            // _grp setFormation "DIAMOND";
+            _grp setCombatMode "RED";
             {
                 _x disableAI "AUTOCOMBAT";
                 _x moveInCargo _tVic;
             } forEach (units _grp);
             // [_building, _grp, 0] spawn dyn_garrison_building;
+            [_grp] call dyn_opfor_change_uniform_grp;
             sleep 5;
             _grp leaveVehicle _tVic;
             [objNull, [_grp]] spawn dyn_attack_nearest_enemy;
-            sleep ([240, 300] call BIS_fnc_randomInt);
+            sleep ([440, 600] call BIS_fnc_randomInt);
         };
     };                                                                                                                                                                                                                                                                                                       
 };

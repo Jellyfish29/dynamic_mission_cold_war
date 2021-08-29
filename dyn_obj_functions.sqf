@@ -630,9 +630,12 @@ dyn_town_defense = {
     private _solitaryBuildings = [];
     for "_i" from 8 to (count _validBuildings) - 1 do {
         _b = _validBuildings#_i;
+        _xMax = ((boundingBox _b)#1)#0;
+        _yMax = ((boundingBox _b)#1)#1;
+
         _ditances = (_validBuildings - [_b]) apply {_x distance2D _b};
         _valid = {
-            if (_x <= 20) exitWith {false};
+            if (_x <= 20 or _xMax > 10 or _yMax > 10) exitWith {false};
             true
         } forEach _ditances;
         if (_valid) then {
@@ -694,8 +697,8 @@ dyn_town_defense = {
 
     // [_aoPos, getPos _hq, "o_hq", "CP"] spawn dyn_spawn_intel_markers;
 
-    // create Strongpoint
-    [_aoPos, _solitaryBuildings, 1, _dir] spawn dyn_spawn_strongpoint; //[1, 2] call BIS_fnc_randomInt
+    // create Strongpoint inc Continuos Inf Spawn 
+    [_aoPos, _solitaryBuildings, 1, _dir, _endTrg] spawn dyn_spawn_strongpoint; //[1, 2] call BIS_fnc_randomInt
 
     // create Tank/APC
     private _vGrps = [];
@@ -739,7 +742,7 @@ dyn_town_defense = {
     [_aoPos, getPos _aoPos, [800, 1300] call BIS_fnc_randomInt, _watchPos] spawn dyn_spawn_side_town_guards;
 
     // Continuos Inf Spawn 
-    [_aoPos, _solitaryBuildings#((count _solitaryBuildings) - ([1, 5] call BIS_fnc_randomInt)), _endTrg] spawn dyn_spawn_def_waves;
+    // [_aoPos, _solitaryBuildings#((count _solitaryBuildings) - ([1, 5] call BIS_fnc_randomInt)), _endTrg] spawn dyn_spawn_def_waves;
 
 
     _allGrps

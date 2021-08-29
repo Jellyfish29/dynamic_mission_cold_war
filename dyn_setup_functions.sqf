@@ -482,11 +482,11 @@ dyn_main_setup = {
             _endTrg setTriggerActivation ["WEST SEIZED", "PRESENT", false];
             _endTrg setTriggerStatements ["this", " ", " "];
             _endTrg setTriggerArea [500, 500, _dir, false];
-            _endTrg setTriggerTimeout [300, 360, 420, false];
-            _enComp = selectRandom dyn_opfor_comp;
+            _endTrg setTriggerTimeout [180, 240, 300, false];
+            dyn_en_comp = selectRandom dyn_opfor_comp;
 
             if (_i > 0) then {
-                [getPos _loc, _dir, _endTrg, _campaignDir, getPos (_locations#(_i - 1)), _enComp] spawn dyn_create_markers;
+                [getPos _loc, _dir, _endTrg, _campaignDir, getPos (_locations#(_i - 1)), dyn_en_comp] spawn dyn_create_markers;
                 _dyn_defense_atkPos = getPos (_locations#(_i - 1));
 
                 // Supply Reinforcements
@@ -507,7 +507,7 @@ dyn_main_setup = {
             }
             else
             {
-                [getPos _loc, _dir, _endTrg, _campaignDir, getPos player, _enComp] spawn dyn_create_markers;
+                [getPos _loc, _dir, _endTrg, _campaignDir, getPos player, dyn_en_comp] spawn dyn_create_markers;
                 // if ((random 1) > 0.35) then {_startDefense = true};
             };
             [getPos _loc, _dir, _endTrg] spawn dyn_ambiance;
@@ -573,7 +573,7 @@ dyn_main_setup = {
 
             sleep 5;
 
-            [_enComp#0] call dyn_opfor_change_uniform;
+            [dyn_en_comp#0] call dyn_opfor_change_uniform;
 
                { 
                     _x addCuratorEditableObjects [allUnits, true]; 
@@ -582,17 +582,8 @@ dyn_main_setup = {
 
             sleep 10;
             if (_i < ((count _locations) - 1)) then {
-                if ((random 1) > 0.5) then {
-                    // [_endTrg, getPos (_locations#_i) , getPos (_locations#(_i + 1)), 5, 3, 4, false, dyn_standart_combat_vehicles, 800] spawn dyn_spawn_counter_attack;
-                    // [_endTrg, (allGroups select {side _x == east})] spawn dyn_attack_nearest_enemy;
-                    _retreatPos = getPos (_locations#(_i + 1));
-                    [_endTrg, _retreatPos, _townDefenseGrps, false] spawn dyn_retreat;
-                }
-                else
-                {
-                    _retreatPos = getPos (_locations#(_i + 1));
-                    [_endTrg, _retreatPos, _townDefenseGrps] spawn dyn_retreat;
-                };
+                _retreatPos = getPos (_locations#(_i + 1));
+                [_endTrg, _retreatPos, (allGroups select {side _x == east})] spawn dyn_retreat;
             };
 
             _garbagePos = getPos _endTrg;
