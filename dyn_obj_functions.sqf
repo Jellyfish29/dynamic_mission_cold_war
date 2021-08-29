@@ -617,18 +617,8 @@ dyn_town_defense = {
         [_rPos, _dir] call dyn_spawn_barriers;
     };
 
-    // Vehicle in Position
-    _vicAmount = ([1, 2] call BIS_fnc_randomInt) * 2;
-    for "_i" from 0 to _vicAmount step 2 do {
-        _b = _validBuildings#_i;
-        _xMax = ((boundingBox _b)#1)#0;
-        _vicType = selectRandom dyn_standart_combat_vehicles;
-        _vPos = [(_xMax + 5) * (sin _dir), (_xMax + 5) * (cos _dir), 0] vectorAdd (getPos _b);
-        _grp = [_vPos, _vicType, _dir, true, false] call dyn_spawn_covered_vehicle;
-    };
-
     private _solitaryBuildings = [];
-    for "_i" from 8 to (count _validBuildings) - 1 do {
+    for "_i" from 0 to (count _validBuildings) - 1 do {
         _b = _validBuildings#_i;
         _xMax = ((boundingBox _b)#1)#0;
         _yMax = ((boundingBox _b)#1)#1;
@@ -648,6 +638,18 @@ dyn_town_defense = {
     };;
     _solitaryBuildings = [_solitaryBuildings, [], {_x distance2D _watchPos}, "ASCEND"] call BIS_fnc_sortBy;
 
+    // Vehicle in Position
+    _vicAmount = ([1, 2] call BIS_fnc_randomInt) * 2;
+    for "_i" from 0 to _vicAmount step 2 do {
+        _b = _solitaryBuildings#_i;
+        _solitaryBuildings deleteAt _i;
+        _xMax = ((boundingBox _b)#1)#0;
+        _vicType = selectRandom dyn_standart_combat_vehicles;
+        _vPos = [(_xMax + 5) * (sin _dir), (_xMax + 5) * (cos _dir), 0] vectorAdd (getPos _b);
+        _grp = [_vPos, _vicType, _dir, true, false] call dyn_spawn_covered_vehicle;
+    };
+
+
     // // small trench Inf
     // for "_i" from 0 to ([1, 2] call BIS_fnc_randomInt) do {
     //     _infB = (_solitaryBuildings#([0, 7] call BIS_fnc_randomInt));
@@ -663,8 +665,9 @@ dyn_town_defense = {
 
     // small Strongpoint
     // for "_i" from 0 to ([0, 1] call BIS_fnc_randomInt) do {
-        _infB = selectRandom _solitaryBuildings;//(_solitaryBuildings#([0, 10] call BIS_fnc_randomInt));
-        _solitaryBuildings deleteAt (_solitaryBuildings find _infB);
+        _strongPointBuildings = +_solitaryBuildings;
+        reverse _strongPointBuildings;
+        _infB = (_strongPointBuildings#([3, 10] call BIS_fnc_randomInt));
         _grp = [_infB, _dir] spawn dyn_spawn_small_strong_point;
     // };
 

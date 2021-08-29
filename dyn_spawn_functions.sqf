@@ -39,6 +39,7 @@ dyn_spawn_mg_team_garrisons = {
             _n = _n + 1;
         };
     };
+    _mgGrp enableDynamicSimulation true;
 };
 
 dyn_spawn_covered_vehicle = {
@@ -82,6 +83,8 @@ dyn_spawn_covered_vehicle = {
 
         };
     };
+
+    _grp enableDynamicSimulation true;
 
 
     _grp
@@ -136,7 +139,6 @@ dyn_spawn_covered_inf = {
         _grp setFormation "LINE";
         _grp setFormDir _dir;
         (leader _grp) setDir _dir;
-        sleep 20;
         if (_sandBag) then {
             _sPos = getPos (leader _grp);
             _sDir =  getDir (leader _grp);
@@ -225,7 +227,6 @@ dyn_spawn_covered_inf = {
             };
         };
 
-        sleep 1;
 
         if (_bushes and !_trench) then {
             {
@@ -239,19 +240,17 @@ dyn_spawn_covered_inf = {
             } forEach (units _grp);
         };
 
-        sleep 5;
+
+        if !(_trench) then {
+            [_grp, _dir, 10, true, _covers] call dyn_line_form_cover;
+        }
+        else
         {
-            if !(_trench) then {
-                [_x, _dir, 15, true, _covers] spawn dyn_find_cover;
-            }
-            else
-            {
-                _x disableAI "PATH";
-                _x setUnitPosWeak "UP";
-            };
-        } forEach (units _grp);
+            [_grp, _dir, 5, false] call dyn_line_form_cover;
+        };
 
     };
+    _grp enableDynamicSimulation true;
     _grp
 };
 
@@ -297,7 +296,7 @@ dyn_spawn_dimounted_inf = {
         _b = "Land_Razorwire_F" createVehicle _bPos;
         _b setDir _vicDir;
     };
-
+    _grp enableDynamicSimulation true;
     _grp
 };
 
@@ -426,6 +425,7 @@ dyn_spawn_strongpoint = {
         [_building, _grp, _dir] spawn dyn_garrison_building;
         sleep 1;
         (units _grp) joinSilent _vicGrp;
+        _vicGrp enableDynamicSimulation true;
 
         // Inf
         // _infPos = [10 * (sin (_dir - 180)), 10 * (cos (_dir - 180)), 0] vectorAdd (getPos _building);
@@ -482,6 +482,7 @@ dyn_spawn_small_strong_point = {
         (units _oGrp) joinSilent _gGrp;
     };
 
+    _gGrp enableDynamicSimulation true;
     _gGrp
 };
 
@@ -494,6 +495,7 @@ dyn_spawn_small_trench = {
         sleep 1;
         _grp setFormation "LINE";
         _grp setFormDir _tDir;
+        [_grp, _tDir, 2, false] call dyn_line_form_cover;
         (leader _grp) setDir _tDir;
         sleep _delay;
         {
@@ -521,6 +523,7 @@ dyn_spawn_small_trench = {
             _tNet setPos ((getPos _tNet) vectorAdd [0,0,-2.3]);
         };
     };
+    _grp enableDynamicSimulation true;
     _grp
 };
 
@@ -566,6 +569,7 @@ dyn_spawn_static_weapon = {
         };
     };
     // detach _sCover;
+    _vGrp enableDynamicSimulation true;
     _vGrp
 };
 
@@ -580,6 +584,7 @@ dyn_spawn_aa = {
     _iPos = getPos _aa;
     _iPos = [5, 5] vectorAdd _iPos;
     _grp = [_iPos, east, dyn_standart_fire_team] call BIS_fnc_spawnGroup;
+    _grp enableDynamicSimulation true;
     _grp
 };
 
@@ -678,6 +683,7 @@ dyn_spawn_forest_position = {
     _forest = [_forest, [], {(_x#0) distance2D _pos}, "ASCEND"] call BIS_fnc_sortBy;
 
     _grp = [(_forest#0)#0, _dir, true, false, false] call dyn_spawn_covered_inf;
+    _grp enableDynamicSimulation true;
 
     [_trg, getPos _trg, [_grp], false] spawn dyn_retreat;
 };
@@ -758,7 +764,8 @@ dyn_spawn_bridge_defense = {
                 _facing = selectRandom [0, -180];
                 _distance = [70, 120] call BIS_fnc_randomInt;
                 _iPos = [_distance * (sin (_dir + _facing)), _distance * (cos (_dir + _facing)), 0] vectorAdd _bPos;
-                _grp = [_iPos, 20, true, true] spawn dyn_spawn_dimounted_inf;
+                _grp = [_iPos, 20, true, true] call dyn_spawn_dimounted_inf;
+                _grp enableDynamicSimulation true;
                 dyn_all_bridge_guards pushBack _grp;
             } forEach _defendedBridges;
         };
@@ -815,6 +822,7 @@ dyn_spawn_side_town_guards = {
             };
             for "_i" from 0 to _amount do {
                 _grp = [getPos _x, east, dyn_standart_fire_team] call BIS_fnc_spawnGroup;
+                _grp enableDynamicSimulation true;
                 dyn_all_side_town_guards pushBack _grp;
                 _buildingIdx = [0, 7] call BIS_fnc_randomInt;
                 [_validBuildings#_buildingIdx, _grp, _dir] spawn dyn_garrison_building;
@@ -939,6 +947,7 @@ dyn_spawn_sandbag_positions = {
             _x doWatch _sPos;
         } forEach [_mgSoldier];//, _leSoldier];
     };
+    _vGrp enableDynamicSimulation true;
 };
 
 dyn_spawn_random_garrison = {
@@ -957,6 +966,7 @@ dyn_spawn_random_garrison = {
         (units _grp) joinSilent _rGrp;
         deleteGroup _grp;
     };
+    _rGrp enableDynamicSimulation true;
 };
 
 dyn_spawn_supply_convoy = { 
@@ -1036,6 +1046,7 @@ dyn_retreat = {
     {
         _grp = _x;
         _grp setVariable ["dyn_is_retreating", true];
+        _grp enableDynamicSimulation false;
         if (vehicle (leader _grp) != leader _grp) then {
             vehicle (leader _grp) setFuel 1;
             [vehicle (leader _grp), "SmokeLauncher"] call BIS_fnc_fire;

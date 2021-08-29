@@ -15,19 +15,19 @@ dyn_find_cover = {
         {
             if !(_x in dyn_covers) exitWith {
                 dyn_covers pushBack _x;
-                _unit doMove (getPos _x);
+                _unit doMove (getPosASL _x);
                 waitUntil {sleep 0.1; (unitReady _unit) or (!alive _unit)};
                 _unit setUnitPos "MIDDLE";
                 sleep 1;
                 if (_moveBehind) then {
                     _moveDir = _watchDir - 180;
-                    _coverPos =  [2*(sin _moveDir), 2*(cos _moveDir), 0] vectorAdd (getPos _unit);
+                    _coverPos =  [2*(sin _moveDir), 2*(cos _moveDir), 0] vectorAdd (getPosASL _unit);
                     _unit doMove _coverPos;
                     sleep 1;
                     waitUntil {sleep 0.1; (unitReady _unit) or (!alive _unit)};
                     doStop _unit;
                     _unit doWatch _watchPos;
-                _unit disableAI "PATH";
+                    _unit disableAI "PATH";
                 }
                 else
                 {
@@ -67,6 +67,61 @@ dyn_find_cover = {
     };
 };
 
+dyn_line_form_cover = {
+    params ["_grp", "_watchDir", "_lineSpacing", "_findCover", ["_addCovers", []]];
+    private ["_startPos", "_offSet", "_moveDir", "_setPos"];
+
+    _units = units _grp;
+    _startPos = getPosASL (leader _grp);
+    _offSet = 0;
+    for "_i" from 0 to ((count (units _grp))- 1) do {
+        _unit = _units#_i;
+        if ((_i % 2) != 0) then {
+            _offSet = _offSet + _lineSpacing;
+            _moveDir = _watchDir - 90;
+        }
+        else
+        {
+            _moveDir = _watchDir + 90;
+        };
+        _setPos = [_offSet * (sin _moveDir), _offSet * (cos _moveDir), 0] vectorAdd _startPos;
+        _covers = nearestTerrainObjects [_setPos, dyn_valid_cover, 6, true, true];
+        _covers = _covers + _addCovers;
+        // _unit enableAI "AUTOCOMBAT";
+        _watchPos = [1000*(sin _watchDir), 1000*(cos _watchDir), 0] vectorAdd _setPos;
+
+        if (((count _covers) > 0) and _findCover) then {
+            {
+                if !(_x in dyn_covers) then {
+                    dyn_covers pushBack _x;
+                    _moveDir = _watchDir - 180;
+                    _coverPos =  [2*(sin _moveDir), 2*(cos _moveDir), 0] vectorAdd (getPosASL _x);
+                    _unit setPosASL _coverPos;
+                    _unit setUnitPos "MIDDLE";
+                    _unit doWatch _watchPos;
+                    _unit disableAI "PATH";
+                }
+                else
+                {
+                    _unit setPosASL _setPos;
+                };
+            } forEach _covers;
+
+            if ((unitPos _unit) == "Auto") then {
+                _unit setUnitPos "DOWN";
+                _unit doWatch _watchPos;
+                _unit disableAI "PATH";
+            };
+        }
+        else
+        {
+            _unit setPosASL _setPos;
+            _unit setUnitPos "MIDDLE";
+            _unit doWatch _watchPos;
+            _unit disableAI "PATH";
+        };
+    };
+};
 
 dyn_garrison_building = {
     params ["_building", "_grp", "_dir"];

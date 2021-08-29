@@ -1,5 +1,6 @@
 dyn_debug = false;
-setGroupIconsVisible [true,false];
+// setGroupIconsVisible [true,false];
+"Group" setDynamicSimulationDistance 600;
 
 addMissionEventHandler ["TeamSwitch", {
     params ["_previousUnit", "_newUnit"];
@@ -578,7 +579,7 @@ dyn_main_setup = {
                { 
                     _x addCuratorEditableObjects [allUnits, true]; 
                     _x addCuratorEditableObjects [vehicles, true];  
-               } forEach allCurators; 
+               } forEach allCurators;
 
             sleep 10;
             if (_i < ((count _locations) - 1)) then {
