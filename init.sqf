@@ -13,6 +13,8 @@ dyn_standart_light_amored_vics = ["cwr3_o_btr80", "cwr3_o_brdm2", "cwr3_o_brdm2_
 dyn_standart_flag = "cwr3_flag_ussr";
 dyn_standart_statics_high = ["vn_o_vc_static_pk_high"]; //["cwr3_o_nsv_high"];
 dyn_standart_statics_low = ["vn_o_vc_static_pk_low"]; //["cwr3_o_nsv_low", "cwr3_o_ags30", "cwr3_o_spg9"];
+dyn_standart_statics_atgm = ["cwr3_o_konkurs_tripod"];
+dyn_standart_statics_atgun = ["cwr3_o_spg9"];
 dyn_attack_heli = "cwr3_o_mi24d";
 dyn_recon_convoy = ["cwr3_o_btr80", "cwr3_o_btr80", "cwr3_o_brdm2_atgm", "cwr3_o_brdm2um", "cwr3_o_brdm2"];
 dyn_hq_vehicles = ["cwr3_o_bmp2_hq", "cwr3_o_ural_hq"];
@@ -30,7 +32,7 @@ sleep 10;
 
 
 // "CUP_B_A10_DYN_USA"
-pl_cas_Heli_1 = "cwr3_b_ah64";
+pl_cas_Heli_1 = "gm_ge_army_bo105p_pah1a1";
 pl_medevac_Heli_1 = "cwr3_b_uh1_mev";
 pl_cas_plane_1 = "RHS_A10";
 pl_cas_plane_2 = "RHS_A10";

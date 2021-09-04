@@ -1,6 +1,5 @@
 dyn_debug = false;
 // setGroupIconsVisible [true,false];
-"Group" setDynamicSimulationDistance 600;
 
 addMissionEventHandler ["TeamSwitch", {
     params ["_previousUnit", "_newUnit"];
@@ -117,7 +116,7 @@ dyn_create_markers = {
     // _marker6 setMarkerColor "colorOPFOR";
 
     _marker7 = createMarker [format ["player%1", _pos], _playerPos];
-    _marker7 setMarkerType "flag_USA";
+    _marker7 setMarkerType "flag_Germany";
 
     _arrowPos = [(_playerPos distance2d _pos) / 2 * (sin (_playerPos getDir _pos)), (_playerPos distance2d _pos) / 2 * (cos (_playerPos getDir _pos)), 0] vectorAdd _playerPos;
     _marker8 = createMarker [format ["arrow%1", _pos], _arrowPos];
@@ -129,10 +128,10 @@ dyn_create_markers = {
 
     _teamPos = [2200 * (sin _dir), 2200 * (cos _dir), 0] vectorAdd _rightPos;
     _marker9 = createMarker [format ["team%1", _pos], _teamPos];
-    _marker9 setMarkerType "b_mech_inf";
+    _marker9 setMarkerType "b_armor";
     _marker9 setMarkerSize [0.5, 0.5];
     // _marker9 setMarkerDir _dir;
-    _marker9 setMarkerText "Team YANKEE";
+    _marker9 setMarkerText "2./PzBtl 203";
 
     _marker10 = createMarker [format ["teamsize%1", _pos], _teamPos];
     _marker10 setMarkerType "group_4";
@@ -339,7 +338,7 @@ dyn_main_setup = {
 
     ////---------------------Version 2------------------------------
     dyn_map_center = [worldSize / 2, worldsize / 2, 0];
-    _startPairs = [["start_0", "obj_0"], ["start_1", "obj_1"], ["start_2", "obj_2"], ["start_3", "obj_3"], ["start_4", "obj_4"], ["start_5", "obj_5"], ["start_6", "obj_6"], ["start_7", "obj_7"], ["start_8", "obj_8"], ["start_9", "obj_9"], ["start_10", "obj_10"]];
+    _startPairs = [["start_0", "obj_0"], ["start_1", "obj_1"], ["start_2", "obj_2"], ["start_3", "obj_3"], ["start_4", "obj_4"], ["start_5", "obj_5"], ["start_6", "obj_6"], ["start_7", "obj_7"], ["start_8", "obj_8"], ["start_9", "obj_9"], ["start_10", "obj_10"], ["start_11", "obj_11"], ["start_12", "obj_12"], ["start_13", "obj_13"], ["start_14", "obj_14"]];
     _startPair = selectRandom _startPairs;
 
     // debug override
@@ -431,7 +430,7 @@ dyn_main_setup = {
                 };
 
                 // between town Defenses
-                if (((getPos _loc) distance2D _pos) > 4000) then {
+                if (((getPos _loc) distance2D _pos) > 3500) then {
                     _midDistance = ((getPos _loc) distance2D _pos) / 2;
                     _midPoint = [_midDistance * (sin (_dir - 180)), _midDistance * (cos (_dir - 180)), 0] vectorAdd _pos;
                     _midDefenses = true;
@@ -492,17 +491,17 @@ dyn_main_setup = {
 
                 // Supply Reinforcements
                 if (({alive _x} count (units dyn_support_group)) <= 0 or !alive dyn_support_vic or isNull dyn_repair_vic) then {
-                    dyn_support_vic = createVehicle ["cwr3_b_m939", _playerStart, [], 40, "NONE"];
+                    dyn_support_vic = createVehicle ["gm_ge_army_u1300l_cargo", _playerStart, [], 40, "NONE"];
                     dyn_support_group = createVehicleCrew dyn_support_vic;
-                    dyn_support_group setGroupId [format ["Echo %1", 2 +_i]];
+                    dyn_support_group setGroupId [format ["TraTrp %1", 2 +_i]];
                     player hcSetGroup [dyn_support_group];
                 };
 
                 sleep 1;
                 if (({alive _x} count (units dyn_repair_group)) <= 0 or !alive dyn_repair_vic or isNull dyn_repair_vic) then {
-                    dyn_repair_vic = createVehicle ["cwr3_b_m939_repair", _playerStart, [], 40, "NONE"];
+                    dyn_repair_vic = createVehicle ["gm_ge_army_u1300l_repair", _playerStart, [], 40, "NONE"];
                     dyn_repair_group = createVehicleCrew dyn_repair_vic;
-                    dyn_repair_group setGroupId [format ["Echo %1", 3 +_i]];
+                    dyn_repair_group setGroupId [format ["GSITrp %1", 3 +_i]];
                     player hcSetGroup [dyn_repair_group];
                 };
             }
@@ -515,15 +514,15 @@ dyn_main_setup = {
 
             [west, format ["task_%1", _i], ["Offensive", format ["Capture %1", _locationName], ""], getPos _loc, "ASSIGNED", 1, true, "attack", false] call BIS_fnc_taskCreate;
 
-            if (_i > 0) then {
-                sleep 160;
+            if (_i > 0 and !dyn_debug) then {
+                sleep 120;
             };
 
             _townDefenseGrps = [_trg, _endTrg, _dir] call dyn_town_defense;
 
             if (_midDefenses) then {
 
-                _defenseType = selectRandom ["line", "point", "roadem"];
+                _defenseType = selectRandom ["line", "point"];
 
                 // debug
                 // _defenseType = "mobiletank";
@@ -537,13 +536,15 @@ dyn_main_setup = {
                     default {[_midPoint, _trg, _dir, true] call dyn_defense_line}; 
                 };
 
-                [_midPoint, 2000, [2, 3] call BIS_fnc_randomInt, _trg] spawn dyn_spawn_forest_patrol;
+                [_midPoint, 2000, [2, 3] call BIS_fnc_randomInt, _trg, _dir] spawn dyn_spawn_forest_patrol;
 
                 [_midPoint, 2000, 400, _midPoint] spawn dyn_spawn_bridge_defense;
 
                 [_midPoint, 2000, 1, _trg] spawn dyn_spawn_hill_overwatch;
 
-                [_endTrg, _midPoint, 2000, _midPoint] spawn dyn_spawn_side_town_guards;
+                [_endTrg, _midPoint, 1500, _midPoint] spawn dyn_spawn_side_town_guards;
+
+                [objNull, _midPoint getPos [[100, 300] call BIS_fnc_randomInt, [0, 359] call BIS_fnc_randomInt], "b_mech_inf", "MechInfCoy.", "colorOPFOR", 0.8] call dyn_spawn_intel_markers;
 
                 if (dyn_debug) then {
                     _m = createMarker [str (random 1), _midPoint];
@@ -556,7 +557,7 @@ dyn_main_setup = {
                 _defenseType = selectRandom ["mobileTank", "recon", "empty"];
 
                 // debug
-                // _defenseType = "forest";
+                // _defenseType = "point";
 
                 switch (_defenseType) do { 
                     case "line" : {[getPos _loc, _trg, _dir] call dyn_defense_line}; 
@@ -570,6 +571,17 @@ dyn_main_setup = {
                 };
             };
 
+            if (_i + 1 < (count _locations) - 1) then {
+                _mP1 = getPos (_locations#(_i + 1)) getPos [200, 0];
+                [objNull, _mP1 , "b_hq", "RegCP.", "colorOPFOR", 0.8] call dyn_spawn_intel_markers;
+                [objNull, _mP1, "colorOpfor", 1000] call dyn_spawn_intel_markers_area;
+            };
+            if (_i + 2 < (count _locations) - 1) then {
+                _mP2 = getPos (_locations#(_i + 2)) getPos [200, 0];
+                [objNull, _mP2, "b_art", "ArtReg.", "colorOPFOR", 0.8] call dyn_spawn_intel_markers;
+                [objNull, _mP2, "colorOpfor", 1600] call dyn_spawn_intel_markers_area;
+            };
+
             // [getPos _loc, _dir] spawn dyn_spawn_heli_attack;
 
             sleep 5;
@@ -579,7 +591,7 @@ dyn_main_setup = {
                { 
                     _x addCuratorEditableObjects [allUnits, true]; 
                     _x addCuratorEditableObjects [vehicles, true];  
-               } forEach allCurators;
+               } forEach allCurators; 
 
             sleep 10;
             if (_i < ((count _locations) - 1)) then {
@@ -588,21 +600,6 @@ dyn_main_setup = {
             };
 
             _garbagePos = getPos _endTrg;
-
-            // sleep 10;
-
-            // {
-            //     if (((leader _x) distance2D (getPos _trg)) > 3500) then {
-            //         [objNull, getPos _endTrg, [_x]] spawn dyn_retreat;
-            //     };
-            // } forEach dyn_all_side_town_guards;
-
-            
-            // {
-            //     if (((leader _x) distance2D (getPos _trg)) > 3500) then {
-            //         [objNull, getPos _endTrg, [_x]] spawn dyn_retreat;
-            //     };
-            // } forEach dyn_all_bridge_guards;
 
             if !(dyn_debug) then {
                 waitUntil {sleep 1; triggerActivated _endTrg};
