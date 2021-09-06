@@ -23,13 +23,17 @@ dyn_opfor_comp = [["b_mech_inf", "232. MechInfBtl"], ["b_inf", "16. GdsInfBtl"],
 dyn_uniforms_dic = createHashMapFromArray [["b_mech_inf", "cwr3_o_uniform_kzs_v1"], ["b_inf", "cwr3_o_uniform_m1982"], ["b_motor_inf", "cwr3_o_uniform_kzs_v2"], ["b_armor", "cwr3_o_uniform_kzs_v2"]];
 
 execVM "dyn_ai_functions.sqf";
-execVM "dyn_spawn_functions.sqf";
+execVm "dyn_satic_placements_functions.sqf";
+execVM "dyn_dynamic_placements_functions.sqf";
+execVm "dyn_ai_supports_functions.sqf";
 execVM "dyn_obj_functions.sqf";
 execVM "dyn_setup_functions.sqf";
 
+"Group" setDynamicSimulationDistance 650;
 
 sleep 10;
-
+dyn_player_support_vic_type = typeOf dyn_support_vic;
+dyn_player_repair_vic_type = typeOf dyn_repair_vic;
 
 // "CUP_B_A10_DYN_USA"
 pl_cas_Heli_1 = "gm_ge_army_bo105p_pah1a1";

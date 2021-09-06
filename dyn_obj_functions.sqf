@@ -561,15 +561,97 @@ dyn_recon_convoy = {
     };
 };
 
+dyn_ambush = {
+    params ["_locPos", "_townTrg", "_dir", ["_exactPos", false]];
+
+    _defPos = _locPos getPos [1800, _dir];
+
+    _trgPos = _defPos getPos [300, _dir];
+    private _atkTrg = createTrigger ["EmptyDetector", _trgPos, true];
+    _atkTrg setTriggerActivation ["WEST", "PRESENT", false];
+    _atkTrg setTriggerStatements ["this", " ", " "];
+    _atkTrg setTriggerArea [2500, 65, _dir, true];
+
+    // //debug
+    // _m = createMarker [str (random 1), _trgPos];
+    // _m setMarkerType "mil_objective";
+
+    _amount = [2, 4] call BIS_fnc_randomInt;
+    _ambushLocs = selectBestPlaces [_defPos, 600, "meadow + forest", 95, _amount];
+
+    private _mgGrps = []; 
+    {
+        [_x#0, _dir, true, true, selectRandom dyn_standart_statics_atgm] call dyn_spawn_static_weapon;
+
+        // //debug
+        // _m = createMarker [str (random 1), _x#0];
+        // _m setMarkerType "mil_dot";
+
+        for "_i" from 0 to 2 do {
+            _mgPos = (_x#0) getPos [8 * _i, _dir + 90];
+            _grp = createGroup [east, true];
+            _grp setVariable ["pl_not_recon_able", true];
+            _mg = _grp createUnit [dyn_standart_mg, _mgPos, [], 0, "NONE"];
+            doStop _mg;
+            _mg disableAI "PATH"; 
+            _mg setUnitPos "Middle";
+            _mg setDir _dir;
+            _mg enableDynamicSimulation true;
+            _mgGrps pushBack _grp;
+            _bush = "gm_b_crataegus_monogyna_01_summer" createVehicle _mgPos;
+        };
+    } forEach _ambushLocs;
+
+
+    private _allVicGroups = [];
+    _mediPos = _locPos getPos [1200, _dir];
+    _vicType = selectRandom dyn_standart_light_amored_vics;
+    _mediPos = _mediPos findEmptyPosition [0, 400, _vicType];
+    for "_j" from 0 to ([2, 3] call BIS_fnc_randomInt) do {
+        _vicType = selectRandom dyn_standart_light_amored_vics;
+        _vicPos =_mediPos getPos [25 * _j, _dir + 90];
+        _grp = [_vicPos, 0, [_vicType], _dir] call dyn_spawn_parked_vehicle;
+        _grp setVariable ["pl_not_recon_able", true];
+        _allVicGroups pushBack _grp;
+    };
+
+    _playerVicsCount = count (vehicles select {side _x == playerSide and alive _X});
+
+
+    [_atkTrg, _locPos, _dir, _mgGrps, _playerVicsCount, _allVicGroups, _townTrg] spawn {
+        params ["_atkTrg", "_locPos", "_dir", "_mgGrps", "_playerVicsCount", "_allVicGroups", "_townTrg"];
+        _rearPos = _locPos getPos [1800, _dir - 180];
+
+        waitUntil{sleep 1; triggerActivated _atkTrg or (count (vehicles select {side _x == playerSide and alive _X}) < _playerVicsCount)};
+
+        [objNull, getPos _atkTrg, getPos _townTrg, [2, 3] call BIS_fnc_randomInt, [2, 3] call BIS_fnc_randomInt, 2] spawn dyn_spawn_counter_attack;
+
+        [objNull, _allVicGroups] spawn dyn_attack_nearest_enemy;
+        {
+            [_x, 1000, false] spawn dyn_auto_suppress;
+        } forEach _mgGrps;
+        _fireSupport = selectRandom [2,3,2,2];
+
+        switch (_fireSupport) do { 
+            case 1 : {[_rearPos, _atkTrg] spawn dyn_spawn_rocket_arty}; 
+            case 2 : {[true] spawn dyn_arty; [true] spawn dyn_arty};
+            case 3 : {[false] spawn dyn_arty; [false] spawn dyn_arty; [false] spawn dyn_arty};
+            default {}; 
+         }; 
+    };
+};
+
 
 dyn_town_defense = {
     params ["_aoPos", "_endTrg", "_dir"];
-    private ["_watchPos", "_validBuildings", "_patrollPos", "_allGrps"];
+    private ["_watchPos", "_validBuildings", "_patrollPos", "_allGrps", "_weferlingen"];
     // private _dir = 360 + ((triggerArea _aoPos)#2);
     _watchPos = [1400 * (sin _dir), 1400 * (cos _dir), 0] vectorAdd (getPos _aoPos);
     _validBuildings = [];
     _patrollPos = [];
     _allGrps = [];
+    _weferlingen = false;
+    if (((triggerArea _aoPos)#0) == 800) then {_weferlingen = true};
 
     // create outer Garrison
     _allBuildings = nearestObjects [(getPos _aoPos), ["house"], (triggerArea _aoPos)#0];
@@ -587,6 +669,9 @@ dyn_town_defense = {
 
     // Random Garrison
     [_validBuildings, [3, 5] call BIS_fnc_randomInt, _dir] call dyn_spawn_random_garrison;
+    if (_weferlingen) then {
+        [_validBuildings, [1, 3] call BIS_fnc_randomInt, _dir] call dyn_spawn_random_garrison;
+    };
 
     // Reinforcements
     if ((random 1) >= 0.5) then {
@@ -668,6 +753,7 @@ dyn_town_defense = {
     // };
 
 
+
     // large trench Inf
     // if ((random 1) > 0.25) then {
     //     _distance = [70, 100] call BIS_fnc_randomInt;
@@ -707,6 +793,11 @@ dyn_town_defense = {
         _grp = [getPos _aoPos, 250, dyn_standart_combat_vehicles + [dyn_standart_MBT] + [dyn_standart_light_amored_vic]] call dyn_spawn_parked_vehicle;
         _vGrps pushBack _grp;
         _allGrps pushBack _grp;
+        if (_weferlingen) then {
+            _grp = [getPos _aoPos, 250, dyn_standart_combat_vehicles + [dyn_standart_MBT] + [dyn_standart_light_amored_vic]] call dyn_spawn_parked_vehicle;
+            _vGrps pushBack _grp;
+            _allGrps pushBack _grp;
+        };
     };
     if ((random 1) > 0.75) then {
         [_aoPos, _vGrps] spawn dyn_attack_nearest_enemy;
@@ -718,7 +809,9 @@ dyn_town_defense = {
     };
 
     // Supply Convoy
-    // [_aoPos, getPos _hq, _dir - 180] spawn dyn_spawn_supply_convoy;
+    // if (_weferlingen) then {
+    //     [_aoPos, getPos (selectRandom _solitaryBuildings), _dir - 180] spawn dyn_spawn_supply_convoy;
+    // };
 
     //AA
     if ((random 1) > 0.5) then {

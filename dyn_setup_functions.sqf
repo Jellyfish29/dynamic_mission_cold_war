@@ -338,11 +338,11 @@ dyn_main_setup = {
 
     ////---------------------Version 2------------------------------
     dyn_map_center = [worldSize / 2, worldsize / 2, 0];
-    _startPairs = [["start_0", "obj_0"], ["start_1", "obj_1"], ["start_2", "obj_2"], ["start_3", "obj_3"], ["start_4", "obj_4"], ["start_5", "obj_5"], ["start_6", "obj_6"], ["start_7", "obj_7"], ["start_8", "obj_8"], ["start_9", "obj_9"], ["start_10", "obj_10"], ["start_11", "obj_11"], ["start_12", "obj_12"], ["start_13", "obj_13"], ["start_14", "obj_14"]];
+    _startPairs = [["start_0", "obj_0"], ["start_1", "obj_1"], ["start_2", "obj_2"], ["start_3", "obj_3"], ["start_4", "obj_4"], ["start_5", "obj_5"], ["start_6", "obj_6"], ["start_7", "obj_7"], ["start_8", "obj_8"], ["start_9", "obj_9"], ["start_10", "obj_10"], ["start_11", "obj_11"], ["start_12", "obj_12"], ["start_13", "obj_13"], ["start_14", "obj_14"], ["start_15", "obj_15"], ["start_16", "obj_16"]];
     _startPair = selectRandom _startPairs;
 
     // debug override
-    // _startPair = ["start_10", "obj_10"];
+    // _startPair = ["start_16", "obj_16"];
 
     _playerStart = getMarkerPos (_startPair#0);
     _startLoc = nearestLocation [getMarkerPos (_startPair#1), ""];
@@ -382,6 +382,14 @@ dyn_main_setup = {
             if (_valid) then {dyn_locations pushBackUnique _loc};
         };
         _loc = nearestLocation [_pos, "NameCity"];
+        if ((_pos distance2D (getPos _loc)) < 2500) then {
+            _valid = {
+                if (((getPos _x) distance2D (getPos _loc)) < 3000) exitWith {false};
+                true 
+            } forEach dyn_locations;
+            if (_valid) then {dyn_locations pushBackUnique _loc};
+        };
+        _loc = nearestLocation [_pos, "NameCityCapital"];
         if ((_pos distance2D (getPos _loc)) < 2500) then {
             _valid = {
                 if (((getPos _x) distance2D (getPos _loc)) < 3000) exitWith {false};
@@ -458,7 +466,7 @@ dyn_main_setup = {
 
             _startDefense = false;
             
-            if (((random 1) > 0.55 and (_dyn_defense_atkPos distance2D (getPos _loc)) > 3000 and _i > 0) or _startDefense) then {
+            if ((((random 1) > 0.55 and (_dyn_defense_atkPos distance2D (getPos _loc)) > 3000 and _i > 0) or _startDefense) and !dyn_debug) then {
                 _waitTime = 900;
                 if (_startDefense) then {_waitTime = 360};
                 [_dyn_defense_atkPos, getPos _loc, _waitTime] spawn dyn_defense;
@@ -473,15 +481,17 @@ dyn_main_setup = {
                 sleep 10;
             };
 
+            private _aoArea = 400;
+            if(_locationName == "") then {_aoArea = 800};
             _trg = createTrigger ["EmptyDetector", (getPos _loc), true];
             _trg setTriggerActivation ["WEST", "PRESENT", false];
             _trg setTriggerStatements ["this", " ", " "];
-            _trg setTriggerArea [400, 400, _dir, false];
+            _trg setTriggerArea [_aoArea, _aoArea, _dir, false];
 
             _endTrg = createTrigger ["EmptyDetector", (getPos _loc), true];
             _endTrg setTriggerActivation ["WEST SEIZED", "PRESENT", false];
             _endTrg setTriggerStatements ["this", " ", " "];
-            _endTrg setTriggerArea [500, 500, _dir, false];
+            _endTrg setTriggerArea [_aoArea + 100, _aoArea + 100, _dir, false];
             _endTrg setTriggerTimeout [180, 240, 300, false];
             dyn_en_comp = selectRandom dyn_opfor_comp;
 
@@ -491,7 +501,7 @@ dyn_main_setup = {
 
                 // Supply Reinforcements
                 if (({alive _x} count (units dyn_support_group)) <= 0 or !alive dyn_support_vic or isNull dyn_repair_vic) then {
-                    dyn_support_vic = createVehicle ["gm_ge_army_u1300l_cargo", _playerStart, [], 40, "NONE"];
+                    dyn_support_vic = createVehicle [dyn_player_support_vic_type, _playerStart, [], 40, "NONE"];
                     dyn_support_group = createVehicleCrew dyn_support_vic;
                     dyn_support_group setGroupId [format ["TraTrp %1", 2 +_i]];
                     player hcSetGroup [dyn_support_group];
@@ -499,7 +509,7 @@ dyn_main_setup = {
 
                 sleep 1;
                 if (({alive _x} count (units dyn_repair_group)) <= 0 or !alive dyn_repair_vic or isNull dyn_repair_vic) then {
-                    dyn_repair_vic = createVehicle ["gm_ge_army_u1300l_repair", _playerStart, [], 40, "NONE"];
+                    dyn_repair_vic = createVehicle [dyn_player_repair_vic_type, _playerStart, [], 40, "NONE"];
                     dyn_repair_group = createVehicleCrew dyn_repair_vic;
                     dyn_repair_group setGroupId [format ["GSITrp %1", 3 +_i]];
                     player hcSetGroup [dyn_repair_group];
@@ -518,14 +528,15 @@ dyn_main_setup = {
                 sleep 120;
             };
 
+
             _townDefenseGrps = [_trg, _endTrg, _dir] call dyn_town_defense;
 
             if (_midDefenses) then {
 
-                _defenseType = selectRandom ["line", "point"];
+                _defenseType = selectRandom ["line", "point", "ambush"];
 
                 // debug
-                // _defenseType = "mobiletank";
+                // _defenseType = "ambush";
 
                 switch (_defenseType) do { 
                     case "line" : {[_midPoint, _trg, _dir, true] call dyn_defense_line}; 
@@ -533,6 +544,7 @@ dyn_main_setup = {
                     case "mobileTank" : {[_midPoint, _trg, _dir, true] call dyn_mobile_armor_defense};
                     case "roadem" : {[_midPoint, _trg, _dir] call dyn_road_emplacemnets};
                     case "recon" : {[_midPoint, _trg, _dir] call dyn_recon_convoy};
+                    case "ambush" : {[_midPoint, _trg, _dir] call dyn_ambush};
                     default {[_midPoint, _trg, _dir, true] call dyn_defense_line}; 
                 };
 
@@ -557,7 +569,7 @@ dyn_main_setup = {
                 _defenseType = selectRandom ["mobileTank", "recon", "empty"];
 
                 // debug
-                // _defenseType = "point";
+                // _defenseType = "ambush";
 
                 switch (_defenseType) do { 
                     case "line" : {[getPos _loc, _trg, _dir] call dyn_defense_line}; 
@@ -566,6 +578,7 @@ dyn_main_setup = {
                     // case "roadem" : {[getPos _loc, _trg, _dir] call dyn_road_emplacemnets};
                     case "recon" : {[getPos _loc, _trg, _dir] call dyn_recon_convoy};
                     case "forest" : {[getPos _loc, _trg, _dir] call dyn_forest_position};
+                    case "ambush" : {[getPos _loc, _trg, _dir] call dyn_ambush};
                     case "empty" : {};
                     default {[getPos _loc, _trg, _dir] call dyn_defense_line}; 
                 };
