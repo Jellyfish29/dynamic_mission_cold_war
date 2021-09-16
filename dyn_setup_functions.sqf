@@ -1,62 +1,62 @@
 dyn_debug = false;
 // setGroupIconsVisible [true,false];
 
-addMissionEventHandler ["TeamSwitch", {
-    params ["_previousUnit", "_newUnit"];
-    _hcc = allMissionObjects "HighCommand" select 0;
-    _hcs = allMissionObjects "HighCommandSubordinate" select 0;
-    deleteVehicle _hcc;
-    // deleteVehicle _previousUnit;
-    createGroup (sideLogic) createUnit ["HighCommand", [0, 0, 0], [], 0, "NONE"];
-    _hcc = allMissionObjects "HighCommand" select 0;
-    _newUnit synchronizeObjectsAdd [_hcc];
-    _hcc synchronizeObjectsAdd [_hcs];
-    [] call dyn_add_all_groups;
+// addMissionEventHandler ["TeamSwitch", {
+//     params ["_previousUnit", "_newUnit"];
+//     _hcc = allMissionObjects "HighCommand" select 0;
+//     _hcs = allMissionObjects "HighCommandSubordinate" select 0;
+//     deleteVehicle _hcc;
+//     // deleteVehicle _previousUnit;
+//     createGroup (sideLogic) createUnit ["HighCommand", [0, 0, 0], [], 0, "NONE"];
+//     _hcc = allMissionObjects "HighCommand" select 0;
+//     _newUnit synchronizeObjectsAdd [_hcc];
+//     _hcc synchronizeObjectsAdd [_hcs];
+//     [] call dyn_add_all_groups;
 
-    _newUnit addEventHandler ["GetInMan", {
-        params ["_unit", "_role", "_vehicle", "_turret"];
-        private ["_group"];
-        _group = group player;
-        _vicGroup = group (driver (vehicle player));
-        if (_vicGroup != (group player)) then {
-            player setVariable ["pl_player_vicGroup", _vicGroup];
-            // _vicGroup setVariable ["setSpecial", true];
-            // _vicGroup setVariable ["specialIcon", "\A3\ui_f\data\igui\cfg\simpleTasks\types\truck_ca.paa"];
-            _vicGroup setVariable ["pl_has_cargo", true];
-            // _group setVariable ["pl_show_info", false];
-            [_group] call pl_hide_group_icon;
-            // player hcRemoveGroup _group;
-        };
-    }];
+//     _newUnit addEventHandler ["GetInMan", {
+//         params ["_unit", "_role", "_vehicle", "_turret"];
+//         private ["_group"];
+//         _group = group player;
+//         _vicGroup = group (driver (vehicle player));
+//         if (_vicGroup != (group player)) then {
+//             player setVariable ["pl_player_vicGroup", _vicGroup];
+//             // _vicGroup setVariable ["setSpecial", true];
+//             // _vicGroup setVariable ["specialIcon", "\A3\ui_f\data\igui\cfg\simpleTasks\types\truck_ca.paa"];
+//             _vicGroup setVariable ["pl_has_cargo", true];
+//             // _group setVariable ["pl_show_info", false];
+//             [_group] call pl_hide_group_icon;
+//             // player hcRemoveGroup _group;
+//         };
+//     }];
 
-    _newUnit addEventHandler ["GetOutMan", {
-        params ["_unit", "_role", "_vehicle", "_turret"];
-        private ["_group"];
-        _group = group player;
-        _vicGroup = player getVariable ["pl_player_vicGroup", (group player)];
-        _group setVariable ["setSpecial", false];
-        _group setVariable ["onTask", false];
-        // _group setVariable ["pl_show_info", true];
-        if !(_group getVariable ["pl_show_info", false]) then {
-            [_group, "hq"] call pl_show_group_icon;
-        };
-        // player hcSetGroup [_group];
+//     _newUnit addEventHandler ["GetOutMan", {
+//         params ["_unit", "_role", "_vehicle", "_turret"];
+//         private ["_group"];
+//         _group = group player;
+//         _vicGroup = player getVariable ["pl_player_vicGroup", (group player)];
+//         _group setVariable ["setSpecial", false];
+//         _group setVariable ["onTask", false];
+//         // _group setVariable ["pl_show_info", true];
+//         if !(_group getVariable ["pl_show_info", false]) then {
+//             [_group, "hq"] call pl_show_group_icon;
+//         };
+//         // player hcSetGroup [_group];
 
-        _cargo = fullCrew [(vehicle ((units _vicGroup)#0)), "cargo", false];
-        if ((count _cargo == 0)) exitWith {
-            // _vicGroup setVariable ["setSpecial", false];
-            _vicGroup setVariable ["pl_has_cargo", false];
-        };
-        if (({(group (_x#0)) isEqualTo _group} count _cargo) > 0) then {
-            [_vicGroup, _cargo, _group] spawn {
-                params ["_vicGroup", "_cargo", "_group"];
-                waitUntil {sleep 1; (({(group (_x#0)) isEqualTo _group} count (fullCrew [(vehicle ((units _vicGroup)#0)), "cargo", false])) == 0)};
-                // _vicGroup setVariable ["setSpecial", false];
-                _vicGroup setVariable ["pl_has_cargo", false];
-            };
-        };
-    }];
-}];
+//         _cargo = fullCrew [(vehicle ((units _vicGroup)#0)), "cargo", false];
+//         if ((count _cargo == 0)) exitWith {
+//             // _vicGroup setVariable ["setSpecial", false];
+//             _vicGroup setVariable ["pl_has_cargo", false];
+//         };
+//         if (({(group (_x#0)) isEqualTo _group} count _cargo) > 0) then {
+//             [_vicGroup, _cargo, _group] spawn {
+//                 params ["_vicGroup", "_cargo", "_group"];
+//                 waitUntil {sleep 1; (({(group (_x#0)) isEqualTo _group} count (fullCrew [(vehicle ((units _vicGroup)#0)), "cargo", false])) == 0)};
+//                 // _vicGroup setVariable ["setSpecial", false];
+//                 _vicGroup setVariable ["pl_has_cargo", false];
+//             };
+//         };
+//     }];
+// }];
 
 dyn_add_all_groups = {
     {
@@ -181,7 +181,7 @@ dyn_ambiance = {
     _leftPosA = [2500 * (sin (_dir - 90)), 2500 * (cos (_dir - 90)), 0] vectorAdd _centerPos;
     _rightPosA = [2500 * (sin (_dir + 90)), 2500 * (cos (_dir + 90)), 0] vectorAdd _centerPos;
 
-    private _ambGroup = createGroup east;
+    private _ambGroup = createGroup [sideLogic, true];
     for "_i" from 0 to 6 do {
         _nPos = [[[selectRandom [_leftPos, _rightPos], 400]], []] call BIS_fnc_randomPos;
         _unit = _ambGroup createUnit ["ModuleTracers_F", _nPos, [],0 , ""];
@@ -323,6 +323,128 @@ dyn_place_player = {
     };
 };
 
+dyn_place_arty = {
+
+    artGrp_1 setVariable ["pl_not_addalbe", true];
+
+    _artyLeader = leader artGrp_1;
+    {
+        _pos1 = getPosWorldVisual (vehicle _artyLeader);
+        _pos2 = getPosWorldVisual (vehicle _x);
+        _relPos = [(_pos1 select 0) - (_pos2 select 0), (_pos1 select 1) - (_pos2 select 1)];
+        _x setVariable ["dyn_rel_pos", _relPos];
+    } forEach ((units artGrp_1) - [_artyLeader]);
+
+    _batteryPos = (getPos player) getPos [1400, (getDir (vehicle player) + 190)];
+    _batteryPos = ((selectBestPlaces [_batteryPos, 500, "2*meadow", 95, 1])#0)#0;
+    // _batteryPos = _batteryPos findEmptyPosition [0, 500, typeOf (vehicle _artyLeader)];
+
+    (vehicle _artyLeader) setPos _batteryPos;
+
+    {
+        (vehicle _x) setDir (getDir vehicle player);
+        _x disableAI "PATH";
+    } forEach (units artGrp_1);
+
+    {
+        _pos1 = getPosWorldVisual (vehicle _artyLeader);
+        _pos2 = _x getVariable "dyn_rel_pos";
+        _setPos = [(_pos1 select 0) + (_pos2 select 0), (_pos1 select 1) + (_pos2 select 1)];
+        (vehicle _x) setPos _setPos;
+    } forEach ((units artGrp_1) - [_artyLeader]);
+};
+
+dyn_opfor_arty = [];
+
+dyn_place_opfor_arty = {
+    params ["_artyPos", "_dir"];
+
+    if (count dyn_opfor_arty > 0) then {
+        {
+            {
+                deleteVehicle _x;
+            } forEach (crew _x);
+            deleteVehicle _x;
+        } forEach dyn_opfor_arty;
+    };
+    dyn_opfor_arty = [];
+    _artyPos = ((selectBestPlaces [_artyPos, 1000, "2*meadow", 95, 1])#0)#0;
+
+    for "_i" from 0 to 2 do {
+        _aPos = _artyPos getPos [20 * _i, _dir + 90];
+        _arty = createVehicle [dyn_standart_arty, _aPos, [], 0, "NONE"];
+        _arty setdir _dir;
+        _grp = createVehicleCrew _arty;
+        dyn_opfor_arty pushBack _arty;
+    };
+};
+
+dyn_opfor_rocket_arty = [];
+
+dyn_place_opfor_rocket_arty = {
+    params ["_artyPos", "_dir"];
+
+    if (count dyn_opfor_rocket_arty > 0) then {
+        {
+            {
+                deleteVehicle _x;
+            } forEach (crew _x);
+            deleteVehicle _x;
+        } forEach dyn_opfor_rocket_arty;
+    };
+    dyn_opfor_rocket_arty = [];
+    _artyPos = ((selectBestPlaces [_artyPos, 1000, "2*meadow", 95, 1])#0)#0;
+
+    for "_i" from 0 to 1 do {
+        _aPos = _artyPos getPos [20 * _i, _dir + 90];
+        _arty = createVehicle [dyn_standart_rocket_arty, _aPos, [], 0, "NONE"];
+        _arty setdir _dir;
+        _grp = createVehicleCrew _arty;
+        dyn_opfor_rocket_arty pushBack _arty;
+    };
+};
+
+dyn_opfor_light_arty = [];
+
+dyn_place_opfor_light_arty = {
+    params ["_artyPos", "_dir"];
+
+    if (count dyn_opfor_light_arty > 0) then {
+        {
+            _art = _x;
+            {
+                (group _x) leaveVehicle _art;
+            } forEach (crew _x);
+            deleteVehicle _x;
+        } forEach dyn_opfor_light_arty;
+    };
+    dyn_opfor_light_arty = [];
+    _artyPos = ((selectBestPlaces [_artyPos, 500, "2*meadow", 95, 1])#0)#0;
+
+    _lightArtyGrp = createGroup [east, true];
+    for "_i" from 0 to 2 do {
+        _offsetDir = 90;
+        if (_i == 1) then {_offsetDir = 70};
+        _aPos = _artyPos getPos [10 * _i, _dir - _offsetDir];
+        _arty = createVehicle [dyn_standart_light_arty, _aPos, [], 0, "NONE"];
+        _arty setdir _dir;
+        _grp = createVehicleCrew _arty;
+        _grp setVariable ["pl_not_recon_able", true];
+        [units _grp] joinSilent _lightArtyGrp;
+        dyn_opfor_light_arty pushBack _arty;
+
+        _sPos = (getPos _arty) getPos [1, _dir];
+        _sandBag = createVehicle ["land_gm_sandbags_01_round_01", _sPos, [], 0, "CAN_COLLIDE"];
+        _sandBag setDir (getDir _arty);
+        if (_i == 1) then {
+            _guardPos = _aPos getPos [15, _dir - 180];
+            _gGrp = [_guardPos, 0] call dyn_spawn_dimounted_inf;
+            _gGrp setVariable ["pl_not_recon_able", true];
+            [units _gGrp] joinSilent _lightArtyGrp;
+        };
+    };
+};
+
 dyn_main_setup = {
 
     dyn_locations = [];
@@ -338,11 +460,11 @@ dyn_main_setup = {
 
     ////---------------------Version 2------------------------------
     dyn_map_center = [worldSize / 2, worldsize / 2, 0];
-    _startPairs = [["start_0", "obj_0"], ["start_1", "obj_1"], ["start_2", "obj_2"], ["start_3", "obj_3"], ["start_4", "obj_4"], ["start_5", "obj_5"], ["start_6", "obj_6"], ["start_7", "obj_7"], ["start_8", "obj_8"], ["start_9", "obj_9"], ["start_10", "obj_10"], ["start_11", "obj_11"], ["start_12", "obj_12"], ["start_13", "obj_13"], ["start_14", "obj_14"], ["start_15", "obj_15"], ["start_16", "obj_16"]];
+    _startPairs = [["start_0", "obj_0"], ["start_1", "obj_1"], ["start_2", "obj_2"], ["start_3", "obj_3"], ["start_4", "obj_4"], ["start_5", "obj_5"], ["start_6", "obj_6"], ["start_7", "obj_7"], ["start_8", "obj_8"], ["start_9", "obj_9"], ["start_10", "obj_10"], ["start_11", "obj_11"], ["start_12", "obj_12"], ["start_13", "obj_13"], ["start_14", "obj_14"], ["start_15", "obj_15"], ["start_16", "obj_16"], ["start_17", "obj_17"]];
     _startPair = selectRandom _startPairs;
 
     // debug override
-    // _startPair = ["start_16", "obj_16"];
+    // _startPair = ["start_17", "obj_17"];
 
     _playerStart = getMarkerPos (_startPair#0);
     _startLoc = nearestLocation [getMarkerPos (_startPair#1), ""];
@@ -374,25 +496,25 @@ dyn_main_setup = {
     for "_i" from 0 to 8 do {
         _pos = [(_intervals * _i) * (sin (_campaignDir - 180)), (_intervals * _i) * (cos (_campaignDir - 180)), 0] vectorAdd _offsetPos;
         _loc = nearestLocation [_pos, "NameVillage"];
-        if ((_pos distance2D (getPos _loc)) < 2500) then {
+        if ((_pos distance2D (getPos _loc)) < 3000) then {
             _valid = {
-                if (((getPos _x) distance2D (getPos _loc)) < 3000) exitWith {false};
+                if (((getPos _x) distance2D (getPos _loc)) < 2500) exitWith {false};
                 true 
             } forEach dyn_locations;
             if (_valid) then {dyn_locations pushBackUnique _loc};
         };
         _loc = nearestLocation [_pos, "NameCity"];
-        if ((_pos distance2D (getPos _loc)) < 2500) then {
+        if ((_pos distance2D (getPos _loc)) < 3000) then {
             _valid = {
-                if (((getPos _x) distance2D (getPos _loc)) < 3000) exitWith {false};
+                if (((getPos _x) distance2D (getPos _loc)) < 2500) exitWith {false};
                 true 
             } forEach dyn_locations;
             if (_valid) then {dyn_locations pushBackUnique _loc};
         };
         _loc = nearestLocation [_pos, "NameCityCapital"];
-        if ((_pos distance2D (getPos _loc)) < 2500) then {
+        if ((_pos distance2D (getPos _loc)) < 3000) then {
             _valid = {
-                if (((getPos _x) distance2D (getPos _loc)) < 3000) exitWith {false};
+                if (((getPos _x) distance2D (getPos _loc)) < 2500) exitWith {false};
                 true 
             } forEach dyn_locations;
             if (_valid) then {dyn_locations pushBackUnique _loc};
@@ -418,6 +540,8 @@ dyn_main_setup = {
     _aoStart = [_playerStart, 2500, ["TRAIL", "TRACK"]] call BIS_fnc_nearestRoad;
 
     [getPos _aoStart, _startPos] call dyn_place_player;
+
+    [] call dyn_place_arty;
 
     [dyn_locations, _playerStart, _campaignDir] spawn {
         params ["_locations", "_playerStart", "_campaignDir"];
@@ -458,7 +582,34 @@ dyn_main_setup = {
             // _trg setTriggerTimeout [10, 30, 60, false];
 
             _locationName = text _loc;
-            
+            dyn_en_comp = selectRandom dyn_opfor_comp;
+
+            _artyPos1 = getPos (_locations#_i) getPos [300, _dir - 180];
+            [_artyPos1, _dir] call dyn_place_opfor_light_arty;
+
+
+            if (_i + 1 < (count _locations) - 1) then {
+                _mP1 = getPos (_locations#(_i + 1)) getPos [200, 0];
+                [objNull, _mP1 , "b_hq", "RegCP.", "colorOPFOR", 0.8] call dyn_spawn_intel_markers;
+                [objNull, _mP1, "colorOpfor", 1000] call dyn_spawn_intel_markers_area;
+
+                if (_i + 2 > (count _locations) - 1) then {
+                    _artyPos2 = getPos (_locations#(_i + 1)) getPos [300, 0];
+                    [_artyPos2, _campaignDir] call dyn_place_opfor_arty;
+                    _artyPos3 = getPos (_locations#(_i + 1)) getPos [300, 180];
+                    [_artyPos3, _campaignDir] call dyn_place_opfor_rocket_arty;
+                };
+            };
+            if (_i + 2 < (count _locations) - 1) then {
+                _mP2 = getPos (_locations#(_i + 2)) getPos [200, 0];
+                [objNull, _mP2, "b_art", "ArtReg.", "colorOPFOR", 0.8] call dyn_spawn_intel_markers;
+                [objNull, _mP2, "colorOpfor", 1600] call dyn_spawn_intel_markers_area;
+                _artyPos2 = getPos (_locations#(_i + 2)) getPos [300, 0];
+                [_artyPos2, _campaignDir] call dyn_place_opfor_arty;
+                _artyPos3 = getPos (_locations#(_i + 2)) getPos [300, 180];
+                [_artyPos3, _campaignDir] call dyn_place_opfor_rocket_arty;
+            };
+                        
             dyn_defense_active = false;
 
             _dyn_defense_atkPos = getPos player;
@@ -466,9 +617,10 @@ dyn_main_setup = {
 
             _startDefense = false;
             
-            if ((((random 1) > 0.55 and (_dyn_defense_atkPos distance2D (getPos _loc)) > 3000 and _i > 0) or _startDefense) and !dyn_debug) then {
+            if (((random 1) > 0.6 and (_dyn_defense_atkPos distance2D (getPos _loc)) > 3000 and _i > 0) or _startDefense) then {
                 _waitTime = 900;
                 if (_startDefense) then {_waitTime = 360};
+                if (dyn_debug) then {_waitTime = 5};
                 [_dyn_defense_atkPos, getPos _loc, _waitTime] spawn dyn_defense;
                 sleep 5;
                 _defDir = _dyn_defense_atkPos getDir (getPos _loc);
@@ -482,7 +634,7 @@ dyn_main_setup = {
             };
 
             private _aoArea = 400;
-            if(_locationName == "") then {_aoArea = 800};
+            if(_locationName == "" or _locationName == "Weferlingen" or _locationName == "Grasleben" or _locationName == "Velpke") then {_aoArea = 800};
             _trg = createTrigger ["EmptyDetector", (getPos _loc), true];
             _trg setTriggerActivation ["WEST", "PRESENT", false];
             _trg setTriggerStatements ["this", " ", " "];
@@ -493,7 +645,7 @@ dyn_main_setup = {
             _endTrg setTriggerStatements ["this", " ", " "];
             _endTrg setTriggerArea [_aoArea + 100, _aoArea + 100, _dir, false];
             _endTrg setTriggerTimeout [180, 240, 300, false];
-            dyn_en_comp = selectRandom dyn_opfor_comp;
+            
 
             if (_i > 0) then {
                 [getPos _loc, _dir, _endTrg, _campaignDir, getPos (_locations#(_i - 1)), dyn_en_comp] spawn dyn_create_markers;
@@ -566,7 +718,7 @@ dyn_main_setup = {
 
             if (_outerDefenses) then {
 
-                _defenseType = selectRandom ["mobileTank", "recon", "empty"];
+                _defenseType = selectRandom ["mobileTank", "recon", "empty", "ambush"];
 
                 // debug
                 // _defenseType = "ambush";
@@ -584,16 +736,24 @@ dyn_main_setup = {
                 };
             };
 
-            if (_i + 1 < (count _locations) - 1) then {
-                _mP1 = getPos (_locations#(_i + 1)) getPos [200, 0];
-                [objNull, _mP1 , "b_hq", "RegCP.", "colorOPFOR", 0.8] call dyn_spawn_intel_markers;
-                [objNull, _mP1, "colorOpfor", 1000] call dyn_spawn_intel_markers_area;
-            };
-            if (_i + 2 < (count _locations) - 1) then {
-                _mP2 = getPos (_locations#(_i + 2)) getPos [200, 0];
-                [objNull, _mP2, "b_art", "ArtReg.", "colorOPFOR", 0.8] call dyn_spawn_intel_markers;
-                [objNull, _mP2, "colorOpfor", 1600] call dyn_spawn_intel_markers_area;
-            };
+            // _artyPos1 = getPos (_locations#_i) getPos [300, _dir - 180];
+            // [_artyPos1, _dir] call dyn_place_opfor_light_arty;
+
+
+            // if (_i + 1 < (count _locations) - 1) then {
+            //     _mP1 = getPos (_locations#(_i + 1)) getPos [200, 0];
+            //     [objNull, _mP1 , "b_hq", "RegCP.", "colorOPFOR", 0.8] call dyn_spawn_intel_markers;
+            //     [objNull, _mP1, "colorOpfor", 1000] call dyn_spawn_intel_markers_area;
+            // };
+            // if (_i + 2 < (count _locations) - 1) then {
+            //     _mP2 = getPos (_locations#(_i + 2)) getPos [200, 0];
+            //     [objNull, _mP2, "b_art", "ArtReg.", "colorOPFOR", 0.8] call dyn_spawn_intel_markers;
+            //     [objNull, _mP2, "colorOpfor", 1600] call dyn_spawn_intel_markers_area;
+            //     _artyPos2 = getPos (_locations#(_i + 1)) getPos [300, 0];
+            //     [_artyPos2, _campaignDir] call dyn_place_opfor_arty;
+            //     _artyPos3 = getPos (_locations#(_i + 1)) getPos [300, 180];
+            //     [_artyPos3, _campaignDir] call dyn_place_opfor_rocket_arty;
+            // };
 
             // [getPos _loc, _dir] spawn dyn_spawn_heli_attack;
 

@@ -22,7 +22,7 @@ dyn_spawn_heli_attack = {
 
         // _frontPos = [3000 * (sin _dir), 3000 * (cos _dir), 0] vectorAdd _targetPos;
 
-        for "_i" from 0 to 1 do {
+        // for "_i" from 0 to 1 do {
 
             [_rearPos, _targetPos, _dir] spawn {
                 params ["_rearPos", "_targetPos", "_dir"];
@@ -30,9 +30,9 @@ dyn_spawn_heli_attack = {
                 _casGroup = createGroup east;
                 _p = [_rearPos, _dir, dyn_attack_heli, _casGroup] call BIS_fnc_spawnVehicle;
                 _plane = _p#0;
-                [_plane, 60] call BIS_fnc_setHeight;
+                [_plane, 40] call BIS_fnc_setHeight;
                 // _plane forceSpeed 140;
-                _plane flyInHeight 60;
+                _plane flyInHeight 40;
                 _wp = _casGroup addWaypoint [_targetPos, 0];
                 _time = time + 300;
 
@@ -48,8 +48,8 @@ dyn_spawn_heli_attack = {
                 } forEach (units _casGroup);
                 deleteVehicle _plane;
             };
-            sleep 10;
-        };
+            // sleep 10;
+        // };
 };
 
 dyn_spawn_rocket_arty = {
@@ -77,30 +77,49 @@ dyn_spawn_rocket_arty = {
 
 
 dyn_arty = {
-    params [["_heavy", false]];
-    _target = selectRandom (allUnits select {side _x == west});
-    _pos = getPos _target;
-    _amount = [5, 10] call BIS_fnc_randomInt;
-    if (_heavy) then {_amount = _amount / 2};
-    _artyGroup = createGroup east;
-    for "_i" from 0 to _amount do {
-        _artyPos = [[[_pos, 300]], [[_pos, 50]]] call BIS_fnc_randomPos;
+    params ["_shells", ["_type", "heavy"]];
+    private ["_eh", "_cords", "_ammoType", "_gunArray"];
 
-        // private _marker = createMarker [str _i, _artyPos];
-        // _marker setMarkerShape "ICON";
-        // _marker setMarkerColor "colorBLUFOR";
-        // _marker setMarkerType "MIL_DOT";
-        _support = _artyGroup createUnit ["ModuleOrdnance_F", _artyPos, [],0 , ""];
-        if (_heavy) then {
-            _support setVariable ["type", "ModuleOrdnanceHowitzer_F_Ammo"];
-        }
-        else
-        {
-            _support setVariable ["type", "ModuleOrdnanceMortar_F_Ammo"];
-        };
-        sleep ([2, 6] call BIS_fnc_randomInt);
+    switch (_type) do { 
+        case "heavy" : {_gunArray = dyn_opfor_arty}; 
+        case "light" : {_gunArray = dyn_opfor_light_arty};
+        case "rocket" : {_gunArray = dyn_opfor_rocket_arty};
+        default {_gunArray = dyn_opfor_arty}; 
     };
+
+
+    for "_i" from 1 to _shells do {
+        _target = selectRandom (allUnits select {side _x == west});
+        _cords = getPos _target;
+        {
+            if (isNull _x) exitWith {};
+            _ammoType = (getArray (configFile >> "CfgVehicles" >> typeOf _x >> "Turrets" >> "MainTurret" >> "magazines")) select 0;
+            _firePos = [[[_cords, 300]], [[_cords, 50]]] call BIS_fnc_randomPos;
+            // player sidechat str (_firePos inRangeOfArtillery [[_x], _ammoType]);
+            _x commandArtilleryFire [_firePos, _ammoType, 1];
+            _x setVariable ["dyn_waiting_for_fired", true];
+            _eh = _x addEventHandler ["Fired", {
+                params ["_unit", "_weapon", "_muzzle", "_mode", "_ammo", "_magazine", "_projectile", "_gunner"];
+                _unit setVariable ["dyn_waiting_for_fired", false];
+            }];
+            // sleep 1;
+        } forEach _gunArray;
+        sleep 1;
+        _time = time + 10;
+        waitUntil {({_x getVariable ["dyn_waiting_for_fired", true]} count _gunArray) == 0 or time >= _time};
+        sleep 1;
+    };
+
+    sleep 20;
+
+    {
+        _ammoType = (getArray (configFile >> "CfgVehicles" >> typeOf _x >> "Turrets" >> "MainTurret" >> "magazines")) select 0;
+        _x addMagazineTurret [_ammoType, [-1]];
+        _x removeEventHandler ["Fired", _eh];
+    } forEach _gunArray;
 };
+
+// [10] call dyn_arty;
 
 dyn_spawn_harresment_arty = {
     params ["_locPos", "_dir", "_endTrg"];
@@ -109,7 +128,7 @@ dyn_spawn_harresment_arty = {
     private _atkTrg = createTrigger ["EmptyDetector", _trgPos, true];
     _atkTrg setTriggerActivation ["WEST", "PRESENT", false];
     _atkTrg setTriggerStatements ["this", " ", " "];
-    _atkTrg setTriggerArea [2500, 65, _dir, true];
+    _atkTrg setTriggerArea [4000, 65, _dir, true];
 
     // debug
     // _m = createMarker [str (random 1), _trgPos];
@@ -118,16 +137,7 @@ dyn_spawn_harresment_arty = {
     waitUntil { sleep 1; triggerActivated _atkTrg };
 
     while {!triggerActivated _endTrg} do {
-        sleep ([180, 300] call BIS_fnc_randomInt);
-        _target = selectRandom (allUnits select {side _x == west});
-        _pos = getPos _target;
-        _amount = [3, 5] call BIS_fnc_randomInt;
-        _artyGroup = createGroup east;
-        for "_i" from 0 to _amount do {
-            _artyPos = [[[_pos, 450]], [[_pos, 80]]] call BIS_fnc_randomPos;
-            _support = _artyGroup createUnit ["ModuleOrdnance_F", _artyPos, [],0 , ""];
-            _support setVariable ["type", "ModuleOrdnanceMortar_F_Ammo"];
-            sleep ([7, 15] call BIS_fnc_randomInt);
-        };
+        sleep ([200, 400] call BIS_fnc_randomInt);
+        [2, "light"] call dyn_arty;
     };
 };

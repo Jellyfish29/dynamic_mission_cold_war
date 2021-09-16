@@ -266,7 +266,7 @@ dyn_spawn_dimounted_inf = {
     _vicType = selectRandom dyn_standart_trasnport_vehicles;
     _roadDir = 0;
     if (_armed) then {
-        _vicType = selectRandom dyn_standart_light_armed_transport;
+        _vicType = selectRandom (dyn_standart_light_armed_transport + dyn_standart_light_amored_vics);
     };
     if (_area > 0) then {
         _road = selectRandom (_pos nearRoads _area);
@@ -816,19 +816,27 @@ dyn_spawn_side_town_guards = {
             };
 
             _atgmPos = (getPos (_validBuildings#0)) getPos [30, _dir];
-            if ((random 1) > 0.6) then {
+            if ((random 1) > 0.5) then {
                 [_atgmPos, _dir, true, true, selectRandom dyn_standart_statics_atgm] call dyn_spawn_static_weapon;
-            }
-            else
-            {
-                if ((random 1) > 0.6) then {
-                    [_atgmPos, _dir, true, true, selectRandom dyn_standart_statics_atgun] call dyn_spawn_static_weapon;
-                };
+            };
+
+            if ((random 1) > 0.5) then {
+                _grp = [getPos _x, 250, dyn_standart_light_amored_vics] call dyn_spawn_parked_vehicle;
+            };
+
+            if ((random 1) > 0.5) then {
+                _vPos = [25 * (sin _dir), 25 * (cos _dir), 0] vectorAdd (getPos (_validBuildings#([0, 4] call BIS_fnc_randomInt)));
+                _grp = [_vPos, selectRandom dyn_standart_light_amored_vics, _dir, true, true] call dyn_spawn_covered_vehicle;
+            };
+
+            if ((random 1) > 0) then {
+                // CrossRoad
+                [getPos _x, 400, 1] spawn dyn_crossroad_position;
             };
 
             [_validBuildings, 3, _dir] call dyn_spawn_random_garrison;
 
-            if ((random 1) > 0.6) then {
+            if ((random 1) > 0.5) then {
                 _qrfTrg = createTrigger ["EmptyDetector", getPos _x , true];
                 _qrfTrg setTriggerActivation ["WEST", "PRESENT", false];
                 _qrfTrg setTriggerStatements ["this", " ", " "];
@@ -956,6 +964,146 @@ dyn_spawn_random_garrison = {
         deleteGroup _grp;
     };
     _rGrp enableDynamicSimulation true;
+    _rGrp setVariable ["pl_not_recon_able", true];
+};
+
+
+dyn_spawn_observation_post = {
+    params ["_townTrg", "_dir"];
+
+    _opPos = (getPos _townTrg) getPos [[600, 800] call BIS_fnc_randomInt, _dir];
+    _opPos = ((selectBestPlaces [_opPos, 300, "meadow + 2*forest", 100, 1])#0)#0;
+
+    // //debug
+    // _m = createMarker [str (random 1), _opPos];
+    // _m setMarkerType "mil_dot";
+
+    _grp = createGroup [east, true];
+    _grp setVariable ["pl_not_recon_able", true];
+    {    
+        _s = _grp createUnit [_x, _opPos, [], 0, "NONE"];
+        _s disableAI "PATH"; 
+        _s setUnitPos "MIDDLE";
+        _s setDir _dir;
+        _s enableDynamicSimulation true;
+        _bPos = _s getPos [10, _dir];
+        for "_i" from 0 to 1 do {
+            _bush = "gm_b_crataegus_monogyna_01_summer" createVehicle _bPos;
+            _bush setDir ([0, 360] call BIS_fnc_randomInt);
+        };
+    } forEach [dyn_standart_mg, dyn_standart_at_soldier];
+
+    [_grp, _dir, 2, false] call dyn_line_form_cover;
+
+    _sPos = _opPos getPos [2, _dir];
+    _sCover =  "land_gm_sandbags_01_wall_01" createVehicle _sPos;
+    _sCover setDir _dir; 
+
+    _tNetPos = _opPos getPos [6, _dir];
+    _tNet = "land_gm_camonet_01_nato" createVehicle _tNetPos;
+    _tNet allowDamage false;
+    _tNet setDir (_dir - 90);
+    _tNet setPos ((getPos _tNet) vectorAdd [0,0,-2.7]);
+
+    _trgPos = (getPos _townTrg) getPos [1300, _dir];
+    private _atkTrg = createTrigger ["EmptyDetector", _trgPos, true];
+    _atkTrg setTriggerActivation ["WEST", "PRESENT", false];
+    _atkTrg setTriggerStatements ["this", " ", " "];
+    _atkTrg setTriggerArea [2500, 65, _dir, true];
+
+    // //debug
+    // _m = createMarker [str (random 1), _trgPos];
+    // _m setMarkerType "mil_dot";
+
+    [_atkTrg, getPos _townTrg, _dir] spawn {
+        params ["_atkTrg", "_locPos", "_dir"];
+        _rearPos = _locPos getPos [1800, _dir - 180];
+
+        waitUntil{sleep 1; triggerActivated _atkTrg};
+
+        _fireSupport = selectRandom [1,2,2,3,3,3,4,4,4,4];
+        // _fireSupport = 2;
+
+        switch (_fireSupport) do {
+            case 1 : {[_locPos, _dir] spawn dyn_spawn_heli_attack};
+            case 2 : {[4] spawn dyn_arty};
+            case 3 : {[2] spawn dyn_arty};
+            case 4 : {};
+            default {}; 
+         }; 
+    };
+};
+
+dyn_crossroad_position = {
+    params ["_pos", "_area", ["_limit", 4]];
+    _allRoads = _pos nearRoads _area;
+    _crossRoads = [];
+    {
+        _r = _x;
+        if (count (roadsConnectedTo _r) > 2) then {
+            if (count _crossRoads == 0) then {
+                _crossRoads pushBackUnique _r;
+            }
+            else
+            {
+                _valid = {
+                    if (_x distance2D _r < 50) exitWith {false};
+                    true
+                } forEach _crossRoads;
+                if (_valid) then {_crossRoads pushBackUnique _r;};
+            };
+        }; 
+    } forEach _allRoads;
+
+    private _n = 0;
+    {
+        // //debug
+        // _m = createMarker [str (random 1), getPos _x];
+        // _m setMarkerType "mil_dot";
+
+        _road = _x;
+        _info = getRoadInfo _road;    
+        _endings = [_info#6, _info#7];
+        _endings = [_endings, [], {_x distance2D player}, "ASCEND"] call BIS_fnc_sortBy;
+        _roadWidth = _info#1;
+        _rPos = ASLToATL (_endings#0);
+        _roadDir = (_endings#1) getDir (_endings#0);
+        _bPos = _rPos getPos [_roadWidth - 2, _roadDir + 90];
+
+        _grp = createGroup [east, true];
+
+        _bunker = createVehicle ["land_gm_woodbunker_01_bags", _bPos , [], 0, "CAN_COLLIDE"];
+        _bunker setDir _roadDir;
+
+        _mg = _grp createUnit [dyn_standart_mg, _bPos, [], 0, "CAN_COLLIDE"];
+        _mg setDir _roadDir;
+        _mg disableAI "PATH";
+
+        _sPos = _rPos getPos [_roadWidth - 4.5, _roadDir + 90];
+        _sandBag = createVehicle ["land_gm_sandbags_01_short_01", _sPos, [], 0, "CAN_COLLIDE"];
+        _sandBag setDir _roadDir;
+
+        _at = _grp createUnit [dyn_standart_at_soldier, _sPos getPos [1, _roadDir - 180], [], 0, "CAN_COLLIDE"];
+        _at setDir _roadDir;
+        _at disableAI "PATH";
+        _at setUnitPos "MIDDLE";
+
+        _sPos2 = _bPos getPos [6, _roadDir - 180];
+        _sandBag = createVehicle ["land_gm_sandbags_01_wall_01", _sPos2, [], 0, "CAN_COLLIDE"];
+        _sandBag setDir _roadDir;
+
+        _s = _grp createUnit [dyn_standart_soldier, _sPos2 getPos [1, _roadDir], [], 0, "CAN_COLLIDE"];
+        _s setDir (_roadDir - 180);
+        _s disableAI "PATH";
+        _s setUnitPos "MIDDLE";
+
+        [_road, false] call dyn_spawn_razor_road_block;
+        _grp enableDynamicSimulation true;
+        // [_grp, 300, false] spawn dyn_auto_suppress;
+        _n = _n + 1;
+        if (_n >= _limit) exitWith {};
+
+    } forEach _crossRoads;
 };
 
 

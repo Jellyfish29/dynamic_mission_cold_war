@@ -199,10 +199,8 @@ dyn_defense_line = {
 
     // rocketArty
     if ((random 1) > 0.85) then {
-        _rearPos = [1200 * (sin (_dir - 180)), 1200 * (cos (_dir - 180)), 0] vectorAdd _locPos;
-        [_rearPos, _aoPos] spawn dyn_spawn_rocket_arty;
+        [5, "rocket"] spawn dyn_arty;
     };
-
     // heli atk
     if ((random 1) > 0.5) then {
         [_locPos, _dir, _aoPos] spawn dyn_spawn_heli_attack;
@@ -262,8 +260,7 @@ dyn_strong_point_defence = {
             [_aoPos, _defPos, getPos _townTrg, [2, 3] call BIS_fnc_randomInt, [1, 2] call BIS_fnc_randomInt, 1, false, [dyn_standart_MBT], 0] spawn dyn_spawn_counter_attack;
         };
         if ((random 1) > 0.7) then {
-            _rearPos = [1200 * (sin (_dir - 180)), 1200 * (cos (_dir - 180)), 0] vectorAdd _locPos;
-            [_rearPos, _aoPos] spawn dyn_spawn_rocket_arty;
+            [5, "rocket"] spawn dyn_arty;
         };
         // [_townTrg, getPos _townTrg, _grps] spawn dyn_retreat;
     };
@@ -435,8 +432,7 @@ dyn_road_emplacemnets = {
     _aoPos setPos _caPos;
 
     if ((random 1) > 0.25) then {
-        _rearPos = [1200 * (sin (_dir - 180)), 1200 * (cos (_dir - 180)), 0] vectorAdd _locPos;
-        [_rearPos, _aoPos] spawn dyn_spawn_rocket_arty;
+        [4, "rocket"] spawn dyn_arty;
     };
 
     //debug
@@ -545,8 +541,8 @@ dyn_recon_convoy = {
         // _fireSupport = 1;
 
         switch (_fireSupport) do { 
-            case 1 : {[_rearPos, _atkTrg] spawn dyn_spawn_rocket_arty}; 
-            case 2 : {[true] spawn dyn_arty};
+            case 1 : {[4, "rocket"] spawn dyn_arty}; 
+            case 2 : {[5] spawn dyn_arty};
             case 3 : {[_locPos, _dir] spawn dyn_spawn_heli_attack};
             default {}; 
          }; 
@@ -564,7 +560,7 @@ dyn_recon_convoy = {
 dyn_ambush = {
     params ["_locPos", "_townTrg", "_dir", ["_exactPos", false]];
 
-    _defPos = _locPos getPos [1800, _dir];
+    _defPos = _locPos getPos [1400, _dir];
 
     _trgPos = _defPos getPos [300, _dir];
     private _atkTrg = createTrigger ["EmptyDetector", _trgPos, true];
@@ -577,7 +573,7 @@ dyn_ambush = {
     // _m setMarkerType "mil_objective";
 
     _amount = [2, 4] call BIS_fnc_randomInt;
-    _ambushLocs = selectBestPlaces [_defPos, 600, "meadow + forest", 95, _amount];
+    _ambushLocs = selectBestPlaces [_defPos, 300, "meadow + forest", 95, _amount];
 
     private _mgGrps = []; 
     {
@@ -587,17 +583,17 @@ dyn_ambush = {
         // _m = createMarker [str (random 1), _x#0];
         // _m setMarkerType "mil_dot";
 
+        _grp = createGroup [east, true];
+        _grp setVariable ["pl_not_recon_able", true];
+        _mgGrps pushBack _grp;
         for "_i" from 0 to 2 do {
             _mgPos = (_x#0) getPos [8 * _i, _dir + 90];
-            _grp = createGroup [east, true];
-            _grp setVariable ["pl_not_recon_able", true];
             _mg = _grp createUnit [dyn_standart_mg, _mgPos, [], 0, "NONE"];
             doStop _mg;
             _mg disableAI "PATH"; 
             _mg setUnitPos "Middle";
             _mg setDir _dir;
             _mg enableDynamicSimulation true;
-            _mgGrps pushBack _grp;
             _bush = "gm_b_crataegus_monogyna_01_summer" createVehicle _mgPos;
         };
     } forEach _ambushLocs;
@@ -633,9 +629,9 @@ dyn_ambush = {
         _fireSupport = selectRandom [2,3,2,2];
 
         switch (_fireSupport) do { 
-            case 1 : {[_rearPos, _atkTrg] spawn dyn_spawn_rocket_arty}; 
-            case 2 : {[true] spawn dyn_arty; [true] spawn dyn_arty};
-            case 3 : {[false] spawn dyn_arty; [false] spawn dyn_arty; [false] spawn dyn_arty};
+            case 1 : {[4, "rocket"] spawn dyn_arty}; 
+            case 2 : {[6, "light"] spawn dyn_arty};
+            case 3 : {[4, "heavy"] spawn dyn_arty};
             default {}; 
          }; 
     };
@@ -668,7 +664,7 @@ dyn_town_defense = {
     [_validBuildings, [2, 4] call BIS_fnc_randomInt, _dir] call dyn_spawn_mg_team_garrisons; //[2, 4] call BIS_fnc_randomInt
 
     // Random Garrison
-    [_validBuildings, [3, 5] call BIS_fnc_randomInt, _dir] call dyn_spawn_random_garrison;
+    [_validBuildings, [2, 4] call BIS_fnc_randomInt, _dir] call dyn_spawn_random_garrison;
     if (_weferlingen) then {
         [_validBuildings, [1, 3] call BIS_fnc_randomInt, _dir] call dyn_spawn_random_garrison;
     };
@@ -693,8 +689,8 @@ dyn_town_defense = {
     [_bRoad, true] call dyn_spawn_razor_road_block;
 
     // checkpoints
-    _roads = (getPos (_validBuildings#10)) nearRoads 150;
-    [_roads, [3, 5] call BIS_fnc_randomInt] call dyn_spawn_sandbag_positions;
+    // _roads = (getPos (_validBuildings#10)) nearRoads 150;
+    // [_roads, [2, 4] call BIS_fnc_randomInt] call dyn_spawn_sandbag_positions;
 
     // create Razor Wire
     for "_i" from 0 to 5 do {
@@ -799,14 +795,14 @@ dyn_town_defense = {
             _allGrps pushBack _grp;
         };
     };
-    if ((random 1) > 0.75) then {
-        [_aoPos, _vGrps] spawn dyn_attack_nearest_enemy;
-    };
+    // if ((random 1) > 0.75) then {
+    // [_aoPos, _vGrps] spawn dyn_attack_nearest_enemy;
+    // };
 
     // Empty Transports
-    for "_i" from 0 to ([0, 1] call BIS_fnc_randomInt) do {
-        _grp = [getPos _aoPos, 250, dyn_standart_trasnport_vehicles, 0, true] call dyn_spawn_parked_vehicle;
-    };
+    // for "_i" from 0 to ([0, 1] call BIS_fnc_randomInt) do {
+    //     _grp = [getPos _aoPos, 250, dyn_standart_trasnport_vehicles, 0, true] call dyn_spawn_parked_vehicle;
+    // };
 
     // Supply Convoy
     // if (_weferlingen) then {
@@ -838,6 +834,18 @@ dyn_town_defense = {
     //harrasment Arty
     [getPos _aoPos, _dir, _endTrg] spawn dyn_spawn_harresment_arty;
 
+    // QRF Patrol
+    [getPos _aoPos, 200, _aoPos, [1, 2] call BIS_fnc_randomInt] call dyn_spawn_qrf_patrol;
+
+    // OP
+    if ((random 1) > 0.2) then {
+        [_aoPos, _dir] spawn dyn_spawn_observation_post;
+    };
+
+    // CrossRoad
+    [getPos _aoPos, (triggerArea _aoPos)#0] spawn dyn_crossroad_position;
+
+
     // Continuos Inf Spawn 
     // [_aoPos, _solitaryBuildings#((count _solitaryBuildings) - ([1, 5] call BIS_fnc_randomInt)), _endTrg] spawn dyn_spawn_def_waves;
 
@@ -865,7 +873,7 @@ dyn_defense = {
 
     _arrowPos = [(_defPos distance2d _atkPos) / 2 * (sin (_defPos getDir _atkPos)), (_defPos distance2d _atkPos) / 2 * (cos (_defPos getDir _atkPos)), 0] vectorAdd _defPos;
     _arrowMarker = createMarker [format ["arrow%1", _atkPos], _arrowPos];
-    _arrowMarker setMarkerType "marker_CATK";
+    _arrowMarker setMarkerType "cwr3_marker_arrow";
     _arrowMarker setMarkerSize [1, 1];
     _arrowMarker setMarkerColor "colorOPFOR";
     _arrowMarker setMarkerDir ((_defPos getDir _atkPos) - 90);
@@ -873,7 +881,8 @@ dyn_defense = {
     sleep 10;
 
     if (random 1 < 0.5) then {
-        [true] spawn dyn_arty;
+        [4] spawn dyn_arty;
+        [2, "rocket"] spawn dyn_arty;
     }
     else
     {
@@ -910,13 +919,13 @@ dyn_defense = {
         sleep 120;
 
         if (random 1 < 0.5) then {
-            [] spawn dyn_arty;
+            [3] spawn dyn_arty;
         };
     };
 
     // player sideChat "spawn end";
     _time = time + 200;
-    waitUntil {(count (allGroups select {(side (leader _x)) isEqualTo east})) <= 14};
+    waitUntil {(count (allGroups select {(side (leader _x)) isEqualTo east})) <= 8};
 
     deleteMarker _arrowMarker;
     deleteMarker _lineMarker;
