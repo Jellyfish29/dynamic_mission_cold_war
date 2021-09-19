@@ -138,6 +138,6 @@ dyn_spawn_harresment_arty = {
 
     while {!triggerActivated _endTrg} do {
         sleep ([200, 400] call BIS_fnc_randomInt);
-        [2, "light"] call dyn_arty;
+        [4, "light"] call dyn_arty;
     };
 };

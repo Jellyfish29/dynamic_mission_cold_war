@@ -384,32 +384,33 @@ dyn_spawn_strongpoint = {
     // _m setMarkerType "mil_dot";
 
     // vehicle
-    _xMax = ((boundingBox _building)#1)#0;
-    _vPos = [(_xMax + 7) * (sin _bDir), (_xMax + 7) * (cos _bDir), 0] vectorAdd (getPos _building);
-    // _vicType = selectRandom dyn_standart_trasnport_vehicles;
-    // if ((random 1) > 0.5) then {
-    //     _vicType = selectRandom dyn_standart_combat_vehicles;
+    // _xMax = ((boundingBox _building)#1)#0;
+    // _vPos = [(_xMax + 7) * (sin _bDir), (_xMax + 7) * (cos _bDir), 0] vectorAdd (getPos _building);
+    // // _vicType = selectRandom dyn_standart_trasnport_vehicles;
+    // // if ((random 1) > 0.5) then {
+    // //     _vicType = selectRandom dyn_standart_combat_vehicles;
+    // // };
+    // _vicType = selectRandom dyn_hq_vehicles;
+    // // _vPos findEmptyPosition [0, 30, _vicType];
+    // if !(_vPos isEqualTo []) then {
+    //     // _vic = _vicType createVehicle _vPos;
+    //     _vic = createVehicle [_vicType, _vPos, [], 0, "NONE"];
+    //     _vicGrp = createVehicleCrew _vic;
+    //     _vic setDir _bDir;
+    //     _net = createVehicle ["land_gm_camonet_02_east", getPosATL _vic, [], 0, "CAN_COLLIDE"];
+    //     _net setVectorUp surfaceNormal position _net;
+    //     _net setDir _bdir;
+    //     (driver _vic) disableAI "PATH";
     // };
-    _vicType = selectRandom dyn_hq_vehicles;
-    // _vPos findEmptyPosition [0, 30, _vicType];
-    if !(_vPos isEqualTo []) then {
-        // _vic = _vicType createVehicle _vPos;
-        _vic = createVehicle [_vicType, _vPos, [], 0, "NONE"];
-        _vicGrp = createVehicleCrew _vic;
-        _vic setDir _bDir;
-        _net = createVehicle ["land_gm_camonet_02_east", getPosATL _vic, [], 0, "CAN_COLLIDE"];
-        _net setVectorUp surfaceNormal position _net;
-        _net setDir _bdir;
-        (driver _vic) disableAI "PATH";
-    };
+    // _vicGrp enableDynamicSimulation true;
 
     // Continious Inf Spawn (90 degrees)
     [_trg, _building, _endTrg] spawn dyn_spawn_def_waves;
 
     // small trench
 
-    _tPos = [10 * (sin (_bDir + 90)), 10 * (cos (_bDir + 90)), 0] vectorAdd _vPos;
-    [_tPos, _bDir] spawn dyn_spawn_small_trench;
+    // _tPos = [10 * (sin (_bDir + 90)), 10 * (cos (_bDir + 90)), 0] vectorAdd _vPos;
+    // [_tPos, _bDir] spawn dyn_spawn_small_trench;
 
 
     {
@@ -422,8 +423,7 @@ dyn_spawn_strongpoint = {
     _grp = [[0,0,0], east, dyn_standart_fire_team] call BIS_fnc_spawnGroup;
     [_building, _grp, _dir] spawn dyn_garrison_building;
     sleep 1;
-    (units _grp) joinSilent _vicGrp;
-    _vicGrp enableDynamicSimulation true;
+    // (units _grp) joinSilent _vicGrp;
 
     // Inf
     // _infPos = [10 * (sin (_dir - 180)), 10 * (cos (_dir - 180)), 0] vectorAdd (getPos _building);
@@ -431,7 +431,7 @@ dyn_spawn_strongpoint = {
 
     // Roadblock
     _road = [getPos _building, 80] call BIS_fnc_nearestRoad;
-    [_road, true] spawn dyn_spawn_razor_road_block;
+    [_road, false] spawn dyn_spawn_razor_road_block;
 
     // Intel
     // [_trg, getPos _building, "loc_Bunker", "", "colorOPFOR"] call dyn_spawn_intel_markers;

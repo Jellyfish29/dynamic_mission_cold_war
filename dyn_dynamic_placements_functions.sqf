@@ -6,7 +6,7 @@ dyn_retreat = {
     };
 
 
-    if (((random 1) > 0.4) and _arty) then {[2] spawn dyn_arty};
+    if (((random 1) > 0.4) and _arty) then {[6] spawn dyn_arty};
 
     private _allUnits = [];
 
@@ -231,7 +231,7 @@ dyn_spawn_counter_attack = {
 
     waitUntil {sleep 1; ({(_atkPos distance2D _x) < 500} count _leaders) > 0 or ({alive _x} count _leaders) <= _breakPoint};
 
-    if ((random 1) > 0.5) then {[4] spawn dyn_arty};
+    if ((random 1) > 0.5) then {[8] spawn dyn_arty};
 
     waitUntil {sleep 1; ({alive _x} count _leaders) <= _breakPoint};
 
@@ -315,7 +315,7 @@ dyn_spawn_delay_action = {
 
     } forEach _allGrps;
 
-    [3] spawn dyn_arty;
+    [7] spawn dyn_arty;
 };
 
 dyn_spawn_def_waves = {

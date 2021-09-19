@@ -199,7 +199,7 @@ dyn_defense_line = {
 
     // rocketArty
     if ((random 1) > 0.85) then {
-        [5, "rocket"] spawn dyn_arty;
+        [7, "rocket"] spawn dyn_arty;
     };
     // heli atk
     if ((random 1) > 0.5) then {
@@ -260,7 +260,7 @@ dyn_strong_point_defence = {
             [_aoPos, _defPos, getPos _townTrg, [2, 3] call BIS_fnc_randomInt, [1, 2] call BIS_fnc_randomInt, 1, false, [dyn_standart_MBT], 0] spawn dyn_spawn_counter_attack;
         };
         if ((random 1) > 0.7) then {
-            [5, "rocket"] spawn dyn_arty;
+            [7, "rocket"] spawn dyn_arty;
         };
         // [_townTrg, getPos _townTrg, _grps] spawn dyn_retreat;
     };
@@ -432,7 +432,7 @@ dyn_road_emplacemnets = {
     _aoPos setPos _caPos;
 
     if ((random 1) > 0.25) then {
-        [4, "rocket"] spawn dyn_arty;
+        [6, "rocket"] spawn dyn_arty;
     };
 
     //debug
@@ -541,8 +541,8 @@ dyn_recon_convoy = {
         // _fireSupport = 1;
 
         switch (_fireSupport) do { 
-            case 1 : {[4, "rocket"] spawn dyn_arty}; 
-            case 2 : {[5] spawn dyn_arty};
+            case 1 : {[6, "rocket"] spawn dyn_arty}; 
+            case 2 : {[7] spawn dyn_arty};
             case 3 : {[_locPos, _dir] spawn dyn_spawn_heli_attack};
             default {}; 
          }; 
@@ -629,9 +629,9 @@ dyn_ambush = {
         _fireSupport = selectRandom [2,3,2,2];
 
         switch (_fireSupport) do { 
-            case 1 : {[4, "rocket"] spawn dyn_arty}; 
-            case 2 : {[6, "light"] spawn dyn_arty};
-            case 3 : {[4, "heavy"] spawn dyn_arty};
+            case 1 : {[6, "rocket"] spawn dyn_arty}; 
+            case 2 : {[9, "light"] spawn dyn_arty};
+            case 3 : {[6, "heavy"] spawn dyn_arty};
             default {}; 
          }; 
     };
@@ -664,9 +664,9 @@ dyn_town_defense = {
     [_validBuildings, [2, 4] call BIS_fnc_randomInt, _dir] call dyn_spawn_mg_team_garrisons; //[2, 4] call BIS_fnc_randomInt
 
     // Random Garrison
-    [_validBuildings, [2, 4] call BIS_fnc_randomInt, _dir] call dyn_spawn_random_garrison;
+    [_validBuildings, [4, 6] call BIS_fnc_randomInt, _dir] call dyn_spawn_random_garrison;
     if (_weferlingen) then {
-        [_validBuildings, [1, 3] call BIS_fnc_randomInt, _dir] call dyn_spawn_random_garrison;
+        [_validBuildings, 2, _dir] call dyn_spawn_random_garrison;
     };
 
     // Reinforcements
@@ -732,12 +732,11 @@ dyn_town_defense = {
 
 
     // // small trench Inf
-    // _trenchAmoun = ([0, 1] call BIS_fnc_randomInt) * 2;
-    // for "_i" from 0 to _trenchAmoun do {
-    //     _b = _solitaryBuildings#_i;
-    //     _solitaryBuildings deleteAt _i;
+    // _trenchAmount = ([0, 1] call BIS_fnc_randomInt) * 2;
+    // for "_i" from 0 to _trenchAmount do {
+    //     _b = _validBuildings#_i;
+    //     _validBuildings deleteAt _i;
     //     _xMax = ((boundingBox _b)#1)#0;
-    //     _vicType = selectRandom dyn_standart_combat_vehicles;
     //     _vPos = [(_xMax + 7) * (sin _dir), (_xMax + 7) * (cos _dir), 0] vectorAdd (getPos _b);
     //     _grp = [_vPos, _dir, true, 5] call dyn_spawn_small_trench;
     // };
@@ -834,8 +833,8 @@ dyn_town_defense = {
     //harrasment Arty
     [getPos _aoPos, _dir, _endTrg] spawn dyn_spawn_harresment_arty;
 
-    // QRF Patrol
-    [getPos _aoPos, 200, _aoPos, [1, 2] call BIS_fnc_randomInt] call dyn_spawn_qrf_patrol;
+    // // QRF Patrol
+    // [getPos _aoPos, 200, _aoPos, [1, 2] call BIS_fnc_randomInt] call dyn_spawn_qrf_patrol;
 
     // OP
     if ((random 1) > 0.2) then {
@@ -881,8 +880,8 @@ dyn_defense = {
     sleep 10;
 
     if (random 1 < 0.5) then {
-        [4] spawn dyn_arty;
-        [2, "rocket"] spawn dyn_arty;
+        [6] spawn dyn_arty;
+        [4, "rocket"] spawn dyn_arty;
     }
     else
     {
@@ -919,7 +918,7 @@ dyn_defense = {
         sleep 120;
 
         if (random 1 < 0.5) then {
-            [3] spawn dyn_arty;
+            [5] spawn dyn_arty;
         };
     };
 

@@ -33,15 +33,17 @@ execVm "dyn_ai_supports_functions.sqf";
 execVM "dyn_obj_functions.sqf";
 execVM "dyn_setup_functions.sqf";
 
-"Group" setDynamicSimulationDistance 650;
+"Group" setDynamicSimulationDistance 800;
 
 sleep 10;
 dyn_player_support_vic_type = typeOf dyn_support_vic;
 dyn_player_repair_vic_type = typeOf dyn_repair_vic;
 
 // Plmod Support Setup
-pl_mortars = [art_1, art_2];
-// pl_arty_enabled = false;
+
+pl_arty_enabled = false;
+[] call pl_show_fire_support_menu;
+
 pl_cas_Heli_1 = "gm_ge_army_bo105p_pah1a1";
 pl_medevac_Heli_1 = "cwr3_b_uh1_mev";
 pl_cas_plane_1 = "RHS_A10";

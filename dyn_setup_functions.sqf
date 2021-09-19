@@ -775,7 +775,7 @@ dyn_main_setup = {
             _garbagePos = getPos _endTrg;
 
             if !(dyn_debug) then {
-                waitUntil {sleep 1; triggerActivated _endTrg};
+                waitUntil {sleep 2; triggerActivated _endTrg or (count (allGroups select {(side (leader _x)) isEqualTo east})) <= 6};
 
             }
             else
@@ -790,8 +790,14 @@ dyn_main_setup = {
             [] spawn dyn_garbage_clear;
 
             [format ["task_%1", _i], "SUCCEEDED", true] call BIS_fnc_taskSetState;
+
+            sleep 5;
+
+            [west, format ["task_clear_%1", _i], ["Deffensive", format ["Secure %1 and wait for tasking", _locationName], ""], getPos _loc, "ASSIGNED", 1, true, "wait", false] call BIS_fnc_taskCreate;
             
-            if !(dyn_debug) then {sleep 60};
+            if !(dyn_debug) then {sleep 180};
+
+            [format ["task_clear_%1", _i], "SUCCEEDED", true] call BIS_fnc_taskSetState;
         };
     };
 };
