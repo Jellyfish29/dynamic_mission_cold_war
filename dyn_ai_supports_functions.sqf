@@ -138,6 +138,86 @@ dyn_spawn_harresment_arty = {
 
     while {!triggerActivated _endTrg} do {
         sleep ([200, 400] call BIS_fnc_randomInt);
-        [4, "light"] call dyn_arty;
+        [3, "light"] call dyn_arty;
+    };
+};
+
+dyn_air_attack = {
+    params ["_dir"];
+    private ["_vicPos"];
+
+    _vicPos = getPos (selectRandom (vehicles select {side _x == playerSide and !((getNumber (configFile >> "CfgVehicles" >> typeOf _x >> "artilleryScanner")) == 1)}));
+     
+
+    _group = createGroup [east, true];
+    {
+        _atkPos = _vicPos getPos [_x, _dir + 90];
+        _support = _group createUnit ["ModuleCAS_F", _atkPos, [],0 , ""];
+        _support setVariable ["vehicle", "O_Plane_Fighter_02_F"];
+        _support setVariable ["type", 2];
+        _support setDir _dir;
+        sleep 3;
+    } forEach [0, 70];
+};
+
+dyn_continous_support = {
+    params ["_activationTrg", "_endTrg", "_dir"];
+
+    if !(isNull _activationTrg) then {
+        waitUntil{sleep 1; triggerActivated _activationTrg};
+        sleep ([10, 40] call BIS_fnc_randomInt);
+    };
+
+    while {!triggerActivated _endTrg} do {
+
+        _fireSupport = selectRandom [1,1,1,2,2,3,4,4,5];
+
+        switch (_fireSupport) do { 
+            case 1 : {[6, "light"] spawn dyn_arty}; 
+            case 2 : {[3, "heavy"] spawn dyn_arty};
+            case 3 : {[getPos _endTrg, _dir, objNull] spawn dyn_spawn_heli_attack};
+            case 4 : {[_dir] spawn dyn_air_attack};
+            case 5 : {[3, "rocket"] spawn dyn_arty};
+            default {}; 
+         }; 
+        sleep ([200, 400] call BIS_fnc_randomInt);
+    };
+};
+
+
+dyn_continous_counterattack = {
+    params ["_activationTrg", "_endTrg", "_dir"];
+
+    _atkPos = getPos _activationTrg;
+
+    if !(isNull _activationTrg) then {
+        waitUntil{sleep 1; triggerActivated _activationTrg};
+        sleep ([20, 80] call BIS_fnc_randomInt);
+    };
+
+    while {!triggerActivated _endTrg} do {
+
+        _atkType = selectRandom [0,0,1,1,1,2,2,3,3];
+
+        switch (_atkType) do {
+            case 0 : {
+                [2] spawn dyn_arty;
+            };  
+            case 1 : {
+                _rearPos = _atkPos getPos [1000, _dir + selectRandom [90, -90, 180]];
+                [objNull, _atkPos, _rearPos, 3, 3, 0, false, dyn_standart_light_amored_vics, 0, [false, 100], true, false] spawn dyn_spawn_counter_attack;
+            }; 
+            case 2 : {
+                _rearPos = _atkPos getPos [1200, _dir + selectRandom [90, -90, 180]];
+                [objNull, _atkPos, _rearPos, 2, 2, 0, true, dyn_standart_combat_vehicles , 0, [false, 100], true, false] spawn dyn_spawn_counter_attack;
+            };
+            case 3 : {
+                _rearPos = _atkPos getPos [1500, _dir + selectRandom [90, -90, 180]];
+                [objNull, _atkPos, _rearPos, 3, 2, 0, true, [dyn_standart_MBT], 0, [false, 100], true, false] spawn dyn_spawn_counter_attack
+            };
+            default {}; 
+         }; 
+
+        sleep ([480, 900] call BIS_fnc_randomInt);
     };
 };

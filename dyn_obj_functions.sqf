@@ -535,7 +535,7 @@ dyn_recon_convoy = {
 
         waitUntil {sleep 1; ({alive (leader _x)} count _allGrps) < (count _allGrps)};
         
-        _fireSupport = selectRandom [1,2,3];
+        _fireSupport = selectRandom [1,2,3,4];
 
         //debug
         // _fireSupport = 1;
@@ -544,6 +544,7 @@ dyn_recon_convoy = {
             case 1 : {[6, "rocket"] spawn dyn_arty}; 
             case 2 : {[7] spawn dyn_arty};
             case 3 : {[_locPos, _dir] spawn dyn_spawn_heli_attack};
+            case 4 : {[_dir] spawn dyn_air_attack};
             default {}; 
          }; 
 
@@ -600,7 +601,7 @@ dyn_ambush = {
 
 
     private _allVicGroups = [];
-    _mediPos = _locPos getPos [1200, _dir];
+    _mediPos = _locPos getPos [1000, _dir];
     _vicType = selectRandom dyn_standart_light_amored_vics;
     _mediPos = _mediPos findEmptyPosition [0, 400, _vicType];
     for "_j" from 0 to ([2, 3] call BIS_fnc_randomInt) do {
@@ -626,12 +627,13 @@ dyn_ambush = {
         {
             [_x, 1000, false] spawn dyn_auto_suppress;
         } forEach _mgGrps;
-        _fireSupport = selectRandom [2,3,2,2];
+        _fireSupport = selectRandom [2,3,2,2,4,4,4];
 
         switch (_fireSupport) do { 
             case 1 : {[6, "rocket"] spawn dyn_arty}; 
             case 2 : {[9, "light"] spawn dyn_arty};
             case 3 : {[6, "heavy"] spawn dyn_arty};
+            case 4 : {[_dir] spawn dyn_air_attack};
             default {}; 
          }; 
     };
@@ -669,33 +671,15 @@ dyn_town_defense = {
         [_validBuildings, 2, _dir] call dyn_spawn_random_garrison;
     };
 
-    // Reinforcements
-    if ((random 1) >= 0.5) then {
-        _rearPos = [1000 * (sin (_dir + 180)), 1000 * (cos (_dir + 180)), 0] vectorAdd (getPos _aoPos);
-        [_aoPos, getPos _aoPos, _rearPos, 2, 1, 0, true, [dyn_standart_MBT], 0, [true, 100], true, false] spawn dyn_spawn_counter_attack;
-    }
-    else
-    {
-        // Flank Attack
-        if ((random 1) >= 0.4) then {
-            _side = selectRandom [90, -90];
-            _flankPos = [1500 * (sin (_dir + _side)), 1500 * (cos (_dir + _side)), 0] vectorAdd (getPos (_validBuildings#0));
-            [_aoPos, getPos _aoPos, _flankPos, 2, 1, 0, true, [dyn_standart_MBT], 0, [true, 100], true, false] spawn dyn_spawn_counter_attack;
-        };
-    };
 
     // create roadblock
-    _bRoad = [getPos (_validBuildings#0), 80] call BIS_fnc_nearestRoad;
-    [_bRoad, true] call dyn_spawn_razor_road_block;
-
-    // checkpoints
-    // _roads = (getPos (_validBuildings#10)) nearRoads 150;
-    // [_roads, [2, 4] call BIS_fnc_randomInt] call dyn_spawn_sandbag_positions;
+    // _bRoad = [getPos (_validBuildings#0), 80] call BIS_fnc_nearestRoad;
+    // [_bRoad, true] call dyn_spawn_razor_road_block;
 
     // create Razor Wire
-    for "_i" from 0 to 5 do {
+    for "_i" from 0 to 3 do {
         _rPos = [30 * (sin _dir), 30 * (cos _dir), 0] vectorAdd (getPos (_validBuildings#_i));
-        [_rPos, _dir] call dyn_spawn_barriers;
+        [_rPos, _dir + ([-20, 20] call BIS_fnc_randomInt)] call dyn_spawn_barriers;
     };
 
     private _solitaryBuildings = [];
@@ -730,56 +714,16 @@ dyn_town_defense = {
         _grp = [_vPos, _vicType, _dir, true, false] call dyn_spawn_covered_vehicle;
     };
 
-
-    // // small trench Inf
-    // _trenchAmount = ([0, 1] call BIS_fnc_randomInt) * 2;
-    // for "_i" from 0 to _trenchAmount do {
-    //     _b = _validBuildings#_i;
-    //     _validBuildings deleteAt _i;
-    //     _xMax = ((boundingBox _b)#1)#0;
-    //     _vPos = [(_xMax + 7) * (sin _dir), (_xMax + 7) * (cos _dir), 0] vectorAdd (getPos _b);
-    //     _grp = [_vPos, _dir, true, 5] call dyn_spawn_small_trench;
-    // };
-
     // small Strongpoint
-    // for "_i" from 0 to ([0, 1] call BIS_fnc_randomInt) do {
+    for "_i" from 0 to ([0, 1] call BIS_fnc_randomInt) do {
         _infB = selectRandom _solitaryBuildings;
+        _solitaryBuildings deleteAt (_solitaryBuildings find _infB);
         _grp = [_infB, _dir] spawn dyn_spawn_small_strong_point;
-    // };
+    };
 
-
-
-    // large trench Inf
-    // if ((random 1) > 0.25) then {
-    //     _distance = [70, 100] call BIS_fnc_randomInt;
-    //     _tDir = [-30, 30] call BIS_fnc_randomInt;
-    //     _infPos = getPos (_validBuildings#0);
-    //     _infPos = [_distance * (sin (_dir + _tDir)), _distance * (cos (_dir + _tDir) ), 0] vectorAdd _infPos;
-    //     _grp = [_infPos, _dir, false, false, false, true, true] call dyn_spawn_covered_inf;
-    //     _allGrps pushBack _grp;
-    // };
-
-    // create static Weapons
-    // for "_i" from 0 to ([0, 1] call BIS_fnc_randomInt) do {
-    //     _sPos = getPos (_validInfBuilding#_i);
-    //     _distance = [30, 60] call BIS_fnc_randomInt;
-    //     _sDir = [-20, 20] call BIS_fnc_randomInt;
-    //     _sPos = [_distance * (sin (_dir + _sDir)), _distance * (cos (_dir + _sDir)), 0] vectorAdd _sPos;
-    //     [_sPos, _dir] call dyn_spawn_static_weapon;
-    // };
-
-    // create HQ
-    // reverse _solitaryBuildings;
-    // _hqB = _solitaryBuildings#([4, 15] call BIS_fnc_randomInt);
-    // _solitaryBuildings deleteAt (_solitaryBuildings find _hqB);
-    // _hqPos = getPos _hqB;
-    // _hq = [_hqPos, 250, _dir] call dyn_spawn_hq_garrison;
-
-    // [_aoPos, getPos _hq, "o_hq", "CP"] spawn dyn_spawn_intel_markers;
-
-    // create Strongpoint inc Continuos Inf Spawn
-    _solCount = count _solitaryBuildings;
-    _infB = _solitaryBuildings#([_solCount - 3, _solCount - 1] call BIS_fnc_randomInt);
+    // create Strongpoint
+    _infB = selectRandom _solitaryBuildings;
+    _solitaryBuildings deleteAt (_solitaryBuildings find _infB);
     [_aoPos, _infB, _dir, _endTrg] spawn dyn_spawn_strongpoint;
 
     // create Tank/APC
@@ -794,19 +738,11 @@ dyn_town_defense = {
             _allGrps pushBack _grp;
         };
     };
-    // if ((random 1) > 0.75) then {
-    // [_aoPos, _vGrps] spawn dyn_attack_nearest_enemy;
-    // };
-
-    // Empty Transports
-    // for "_i" from 0 to ([0, 1] call BIS_fnc_randomInt) do {
-    //     _grp = [getPos _aoPos, 250, dyn_standart_trasnport_vehicles, 0, true] call dyn_spawn_parked_vehicle;
-    // };
 
     // Supply Convoy
-    // if (_weferlingen) then {
-    //     [_aoPos, getPos (selectRandom _solitaryBuildings), _dir - 180] spawn dyn_spawn_supply_convoy;
-    // };
+    if ((random 1) > 0.25) then {
+        [_aoPos, getPos (selectRandom _solitaryBuildings), _dir - 180] spawn dyn_spawn_supply_convoy;
+    };
 
     //AA
     if ((random 1) > 0.5) then {
@@ -821,9 +757,6 @@ dyn_town_defense = {
     // Forest Position
     [[1000 * (sin _dir), 1000 * (cos _dir), 0] vectorAdd (getPos _aoPos), 600, _aoPos, _dir] spawn dyn_spawn_forest_position;
 
-    // Hill Cover
-    // [getPos _aoPos, 2000, 1, _aoPos] spawn dyn_spawn_hill_overwatch;
-
     // Bridge Defense
     [getPos _aoPos, 1500, 400, _watchPos] spawn dyn_spawn_bridge_defense;
 
@@ -833,20 +766,28 @@ dyn_town_defense = {
     //harrasment Arty
     [getPos _aoPos, _dir, _endTrg] spawn dyn_spawn_harresment_arty;
 
+    //continous ai fire Support
+    [_aoPos, _endTrg, _dir] spawn dyn_continous_support;
+
+    // continous counterattacks
+    [_aoPos, _endTrg, _dir] spawn dyn_continous_counterattack;
+
     // // QRF Patrol
     // [getPos _aoPos, 200, _aoPos, [1, 2] call BIS_fnc_randomInt] call dyn_spawn_qrf_patrol;
 
     // OP
     if ((random 1) > 0.2) then {
-        [_aoPos, _dir] spawn dyn_spawn_observation_post;
+        [_aoPos, _dir + ([-20, 20] call BIS_fnc_randomInt)] spawn dyn_spawn_observation_post;
     };
 
     // CrossRoad
-    [getPos _aoPos, (triggerArea _aoPos)#0] spawn dyn_crossroad_position;
+    [getPos _aoPos, (triggerArea _aoPos)#0, 2] spawn dyn_crossroad_position;
 
-
-    // Continuos Inf Spawn 
-    // [_aoPos, _solitaryBuildings#((count _solitaryBuildings) - ([1, 5] call BIS_fnc_randomInt)), _endTrg] spawn dyn_spawn_def_waves;
+    // Continuos Inf Spawn
+    _solCount = count _solitaryBuildings;
+    _infB = _solitaryBuildings#(_solCount - ([1, round (_solCount * 0.25)] call BIS_fnc_randomInt));
+    _solitaryBuildings deleteAt (_solitaryBuildings find _infB);
+    [_aoPos, _infB, _endTrg] spawn dyn_spawn_def_waves;
 
 
     _allGrps
@@ -886,6 +827,7 @@ dyn_defense = {
     else
     {
         [_defPos, _defPos getDir _atkPos] spawn dyn_spawn_heli_attack;
+        [_atkPos getDir _defPos] spawn dyn_air_attack;
     };
 
     _waves = [2, 3] call BIS_fnc_randomInt;

@@ -412,58 +412,61 @@ dyn_spawn_supply_convoy = {
     _dir = player getDir _hqPos;
 
     _spawnDir = _dir - ([-90, 90] call BIS_fnc_randomInt);
-    _rearPos = [1400 * (sin _spawnDir), 1400 * (cos _spawnDir), 0] vectorAdd _hqPos;
+    _rearPos = _hqPos getPos [1000, _dir + _spawnDir];
 
     // debug
     // _m = createMarker [str (random 1), _rearPos];
     // _m setMarkerType "mil_circle"; 
 
     // _road = [_rearPos, 1000 , ["TRAIL"]] call BIS_fnc_nearestRoad;
-    _roads = _rearPos nearRoads 1500;
-    _roads = [_roads, [], {(getPos _x) distance2D _rearPos}, "ASCEND"] call BIS_fnc_sortBy;
-    _road = _roads#0;
-    _usedRoads = [];
-    private _vics = [];
-    private _grps = [];
-    _vicType = selectRandom (dyn_standart_trasnport_vehicles + [dyn_standart_light_amored_vic]);
-    for "_i" from 0 to 1 step 1 do {
-        _road = ((roadsConnectedTo _road) - [_road]) select 0;
-        _vic = vehicle (leader ([getPos _road, 0, [_vicType]] call dyn_spawn_parked_vehicle));
-        _vics pushBack _vic;
-        _near = roadsConnectedTo _road;
-        _near = [_near, [], {(getPos _x) distance2D _hqPos}, "DESCEND"] call BIS_fnc_sortBy;
-        _vDir = (getPos (_near#0)) getDir (getPos _road);
-        _vic setDir _vDir;
-        _grp = [_rearPos, east, dyn_standart_squad] call BIS_fnc_spawnGroup;
-        _grp setFormation "DIAMOND";
+    _roads = _rearPos nearRoads 1700;
+    if !(_roads isEqualTo []) then {
+        _roads = [_roads, [], {(getPos _x) distance2D _rearPos}, "ASCEND"] call BIS_fnc_sortBy;
+        _road = _roads#0;
+        _usedRoads = [];
+        private _vics = [];
+        private _grps = [];
+        // _vicType = selectRandom (dyn_standart_trasnport_vehicles + [dyn_standart_light_amored_vic]);
+        _vicType = dyn_standart_light_amored_vic;
+        for "_i" from 0 to 1 step 1 do {
+            _road = ((roadsConnectedTo _road) - [_road]) select 0;
+            _vic = vehicle (leader ([getPos _road, 0, [_vicType]] call dyn_spawn_parked_vehicle));
+            _vics pushBack _vic;
+            _near = roadsConnectedTo _road;
+            _near = [_near, [], {(getPos _x) distance2D _hqPos}, "DESCEND"] call BIS_fnc_sortBy;
+            _vDir = (getPos (_near#0)) getDir (getPos _road);
+            _vic setDir _vDir;
+            _grp = [_rearPos, east, dyn_standart_squad] call BIS_fnc_spawnGroup;
+            _grp setFormation "DIAMOND";
+            {
+                _x assignAsCargo _vic;
+                _x moveInCargo _vic;
+            } forEach (units _grp);
+            _vic setVariable ["dyn_supply_con_trasnported_grp", _grp];
+        };
+
+        waitUntil {sleep 1, triggerActivated _trg};
+
+        // sleep ([60, 180] call BIS_fnc_randomInt);
+
         {
-            _x assignAsCargo _vic;
-            _x moveInCargo _vic;
-        } forEach (units _grp);
-        _vic setVariable ["dyn_supply_con_trasnported_grp", _grp];
+            _g = (group (driver _x));
+            _wpPos = [[[_hqPos, 50]],[], {isOnRoad _this}] call BIS_fnc_randomPos;
+            _wp = _g addWaypoint [_wpPos, 2];
+            _wp setWaypointType "UNLOAD";
+            _x limitSpeed 35;
+            _g setBehaviour "CARELESS";
+            [_x, _wp] spawn {
+                params ["_vic", "_wp"];
+                waitUntil {sleep 1; ((_vic distance2D (waypointPosition _wp)) < 25) or !(alive _vic)};
+                doStop _vic;
+                sleep 10;
+                _tGrp = _vic getVariable ["dyn_supply_con_trasnported_grp", grpNull];
+                _tGrp leaveVehicle _vic;
+                [objNull, [_tGrp]] spawn dyn_attack_nearest_enemy;
+            }; 
+        } forEach _vics;
     };
-
-    waitUntil {sleep 1, triggerActivated _trg};
-
-    // sleep ([60, 180] call BIS_fnc_randomInt);
-
-    {
-        _g = (group (driver _x));
-        _wpPos = [[[_hqPos, 50]],[], {isOnRoad _this}] call BIS_fnc_randomPos;
-        _wp = _g addWaypoint [_wpPos, 2];
-        _wp setWaypointType "UNLOAD";
-        _x limitSpeed 35;
-        _g setBehaviour "CARELESS";
-        [_x, _wp] spawn {
-            params ["_vic", "_wp"];
-            waitUntil {sleep 1; ((_vic distance2D (waypointPosition _wp)) < 25) or !(alive _vic)};
-            doStop _vic;
-            sleep 10;
-            _tGrp = _vic getVariable ["dyn_supply_con_trasnported_grp", grpNull];
-            _tGrp leaveVehicle _vic;
-            [objNull, [_tGrp]] spawn dyn_attack_nearest_enemy;
-        }; 
-    } forEach _vics;
 };
 
 
