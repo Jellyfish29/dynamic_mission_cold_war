@@ -793,7 +793,7 @@ dyn_spawn_side_town_guards = {
 
             _dir = (getPos _x) getDir player;
 
-            if (_n >= _limit) then {
+            if (_n < _limit) then {
 
                 [objNull, getPos _x, "b_recon", "RecPlt.", "colorOPFOR"] call dyn_spawn_intel_markers;
 

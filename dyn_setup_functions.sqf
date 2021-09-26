@@ -323,6 +323,57 @@ dyn_place_player = {
     };
 };
 
+dyn_place_support_deployed = {
+    params ["_startPos", "_dest"];
+
+    _spawnPos = getMarkerPos "support_spawn";
+    deleteMarker "support_spawn";
+
+    _vehicles = nearestObjects [_spawnPos,["LandVehicle"], 100];
+
+    _road = [_startPos, 300] call BIS_fnc_nearestRoad;
+    _usedRoads = [];
+    // reverse _vehicles;
+
+    _roadsPos = [];
+    for "_i" from 0 to (count _vehicles) - 1 step 1 do {
+        _road = ((roadsConnectedTo _road) - [_road]) select 0;
+        _roadPos = getPos _road;
+        _near = roadsConnectedTo _road;
+        _near = [_near, [], {(getPos _x) distance2D _dest}, "DESCEND"] call BIS_fnc_sortBy;
+        _dir = (getPos (_near#0)) getDir (getPos _road);
+        _roadsPos pushBack [_roadPos, _dir];
+    };
+
+    _roadsPos = [_roadsPos, [], {(_x#0) distance2D _dest}, "ASCEND"] call BIS_fnc_sortBy;
+
+    for "_i" from 0 to (count _vehicles) - 1 step 1 do {
+        (_vehicles#_i) setPos ((_roadsPos#_i)#0);
+        (_vehicles#_i) setdir ((_roadsPos#_i)#1);
+    };
+};
+
+dyn_place_player_deployed = {
+    params ["_startPos", "_startDir", "_placePos", "_dest", "_supportPos"];
+    _vehicles = nearestObjects [_startPos,["LandVehicle"], 300];
+    {
+        _dis = _startPos distance2D _x;
+        _dir = _startPos getDir _x;
+        _x setVariable ["dyn_rel_data", [_dis, _dir]];
+    } forEach _vehicles;
+
+    {
+        _relData = _x getVariable "dyn_rel_data";
+        _setPos = _placePos getPos [_relData#0, _startDir - (_relData#1)];
+        _x setPos _setPos;
+        _x setDir _startDir;
+    } forEach _vehicles;
+
+    [_supportPos, _dest] call dyn_place_support_deployed;
+};
+
+
+
 dyn_place_arty = {
 
     artGrp_1 setVariable ["pl_not_addalbe", true];
@@ -335,7 +386,7 @@ dyn_place_arty = {
         _x setVariable ["dyn_rel_pos", _relPos];
     } forEach ((units artGrp_1) - [_artyLeader]);
 
-    _batteryPos = (getPos player) getPos [1400, (getDir (vehicle player) + 190)];
+    _batteryPos = (getPos player) getPos [2000, (getDir (vehicle player) + 190)];
     _batteryPos = ((selectBestPlaces [_batteryPos, 500, "2*meadow", 95, 1])#0)#0;
     // _batteryPos = _batteryPos findEmptyPosition [0, 500, typeOf (vehicle _artyLeader)];
 
@@ -368,7 +419,7 @@ dyn_place_opfor_arty = {
         } forEach dyn_opfor_arty;
     };
     dyn_opfor_arty = [];
-    _artyPos = ((selectBestPlaces [_artyPos, 1000, "2*meadow", 95, 1])#0)#0;
+    _artyPos = ((selectBestPlaces [_artyPos, 1500, "2*meadow", 95, 1])#0)#0;
 
     for "_i" from 0 to 2 do {
         _aPos = _artyPos getPos [20 * _i, _dir + 90];
@@ -445,7 +496,21 @@ dyn_place_opfor_light_arty = {
     };
 };
 
+// dyn_start_markers = [["start_0", "obj_0"], ["start_1", "obj_1"], ["start_2", "obj_2"], ["start_3", "obj_3"], ["start_4", "obj_4"], ["start_5", "obj_5"], ["start_6", "obj_6"], ["start_7", "obj_7"], ["start_8", "obj_8"], ["start_9", "obj_9"], ["start_10", "obj_10"], ["start_11", "obj_11"], ["start_12", "obj_12"], ["start_13", "obj_13"], ["start_14", "obj_14"], ["start_15", "obj_15"]];
+
+
+
 dyn_main_setup = {
+
+    dyn_start_markers = [];
+
+    for "_i" from 0 to 15 do {
+        _m1 = format ["start_%1", _i];
+        _m2 = format ["obj_%1", _i];
+        _m3 = format ["support_%1", _i];
+
+        dyn_start_markers pushBack [_m1, _m2, _m3];        
+    };
 
     dyn_locations = [];
 
@@ -460,15 +525,17 @@ dyn_main_setup = {
 
     ////---------------------Version 2------------------------------
     dyn_map_center = [worldSize / 2, worldsize / 2, 0];
-    _startPairs = [["start_0", "obj_0"], ["start_1", "obj_1"], ["start_2", "obj_2"], ["start_3", "obj_3"], ["start_4", "obj_4"], ["start_5", "obj_5"], ["start_6", "obj_6"], ["start_7", "obj_7"], ["start_8", "obj_8"], ["start_9", "obj_9"], ["start_10", "obj_10"], ["start_11", "obj_11"], ["start_12", "obj_12"], ["start_13", "obj_13"], ["start_14", "obj_14"], ["start_15", "obj_15"], ["start_16", "obj_16"], ["start_17", "obj_17"]];
-    _startPair = selectRandom _startPairs;
+    
+    _startPair = selectRandom dyn_start_markers;
 
     // debug override
-    // _startPair = ["start_17", "obj_17"];
+    // _startPair = ["start_14", "obj_14", "support_14"];
+    _playerStartDir = markerDir (_startPair#0);
 
     _playerStart = getMarkerPos (_startPair#0);
     _startLoc = nearestLocation [getMarkerPos (_startPair#1), ""];
     _startPos = getPos _startLoc;
+    _supportPos = getMarkerPos (_startPair#2);
     dyn_locations pushBack _startLoc;
     private _campaignDir = ((getPos _startLoc) getDir dyn_map_center) - 180;
 
@@ -483,10 +550,12 @@ dyn_main_setup = {
         {
             deleteMarker (_x#0);
             deleteMarker (_x#1);
-        } forEach _startPairs;
+            deleteMarker (_x#2);
+        } forEach dyn_start_markers;
 
         deleteMarker "test_m_1";
         deleteMarker "test_m_2";
+        
     };
 
 
@@ -539,7 +608,10 @@ dyn_main_setup = {
 
     _aoStart = [_playerStart, 2500, ["TRAIL", "TRACK"]] call BIS_fnc_nearestRoad;
 
-    [getPos _aoStart, _startPos] call dyn_place_player;
+    // [getPos _aoStart, _startPos] call dyn_place_player;
+
+    [getMarkerPos "spawn_start", _playerStartDir, getPos _aoStart, _startPos, _supportPos] call dyn_place_player_deployed;
+    deleteMarker "spawn_start";
 
     [] call dyn_place_arty;
 
@@ -654,6 +726,7 @@ dyn_main_setup = {
                 // Supply Reinforcements
                 if (({alive _x} count (units dyn_support_group)) <= 0 or !alive dyn_support_vic or isNull dyn_repair_vic) then {
                     dyn_support_vic = createVehicle [dyn_player_support_vic_type, _playerStart, [], 40, "NONE"];
+                    dyn_support_vic setVariable ["pl_set_supply_vic", true];
                     dyn_support_group = createVehicleCrew dyn_support_vic;
                     dyn_support_group setGroupId [format ["TraTrp %1", 2 +_i]];
                     player hcSetGroup [dyn_support_group];
@@ -662,6 +735,7 @@ dyn_main_setup = {
                 sleep 1;
                 if (({alive _x} count (units dyn_repair_group)) <= 0 or !alive dyn_repair_vic or isNull dyn_repair_vic) then {
                     dyn_repair_vic = createVehicle [dyn_player_repair_vic_type, _playerStart, [], 40, "NONE"];
+                    dyn_repair_vic setVariable ["pl_set_repair_vic", true];
                     dyn_repair_group = createVehicleCrew dyn_repair_vic;
                     dyn_repair_group setGroupId [format ["GSITrp %1", 3 +_i]];
                     player hcSetGroup [dyn_repair_group];
@@ -672,7 +746,8 @@ dyn_main_setup = {
                 [getPos _loc, _dir, _endTrg, _campaignDir, getPos player, dyn_en_comp] spawn dyn_create_markers;
                 // if ((random 1) > 0.35) then {_startDefense = true};
             };
-            [getPos _loc, _dir, _endTrg] spawn dyn_ambiance;
+            
+            // [getPos _loc, _dir, _endTrg] spawn dyn_ambiance;
 
             [west, format ["task_%1", _i], ["Offensive", format ["Capture %1", _locationName], ""], getPos _loc, "ASSIGNED", 1, true, "attack", false] call BIS_fnc_taskCreate;
 
@@ -721,7 +796,7 @@ dyn_main_setup = {
                 _defenseType = selectRandom ["mobileTank", "recon", "empty", "ambush"];
 
                 // debug
-                // _defenseType = "ambush";
+                // _defenseType = "mobileTank";
 
                 switch (_defenseType) do { 
                     case "line" : {[getPos _loc, _trg, _dir] call dyn_defense_line}; 
@@ -803,4 +878,5 @@ dyn_main_setup = {
 };
 
 [] call dyn_main_setup;
+
 

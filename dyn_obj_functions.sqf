@@ -292,9 +292,16 @@ dyn_mobile_armor_defense = {
 
     for "_i" from 0 to ([3, 4] call BIS_fnc_randomInt) do {
         _vPos = [(70 * _i) * (sin (_dir + 90)), (70 * _i) * (cos (_dir + 90)), 0] vectorAdd _stagingPos;
-        _grp = [_vPos, 0, [dyn_standart_MBT], _dir] call dyn_spawn_parked_vehicle;
-        (vehicle (leader _grp)) limitSpeed 30;
-        _allTankGrps pushBack _grp;
+        _isForest = [_vPos] call dyn_is_forest;
+        if !(_isForest) then {
+            _grp = [_vPos, 0, [dyn_standart_MBT], _dir] call dyn_spawn_parked_vehicle;
+            (vehicle (leader _grp)) limitSpeed 30;
+            _allTankGrps pushBack _grp;
+        }
+        else
+        {
+            _grp = [_vPos, _dir, true, true, true, true] call dyn_spawn_covered_inf;
+        };
     };
 
     [_atkTrg, _allTankGrps, getPos _townTrg] spawn {

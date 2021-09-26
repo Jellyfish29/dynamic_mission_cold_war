@@ -4,7 +4,7 @@ dyn_spawn_smoke = {
     _sdir = getDir (leader _grp);
     _smokePos = [60 * (sin _sDir), 60 * (cos _sDir), 0] vectorAdd getPos (leader _grp);
     // _smokePos = getPos (leader _grp);
-    _smokeGroup = createGroup east;
+    _smokeGroup = createGroup [east, true];
     _smoke = _smokeGroup createUnit ["ModuleSmoke_F", _smokePos, [],0 , ""];
     _smoke setVariable ["type", "SmokeShell"]
 };
@@ -146,7 +146,7 @@ dyn_air_attack = {
     params ["_dir"];
     private ["_vicPos"];
 
-    _vicPos = getPos (selectRandom (vehicles select {side _x == playerSide and !((getNumber (configFile >> "CfgVehicles" >> typeOf _x >> "artilleryScanner")) == 1)}));
+    _vicPos = getPos (selectRandom (vehicles select {side _x == playerSide and !((getNumber (configFile >> "CfgVehicles" >> typeOf _x >> "artilleryScanner")) == 1) and !(_x getVariable ["pl_set_repair_vic", false]) and !(_x getVariable ["pl_set_supply_vic", false])}));
      
 
     _group = createGroup [east, true];
@@ -170,9 +170,10 @@ dyn_continous_support = {
 
     while {!triggerActivated _endTrg} do {
 
-        _fireSupport = selectRandom [1,1,1,2,2,3,4,4,5];
+        _fireSupport = selectRandom [0,0,1,1,1,2,2,3,4,4,5];
 
-        switch (_fireSupport) do { 
+        switch (_fireSupport) do {
+            case 0 : {}; 
             case 1 : {[6, "light"] spawn dyn_arty}; 
             case 2 : {[3, "heavy"] spawn dyn_arty};
             case 3 : {[getPos _endTrg, _dir, objNull] spawn dyn_spawn_heli_attack};
