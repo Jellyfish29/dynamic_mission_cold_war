@@ -231,7 +231,7 @@ dyn_spawn_counter_attack = {
 
     waitUntil {sleep 1; ({(_atkPos distance2D _x) < 500} count _leaders) > 0 or ({alive _x} count _leaders) <= _breakPoint};
 
-    if ((random 1) > 0.5) then {[8] spawn dyn_arty};
+    if ((random 1) > 0.5) then {[8, "rocket"] spawn dyn_arty; [4, "heavy", true] spawn dyn_arty};
 
     waitUntil {sleep 1; ({alive _x} count _leaders) <= _breakPoint};
 
@@ -253,6 +253,8 @@ dyn_spawn_delay_action = {
     if !(isNull _trg) then {
         waitUntil { sleep 1; triggerActivated _trg };
     };
+
+    [4, "heavy", true] spawn dyn_arty;
 
     {
         _grp = _x;
@@ -315,7 +317,7 @@ dyn_spawn_delay_action = {
 
     } forEach _allGrps;
 
-    [7] spawn dyn_arty;
+    [5, "rocket"] spawn dyn_arty;
 };
 
 dyn_spawn_def_waves = {
@@ -335,13 +337,13 @@ dyn_spawn_def_waves = {
         _net setVectorUp surfaceNormal position _net;
         _net setDir getDir _tVic;
 
-        _tPos = [10 * (sin _vDir), 10 * (cos _vDir), 0] vectorAdd (getPos _tVic);
-        [_tPos, _vDir] spawn dyn_spawn_small_trench;
+        // _tPos = [10 * (sin _vDir), 10 * (cos _vDir), 0] vectorAdd (getPos _tVic);
+        // [_tPos, _vDir] spawn dyn_spawn_small_trench;
 
         _spawnEndTrg = createTrigger ["EmptyDetector", getPos _tVic, true];
         _spawnEndTrg setTriggerActivation ["WEST", "PRESENT", false];
         _spawnEndTrg setTriggerStatements ["this", " ", " "];
-        _spawnEndTrg setTriggerArea [100, 100, 0, false];
+        _spawnEndTrg setTriggerArea [100, 100, 0, false, 30];
 
         waitUntil {sleep 1; triggerActivated _trg};
 
@@ -363,48 +365,6 @@ dyn_spawn_def_waves = {
     };                                                                                                                                                                                                                                                                                                       
 };
 
-dyn_spawn_heli_attack = {
-        params ["_locPos", "_dir", ["_trg", objNull]];
-
-        if !(isNull _trg) then {
-            waitUntil { sleep 1; triggerActivated _trg };
-        };
-
-        _rearPos = [3000 * (sin (_dir - 180)), 3000 * (cos (_dir - 180)), 0] vectorAdd _locPos;
-        _units = allUnits+vehicles select {side _x == west};
-        _targetPos = getPos (_units#0);
-
-        // _frontPos = [3000 * (sin _dir), 3000 * (cos _dir), 0] vectorAdd _targetPos;
-
-        for "_i" from 0 to 1 do {
-
-            [_rearPos, _targetPos, _dir] spawn {
-                params ["_rearPos", "_targetPos", "_dir"];
-
-                _casGroup = createGroup east;
-                _p = [_rearPos, _dir, dyn_attack_heli, _casGroup] call BIS_fnc_spawnVehicle;
-                _plane = _p#0;
-                [_plane, 60] call BIS_fnc_setHeight;
-                // _plane forceSpeed 140;
-                _plane flyInHeight 60;
-                _wp = _casGroup addWaypoint [_targetPos, 0];
-                _time = time + 300;
-
-                waitUntil {(_plane distance2D (waypointPosition _wp)) <= 200 or time >= _time};
-
-                _wp = _casGroup addWaypoint [_rearPos, 0];
-                _time = time + 300;
-
-                waitUntil {(_plane distance2D (waypointPosition _wp)) <= 200 or time >= _time};
-
-                {
-                    deleteVehicle _x;
-                } forEach (units _casGroup);
-                deleteVehicle _plane;
-            };
-            sleep 10;
-        };
-};
 
 dyn_spawn_supply_convoy = { 
     params ["_trg", "_hqPos", "_dir"];

@@ -142,15 +142,6 @@ dyn_spawn_covered_inf = {
         _grp setFormation "LINE";
         _grp setFormDir _dir;
         (leader _grp) setDir _dir;
-        if (_sandBag) then {
-            _sPos = getPos (leader _grp);
-            _sDir =  getDir (leader _grp);
-            _sPos = [0.5 * (sin _sDir), 0.5 * (cos _sDir), 0] vectorAdd _sPos;
-            _comp = selectRandom ["land_gm_sandbags_01_round_01", "land_gm_sandbags_01_wall_01"];
-            _sCover =  _comp createVehicle _sPos;
-            _sCover setDir _sDir;
-            _covers pushBack _sCover;
-        };
 
         if (_net and !_trench) then {
             _comp = selectRandom ["land_gm_camonet_02_east", "Land_CamoNetVar_EAST"];
@@ -219,6 +210,12 @@ dyn_spawn_covered_inf = {
                 _w = "Land_Razorwire_F" createVehicle _wPos;
                 _w setDir (_dir - 180);
 
+                _tNetPos = [9 * (sin (_dir + 90)), 9 * (cos (_dir + 90)), 0] vectorAdd _trenchPos;
+                _tNet = "land_gm_camonet_01_nato" createVehicle _tNetPos;
+                _tNet allowDamage false;
+                _tNet setDir (_dir - 90);
+                _tNet setPos ((getPos _tNet) vectorAdd [0,0,-2.3]);
+
                 if (_bushes) then {
                     for "_j" from 0 to 1 do {
                         _bush = "gm_b_crataegus_monogyna_01_summer" createVehicle _wPos;
@@ -245,11 +242,11 @@ dyn_spawn_covered_inf = {
 
 
         if !(_trench) then {
-            [_grp, _dir, 10, true, _covers] call dyn_line_form_cover;
+            [_grp, _dir, 10, true, _covers, 15, _sandBag] call dyn_line_form_cover;
         }
         else
         {
-            [_grp, _dir, 5, false] call dyn_line_form_cover;
+            [_grp, _dir, 4, false] call dyn_line_form_cover;
         };
 
     };
@@ -326,7 +323,7 @@ dyn_spawn_hq_garrison = {
     _atkTrg = createTrigger ["EmptyDetector", _pos, true];
     _atkTrg setTriggerActivation ["WEST", "PRESENT", false];
     _atkTrg setTriggerStatements ["this", " ", " "];
-    _atkTrg setTriggerArea [100, 100, 0, false];
+    _atkTrg setTriggerArea [100, 100, 0, false, 30];
 
     // small trench
     _tPos = [[[getPos _hq, 30]], [[getPos _hq, 10], "water"]] call BIS_fnc_randomPos;
@@ -447,18 +444,25 @@ dyn_spawn_small_strong_point = {
     _xMax = ((boundingBox _building)#1)#0;
     _infPos = [(_xMax + 2) * (sin _bDir), (_xMax + 2) * (cos _bDir), -0.1] vectorAdd (getPosATL _building);
 
-    _sCover1 =  "land_gm_sandbags_01_wall_01" createVehicle _infPos;
-    _sCover1 setPosATL _infPos;
-    _sCover1 setDir (_bDir + 90);
+    _mgGrp = createGroup [east, true];
 
-    _sPos = [4 * (sin (_bDir + 45)), 4 * (cos (_bDir + 45)), -0.1] vectorAdd (getPosATL _sCover1);
-    _sCover2 =  "land_gm_sandbags_01_wall_01" createVehicle _sPos;
-    _sCover2 setPosATL _sPos;
-    _sCover2 setDir _bDir;
+    _bunker = createVehicle ["land_gm_woodbunker_01_bags", _infPos , [], 0, "CAN_COLLIDE"];
+    _bunker setDir _bDir;
 
-    _covers = [_sCover1, _sCover2];
+    _mg = _mgGrp createUnit [dyn_standart_mg, _infPos, [], 0, "CAN_COLLIDE"];
+    _mg setDir _bDir;
+    _mg disableAI "PATH";
 
-    _oGrp = [_infPos, _dir, false, false, false, false, false, dyn_standart_fire_team, _covers] call dyn_spawn_covered_inf;
+    _sPos = _infPos getPos [2.5, _bDir + 90];
+    _sandBag = createVehicle ["land_gm_sandbags_01_short_01", _sPos, [], 0, "CAN_COLLIDE"];
+    _sandBag setDir _bDir;
+
+    _at = _mgGrp createUnit [dyn_standart_at_soldier, _sPos getPos [1, _bDir - 180], [], 0, "CAN_COLLIDE"];
+    _at setDir _bDir;
+    _at disableAI "PATH";
+    _at setUnitPos "MIDDLE";
+
+    _oGrp = [_infPos, _dir, false, false, false, false, false, dyn_standart_fire_team] call dyn_spawn_covered_inf;
 
     // Wire
     {
@@ -471,15 +475,17 @@ dyn_spawn_small_strong_point = {
     _road = [getPos _building, 80] call BIS_fnc_nearestRoad;
     [_road, false] spawn dyn_spawn_razor_road_block;
 
-    [_gGrp, _oGrp] spawn {
-        params ["_gGrp", "_oGrp"];
+    [_gGrp, _oGrp, _mgGrp] spawn {
+        params ["_gGrp", "_oGrp", "_mgGrp"];
 
-        sleep 40;
+        sleep 20;
 
         (units _oGrp) joinSilent _gGrp;
+        (units _mgGrp) joinSilent _gGrp;
+        _gGrp enableDynamicSimulation true;
     };
 
-    _gGrp enableDynamicSimulation true;
+    // _gGrp enableDynamicSimulation true;
     _gGrp
 };
 
@@ -621,8 +627,8 @@ dyn_spawn_forest_patrol = {
         _patrollPos pushBack (_x#0);
     } forEach _forest;
 
-    _defPos = _pos getPos [800, _defDir];
-    _patrollPos = [_patrollPos, [], {_x distance2D _pos}, "ASCEND"] call BIS_fnc_sortBy;
+    _defPos = _pos getPos [1700, _defDir];
+    _patrollPos = [_patrollPos, [], {_x distance2D _defPos}, "ASCEND"] call BIS_fnc_sortBy;
 
     for "_i" from 0 to (_amount - 1) do {
         _pPos = _patrollPos#(2 * _i);
@@ -654,7 +660,7 @@ dyn_spawn_forest_position = {
 
     _forest = [_forest, [], {(_x#0) distance2D _pos}, "ASCEND"] call BIS_fnc_sortBy;
 
-    _grp = [(_forest#0)#0, _dir, true, false, false] call dyn_spawn_covered_inf;
+    _grp = [(_forest#0)#0, _dir, true, false, true] call dyn_spawn_covered_inf;
     _grp enableDynamicSimulation true;
 
     [_trg, getPos _trg, [_grp], false] spawn dyn_retreat;
@@ -848,7 +854,7 @@ dyn_spawn_side_town_guards = {
                     _qrfTrg = createTrigger ["EmptyDetector", getPos _x , true];
                     _qrfTrg setTriggerActivation ["WEST", "PRESENT", false];
                     _qrfTrg setTriggerStatements ["this", " ", " "];
-                    _qrfTrg setTriggerArea [300, 300, _dir, true];
+                    _qrfTrg setTriggerArea [300, 300, _dir, true, 30];
 
                     [_qrfTrg, getPos _x, 1000, [2, 3] call BIS_fnc_randomInt] spawn dyn_spawn_qrf;
                 };
@@ -1028,7 +1034,7 @@ dyn_spawn_observation_post = {
     private _atkTrg = createTrigger ["EmptyDetector", _trgPos, true];
     _atkTrg setTriggerActivation ["WEST", "PRESENT", false];
     _atkTrg setTriggerStatements ["this", " ", " "];
-    _atkTrg setTriggerArea [2500, 65, _dir, true];
+    _atkTrg setTriggerArea [2500, 65, _dir, true, 30];
 
     // //debug
     // _m = createMarker [str (random 1), _trgPos];
@@ -1073,6 +1079,8 @@ dyn_crossroad_position = {
             };
         }; 
     } forEach _allRoads;
+
+    _allRoads = [_allRoads, [], {_x distance2D _pos}, "ASCEND"] call BIS_fnc_sortBy;
 
     private _n = 0;
     {
@@ -1148,7 +1156,7 @@ dyn_spawn_intel_markers = {
 
 
 dyn_spawn_intel_markers_area = {
-    params ["_trg", "_pos", ["_color", "colorOpfor"], ["_size", 1500]];
+    params ["_trg", "_pos", ["_color", "colorOpfor"], ["_size", 1500], ["_sizeYoff", 0.66], ["_mDir", [0, 359] call BIS_fnc_randomInt]];
 
     if !(isNull _trg) then { waitUntil {sleep 1; triggerActivated _trg}};
 
@@ -1157,8 +1165,8 @@ dyn_spawn_intel_markers_area = {
     _intelMarker setMarkerShape "ELLIPSE";
     _intelMarker setMarkerBrush "BDiagonal";
     _intelMarker setMarkerAlpha 0.9;
-    _intelMarker setMarkerDir ([0, 359] call BIS_fnc_randomInt);
-    _intelMarker setMarkerSize [_size, _size * 0.66];
+    _intelMarker setMarkerDir _mDir;
+    _intelMarker setMarkerSize [_size, _size * _sizeYoff];
 
     dyn_intel_markers pushBack _intelMarker;
 };

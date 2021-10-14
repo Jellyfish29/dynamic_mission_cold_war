@@ -68,7 +68,7 @@ dyn_find_cover = {
 };
 
 dyn_line_form_cover = {
-    params ["_grp", "_watchDir", "_lineSpacing", "_findCover", ["_addCovers", []]];
+    params ["_grp", "_watchDir", "_lineSpacing", "_findCover", ["_addCovers", []], ["_entropy", 0], ["_sandbags", false]];
     private ["_startPos", "_offSet", "_moveDir", "_setPos"];
 
     _units = units _grp;
@@ -77,20 +77,24 @@ dyn_line_form_cover = {
     for "_i" from 0 to ((count (units _grp))- 1) do {
         _unit = _units#_i;
         if ((_i % 2) != 0) then {
-            _offSet = _offSet + _lineSpacing;
-            _moveDir = _watchDir - 90;
+            _offSet = _offSet + _lineSpacing + ([0, round (_entropy  * 0.25)] call BIS_fnc_randomInt);
+            _moveDir = _watchDir - 90 + ([0, _entropy] call BIS_fnc_randomInt);
         }
         else
         {
-            _moveDir = _watchDir + 90;
+            _moveDir = _watchDir + 90 + ([0, _entropy] call BIS_fnc_randomInt);
         };
         _setPos = _startPos getPos [_offSet, _moveDir];
         _covers = nearestTerrainObjects [_setPos, dyn_valid_cover, 6, true, true];
         _covers = _covers + _addCovers;
         // _unit enableAI "AUTOCOMBAT";
         _watchPos = _setPos getPos [1000, _watchDir];
+        if (_sandbags) then {
+            _sandBag = createVehicle ["land_gm_sandbags_01_low_01", _setPos getPos [1, _watchDir], [], 0, "CAN_COLLIDE"];
+            _sandBag setDir _watchDir;
+        };
 
-        if (((count _covers) > 0) and _findCover) then {
+        if (((count _covers) > 0) and _findCover and !_sandbags) then {
             {
                 if !(_x in dyn_covers) then {
                     dyn_covers pushBack _x;
@@ -99,6 +103,7 @@ dyn_line_form_cover = {
                     _unit setPos _coverPos;
                     _unit setUnitPos "MIDDLE";
                     _unit doWatch _watchPos;
+                    _unit setDir _watchDir;
                     _unit disableAI "PATH";
                 }
                 else
@@ -116,8 +121,9 @@ dyn_line_form_cover = {
         else
         {
             _unit setPos _setPos;
-            _unit setUnitPos "MIDDLE";
+            _unit setUnitPosWeak "MIDDLE";
             _unit doWatch _watchPos;
+            _unit setDir _watchDir;
             _unit disableAI "PATH";
         };
     };
@@ -214,7 +220,7 @@ dyn_select_atk_mode = {
 };
 
 dyn_auto_suppress = {
-    params ["_grp", ["_range", 400], ["_cover", true]];
+    params ["_grp", ["_range", 400], ["_cover", true], ["_reveal", true]];
 
     _units = units _grp;
     _grp setVariable ["dyn_is_suppressing", true];
@@ -227,6 +233,12 @@ dyn_auto_suppress = {
         } forEach _units;
 
         sleep 15;
+    };
+
+    if (_reveal) then {
+        {
+            (leader _grp) reveal [_x, 3];
+        } forEach (allUnits select {side _x == west});
     };
 
     while {({alive _x} count _units) > 2} do {
@@ -437,4 +449,26 @@ dyn_opfor_change_uniform_grp = {
         _unit addUniform _uniformType;
         _unit addMagazines [(_mags#0)#0, (_mags#1)#0];
     } forEach (units _grp);
+};
+
+dyn_is_town = {
+    params ["_pos"];
+
+    _buildings = nearestObjects [_pos, ["house"], 80];
+
+    if (count _buildings > 1) exitWith {true};
+
+    false
+};
+
+dyn_is_water = {
+    params ["_pos"];
+    private ["_isWater"];
+
+    _isWater = {
+        if (surfaceIsWater (_pos getPos [35, _x])) exitWith {true};
+        false
+    } forEach [0, 90, 180, 270]; 
+    if (surfaceIsWater _pos) then {_isWater = true};
+    _isWater 
 };

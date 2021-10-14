@@ -350,6 +350,7 @@ dyn_place_support_deployed = {
     for "_i" from 0 to (count _vehicles) - 1 step 1 do {
         (_vehicles#_i) setPos ((_roadsPos#_i)#0);
         (_vehicles#_i) setdir ((_roadsPos#_i)#1);
+        group (driver (_vehicles#_i)) addWaypoint [(_roadsPos#_i)#0, 0];
     };
 };
 
@@ -367,6 +368,7 @@ dyn_place_player_deployed = {
         _setPos = _placePos getPos [_relData#0, _startDir - (_relData#1)];
         _x setPos _setPos;
         _x setDir _startDir;
+        group (driver _x) addWaypoint [_setPos, 0];
     } forEach _vehicles;
 
     [_supportPos, _dest] call dyn_place_support_deployed;
@@ -710,12 +712,12 @@ dyn_main_setup = {
             _trg = createTrigger ["EmptyDetector", (getPos _loc), true];
             _trg setTriggerActivation ["WEST", "PRESENT", false];
             _trg setTriggerStatements ["this", " ", " "];
-            _trg setTriggerArea [_aoArea, _aoArea, _dir, false];
+            _trg setTriggerArea [_aoArea, _aoArea, _dir, false, 30];
 
             _endTrg = createTrigger ["EmptyDetector", (getPos _loc), true];
             _endTrg setTriggerActivation ["WEST SEIZED", "PRESENT", false];
             _endTrg setTriggerStatements ["this", " ", " "];
-            _endTrg setTriggerArea [_aoArea + 100, _aoArea + 100, _dir, false];
+            _endTrg setTriggerArea [_aoArea + 100, _aoArea + 100, _dir, false, 30];
             _endTrg setTriggerTimeout [180, 240, 300, false];
             
 
@@ -760,7 +762,7 @@ dyn_main_setup = {
 
             if (_midDefenses) then {
 
-                _defenseType = selectRandom ["line", "point", "ambush"];
+                _defenseType = selectRandom ["point", "ambush", "minefield"];
 
                 // debug
                 // _defenseType = "ambush";
@@ -772,6 +774,7 @@ dyn_main_setup = {
                     case "roadem" : {[_midPoint, _trg, _dir] call dyn_road_emplacemnets};
                     case "recon" : {[_midPoint, _trg, _dir] call dyn_recon_convoy};
                     case "ambush" : {[_midPoint, _trg, _dir] call dyn_ambush};
+                    case "minefield" : {[_midPoint, 2500, _dir, true] call dyn_spawn_mine_field};
                     default {[_midPoint, _trg, _dir, true] call dyn_defense_line}; 
                 };
 
@@ -793,10 +796,10 @@ dyn_main_setup = {
 
             if (_outerDefenses) then {
 
-                _defenseType = selectRandom ["mobileTank", "recon", "empty", "ambush"];
+                _defenseType = selectRandom ["mobileTank", "recon", "ambush", "minefield", "point"];
 
                 // debug
-                // _defenseType = "mobileTank";
+                // _defenseType = "point";
 
                 switch (_defenseType) do { 
                     case "line" : {[getPos _loc, _trg, _dir] call dyn_defense_line}; 
@@ -804,8 +807,8 @@ dyn_main_setup = {
                     case "mobileTank" : {[getPos _loc, _trg, _dir] call dyn_mobile_armor_defense};
                     // case "roadem" : {[getPos _loc, _trg, _dir] call dyn_road_emplacemnets};
                     case "recon" : {[getPos _loc, _trg, _dir] call dyn_recon_convoy};
-                    case "forest" : {[getPos _loc, _trg, _dir] call dyn_forest_position};
                     case "ambush" : {[getPos _loc, _trg, _dir] call dyn_ambush};
+                    case "minefield" : {[(getPos _loc) getPos [[1300, 1700] call BIS_fnc_randomInt, _dir], 2000, _dir, true] call dyn_spawn_mine_field};
                     case "empty" : {};
                     default {[getPos _loc, _trg, _dir] call dyn_defense_line}; 
                 };

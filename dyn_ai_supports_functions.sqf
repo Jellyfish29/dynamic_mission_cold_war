@@ -77,7 +77,7 @@ dyn_spawn_rocket_arty = {
 
 
 dyn_arty = {
-    params ["_shells", ["_type", "heavy"]];
+    params ["_shells", ["_type", "heavy"], ["_smoke", false], ["_staticPos", []]];
     private ["_eh", "_cords", "_ammoType", "_gunArray"];
 
     switch (_type) do { 
@@ -89,12 +89,22 @@ dyn_arty = {
 
 
     for "_i" from 1 to _shells do {
-        _target = selectRandom (allUnits select {side _x == west});
-        _cords = getPos _target;
+        if (_staticPos isEqualTo []) then {
+            _target = selectRandom (allUnits select {side _x == west});
+            _cords = getPos _target;
+        }
+        else
+        {
+            _cords = _staticPos;
+        };
         {
             if (isNull _x) exitWith {};
             _ammoType = (getArray (configFile >> "CfgVehicles" >> typeOf _x >> "Turrets" >> "MainTurret" >> "magazines")) select 0;
-            _firePos = [[[_cords, 300]], [[_cords, 50]]] call BIS_fnc_randomPos;
+            if (_smoke) then {
+                _ammoType = (getArray (configFile >> "CfgVehicles" >> typeOf _x >> "Turrets" >> "MainTurret" >> "magazines") select {["smoke", _x] call BIS_fnc_inString})#0;
+            };
+            if (isNil "_ammoType") exitWith {};
+            _firePos = [[[_cords, 350]], [[position player, 55]]] call BIS_fnc_randomPos;
             // player sidechat str (_firePos inRangeOfArtillery [[_x], _ammoType]);
             _x commandArtilleryFire [_firePos, _ammoType, 1];
             _x setVariable ["dyn_waiting_for_fired", true];
@@ -128,7 +138,7 @@ dyn_spawn_harresment_arty = {
     private _atkTrg = createTrigger ["EmptyDetector", _trgPos, true];
     _atkTrg setTriggerActivation ["WEST", "PRESENT", false];
     _atkTrg setTriggerStatements ["this", " ", " "];
-    _atkTrg setTriggerArea [4000, 65, _dir, true];
+    _atkTrg setTriggerArea [4000, 65, _dir, true, 30];
 
     // debug
     // _m = createMarker [str (random 1), _trgPos];
@@ -174,11 +184,11 @@ dyn_continous_support = {
 
         switch (_fireSupport) do {
             case 0 : {}; 
-            case 1 : {[6, "light"] spawn dyn_arty}; 
+            case 1 : {[4, "light"] spawn dyn_arty}; 
             case 2 : {[3, "heavy"] spawn dyn_arty};
             case 3 : {[getPos _endTrg, _dir, objNull] spawn dyn_spawn_heli_attack};
             case 4 : {[_dir] spawn dyn_air_attack};
-            case 5 : {[3, "rocket"] spawn dyn_arty};
+            case 5 : {[2, "rocket"] spawn dyn_arty};
             default {}; 
          }; 
         sleep ([200, 400] call BIS_fnc_randomInt);
@@ -189,7 +199,6 @@ dyn_continous_support = {
 dyn_continous_counterattack = {
     params ["_activationTrg", "_endTrg", "_dir"];
 
-    _atkPos = getPos _activationTrg;
 
     if !(isNull _activationTrg) then {
         waitUntil{sleep 1; triggerActivated _activationTrg};
@@ -197,6 +206,10 @@ dyn_continous_counterattack = {
     };
 
     while {!triggerActivated _endTrg} do {
+
+        _westUnits = allUnits select {side _x == west};
+        _westUnits = [_westUnits, [], {_x distance2D (getPos _endTrg)}, "ASCEND"] call BIS_fnc_sortBy;
+        _atkPos = getPos (_westUnits#0);
 
         _atkType = selectRandom [0,0,1,1,1,2,2,3,3];
 
@@ -206,19 +219,73 @@ dyn_continous_counterattack = {
             };  
             case 1 : {
                 _rearPos = _atkPos getPos [1000, _dir + selectRandom [90, -90, 180]];
-                [objNull, _atkPos, _rearPos, 3, 3, 0, false, dyn_standart_light_amored_vics, 0, [false, 100], true, false] spawn dyn_spawn_counter_attack;
+                [objNull, _atkPos, _rearPos, 2, 3, 0, false, dyn_standart_light_amored_vics, 0, [false, 100], true, false] spawn dyn_spawn_counter_attack;
             }; 
             case 2 : {
                 _rearPos = _atkPos getPos [1200, _dir + selectRandom [90, -90, 180]];
-                [objNull, _atkPos, _rearPos, 2, 2, 0, true, dyn_standart_combat_vehicles , 0, [false, 100], true, false] spawn dyn_spawn_counter_attack;
+                [objNull, _atkPos, _rearPos, 2, 2, 0, false, dyn_standart_combat_vehicles , 0, [false, 100], true, false] spawn dyn_spawn_counter_attack;
             };
             case 3 : {
                 _rearPos = _atkPos getPos [1500, _dir + selectRandom [90, -90, 180]];
-                [objNull, _atkPos, _rearPos, 3, 2, 0, true, [dyn_standart_MBT], 0, [false, 100], true, false] spawn dyn_spawn_counter_attack
+                [objNull, _atkPos, _rearPos, 2, 2, 0, true, [dyn_standart_MBT], 0, [false, 100], true, false] spawn dyn_spawn_counter_attack
             };
             default {}; 
          }; 
 
-        sleep ([480, 900] call BIS_fnc_randomInt);
+        sleep ([700, 900] call BIS_fnc_randomInt);
+    };
+};
+
+dyn_spawn_mine_field = {
+    params ["_startPos", "_length", "_dir", ["_isObj", false]];
+
+
+    private _allMines = [];
+    private _mineSpacing = 20;
+    for "_j" from 0 to 2 do {
+        _startPos = _startPos getPos [20, _dir - 180];
+        _minesAmount = round (_length / _mineSpacing);
+        _offset = 0;
+        for "_i" from 0 to _minesAmount do {
+            _minePos = _startPos getPos [_offset, _dir + 90];
+            if (_i % 2 == 0) then {
+                _minePos = _startPos getPos [_offset, _dir - 90];
+                _offset = _offset + _mineSpacing;
+            };
+
+            _mine = createMine ["ATMine", _minePos, [], 0];
+            _mine enableDynamicSimulation true;
+            _allMines pushBack _mine;
+
+            // // debug
+            // _m = createMarker [str (random 5), _minePos];
+            // _m setMarkerType "mil_dot";
+        };
+        _mineSpacing = _mineSpacing - 4;
+    };
+
+    [_allMines, _startPos, _dir, _length, _isObj] spawn {
+        params ["_allMines", "_startPos", "_dir", "_length", "_isObj"];
+
+        sleep 2;
+
+        _mineCount = count _allMines;
+
+        waitUntil {sleep 5; ({alive _x} count _allMines) < _mineCount};
+
+        [objNull, _startPos, "colorRed", (_length / 2) + 20, 0.1, _dir] call dyn_spawn_intel_markers_area;
+        [objNull, _startPos, "hd_warning", "Mine Field", "colorRED"] call dyn_spawn_intel_markers;
+
+        if (_isObj) then {
+            [8, "rocket"] spawn dyn_arty;
+            [6, "heavy", true, _startPos] spawn dyn_arty;
+
+            _rearPos = _startPos getPos [1000, _dir - 180];
+            // _westUnits = allUnits select {side _x == west};
+            // _westUnits = [_westUnits, [], {_x distance2D (getPos _endTrg)}, "ASCEND"] call BIS_fnc_sortBy;
+            // _atkPos = getPos (_westUnits#0);
+
+            [objNull, _startPos getPos [100, _dir - 180], _rearPos, 5, 2, 0, true, [dyn_standart_MBT], 0, [false, 100], true, false] spawn dyn_spawn_counter_attack
+        };
     };
 };
