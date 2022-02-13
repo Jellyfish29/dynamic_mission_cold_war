@@ -129,7 +129,7 @@ dyn_arty = {
     } forEach _gunArray;
 };
 
-// [10] call dyn_arty;
+// [20, "rocket"] call dyn_arty;
 
 dyn_spawn_harresment_arty = {
     params ["_locPos", "_dir", "_endTrg"];
