@@ -10,46 +10,48 @@ dyn_spawn_smoke = {
 };
 
 dyn_spawn_heli_attack = {
-        params ["_locPos", "_dir", ["_trg", objNull]];
+    params ["_locPos", "_dir", ["_trg", objNull]];
 
-        if !(isNull _trg) then {
-            waitUntil { sleep 1; triggerActivated _trg };
+    if (true) exitWith {};
+
+    if !(isNull _trg) then {
+        waitUntil { sleep 1; triggerActivated _trg };
+    };
+
+    _rearPos = [3000 * (sin (_dir - 180)), 3000 * (cos (_dir - 180)), 0] vectorAdd _locPos;
+    _units = allUnits+vehicles select {side _x == west};
+    _targetPos = getPos (_units#0);
+
+    // _frontPos = [3000 * (sin _dir), 3000 * (cos _dir), 0] vectorAdd _targetPos;
+
+    // for "_i" from 0 to 1 do {
+
+        [_rearPos, _targetPos, _dir] spawn {
+            params ["_rearPos", "_targetPos", "_dir"];
+
+            _casGroup = createGroup east;
+            _p = [_rearPos, _dir, dyn_attack_heli, _casGroup] call BIS_fnc_spawnVehicle;
+            _plane = _p#0;
+            [_plane, 40] call BIS_fnc_setHeight;
+            // _plane forceSpeed 140;
+            _plane flyInHeight 40;
+            _wp = _casGroup addWaypoint [_targetPos, 0];
+            _time = time + 300;
+
+            waitUntil {(_plane distance2D (waypointPosition _wp)) <= 200 or time >= _time};
+
+            _wp = _casGroup addWaypoint [_rearPos, 0];
+            _time = time + 300;
+
+            waitUntil {(_plane distance2D (waypointPosition _wp)) <= 200 or time >= _time};
+
+            {
+                deleteVehicle _x;
+            } forEach (units _casGroup);
+            deleteVehicle _plane;
         };
-
-        _rearPos = [3000 * (sin (_dir - 180)), 3000 * (cos (_dir - 180)), 0] vectorAdd _locPos;
-        _units = allUnits+vehicles select {side _x == west};
-        _targetPos = getPos (_units#0);
-
-        // _frontPos = [3000 * (sin _dir), 3000 * (cos _dir), 0] vectorAdd _targetPos;
-
-        // for "_i" from 0 to 1 do {
-
-            [_rearPos, _targetPos, _dir] spawn {
-                params ["_rearPos", "_targetPos", "_dir"];
-
-                _casGroup = createGroup east;
-                _p = [_rearPos, _dir, dyn_attack_heli, _casGroup] call BIS_fnc_spawnVehicle;
-                _plane = _p#0;
-                [_plane, 40] call BIS_fnc_setHeight;
-                // _plane forceSpeed 140;
-                _plane flyInHeight 40;
-                _wp = _casGroup addWaypoint [_targetPos, 0];
-                _time = time + 300;
-
-                waitUntil {(_plane distance2D (waypointPosition _wp)) <= 200 or time >= _time};
-
-                _wp = _casGroup addWaypoint [_rearPos, 0];
-                _time = time + 300;
-
-                waitUntil {(_plane distance2D (waypointPosition _wp)) <= 200 or time >= _time};
-
-                {
-                    deleteVehicle _x;
-                } forEach (units _casGroup);
-                deleteVehicle _plane;
-            };
-            // sleep 10;
-        // };
+        // sleep 10;
+    // };
 };
 
 dyn_spawn_rocket_arty = {

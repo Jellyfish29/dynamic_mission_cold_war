@@ -309,7 +309,7 @@ dyn_garbage_clear = {
     sleep 240;
 
     {
-        if (side _x != playerSide) then {
+        if (side _x != playerSide and !(_x getVariable ["dyn_dont_delete", false])) then {
             deleteVehicle _x;
         };
     } forEach allDeadMen; 
@@ -334,7 +334,7 @@ dyn_garbage_clear = {
     sleep 1;
     _deadVicLimiter = 0;
     {
-        if ((_x distance2D player) > 2000 and _deadVicLimiter <= 8) then {
+        if ((_x distance2D player) > 2000 and _deadVicLimiter <= 10 and !(_x getVariable ["dyn_dont_delete", false])) then {
             deleteVehicle _x;
             _deadVicLimiter = _deadVicLimiter + 1;
         };

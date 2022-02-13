@@ -176,32 +176,102 @@ dyn_create_markers = {
 dyn_ambiance = {
     params ["_centerPos", "_dir", "_trg"];
 
-    _leftPos = [2000 * (sin (_dir - 90)), 2000 * (cos (_dir - 90)), 0] vectorAdd _centerPos;
-    _rightPos = [2000 * (sin (_dir + 90)), 2000 * (cos (_dir + 90)), 0] vectorAdd _centerPos;
-    _leftPosA = [2500 * (sin (_dir - 90)), 2500 * (cos (_dir - 90)), 0] vectorAdd _centerPos;
-    _rightPosA = [2500 * (sin (_dir + 90)), 2500 * (cos (_dir + 90)), 0] vectorAdd _centerPos;
 
-    private _ambGroup = createGroup [sideLogic, true];
-    for "_i" from 0 to 6 do {
-        _nPos = [[[selectRandom [_leftPos, _rightPos], 400]], []] call BIS_fnc_randomPos;
-        _unit = _ambGroup createUnit ["ModuleTracers_F", _nPos, [],0 , ""];
-        sleep 2;
-    };
+    dyn_ambient_sound_mod attachTo [player, [0,0,0]];
 
-    while {!(triggerActivated _trg)} do {
-        _amount = [2, 4] call BIS_fnc_randomInt;
-        for "_i" from 0 to _amount do {
-            _artyPos = [[[selectRandom [_leftPosA, _rightPosA], 200]], []] call BIS_fnc_randomPos;
-            _support = _ambGroup createUnit ["ModuleOrdnance_F", _artyPos, [],0 , ""];
-            _support setVariable ["type", "ModuleOrdnanceHowitzer_F_Ammo"];
-            sleep ([1, 4] call BIS_fnc_randomInt);
+    _smokeGroup = createGroup [civilian, true];
+    _civVics = ["cwr3_c_gaz24", "cwr3_c_mini", "cwr3_c_rapid", "gm_ge_civ_typ1200"];
+    _roads = _centerPos nearRoads 1300;
+
+    for "_l" from 0 to ([5, 9] call BIS_fnc_randomInt) do {
+        _vic = createVehicle [selectRandom _civVics, getPos (selectRandom _roads) , [], 15, "NONE"];
+        _vic setDir ([0, 359] call BIS_fnc_randomInt);
+        _vic setDamage 1;
+        _vic setVariable ["dyn_dont_delete", true];
+        [_vic] spawn {
+            params ["_vic"];
+            sleep 20;
+            _vic enableSimulation false;
         };
-        sleep ([40, 120] call BIS_fnc_randomInt);
+        for "_j" from 0 to ([1, 2] call BIS_fnc_randomInt) do {
+            _civ = _smokeGroup createUnit ["cwr3_c_civilian_random", getPos _vic, [], 8, "NONE"];
+            _civ setVariable ["dyn_dont_delete", true];
+            _civ setDamage 1;
+            [_civ] spawn {
+                params ["_civ"];
+                _civ setDir ([0, 359] call BIS_fnc_randomInt);
+                sleep 20;
+                _civ enableSimulation false;
+            };
+        };
+        sleep 1;
     };
+
+    _houses = nearestTerrainObjects [_centerPos, ["HOUSE"], 1500, false, true];
+
+    for "_i" from 0 to ([3, 7] call BIS_fnc_randomInt) do {
+        _house = selectRandom _houses;
+        _house setDamage 1;
+        _pos = getPosATLVisual _house;
+        _smoke = _smokeGroup createUnit ["ModuleEffectsSmoke_F", _pos, [],0 , ""];
+        _fire = _smokeGroup createUnit ["ModuleEffectsFire_F", _pos, [],0 , ""];
+        // _support = _smokeGroup createUnit ["ModuleOrdnance_F", _pos, [],0 , ""];
+        // _support setVariable ["type", "ModuleOrdnanceMortar_F_ammo"];
+
+        for "_j" from 0 to ([1, 2] call BIS_fnc_randomInt) do {
+            _civ = _smokeGroup createUnit ["cwr3_c_civilian_random", _pos, [], 20, "NONE"];
+            _civ setVariable ["dyn_dont_delete", true];
+            _civ setDamage 1;
+            [_civ] spawn {
+                params ["_civ"];
+                _civ setDir ([0, 359] call BIS_fnc_randomInt);
+                sleep 20;
+                _civ enableSimulation false;
+            };
+        };
+
+        _fire setPosATL _pos;
+        _smoke setPosATL _pos;
+
+        sleep 15;
+    };
+
+
+
+    waitUntil {triggerActivated _trg};
 
     {
+        sleep 30;
         deleteVehicle _x;
-    } forEach (units _ambGroup);
+    } forEach (units _smokeGroup);
+
+
+    // _leftPos = [2000 * (sin (_dir - 90)), 2000 * (cos (_dir - 90)), 0] vectorAdd _centerPos;
+    // _rightPos = [2000 * (sin (_dir + 90)), 2000 * (cos (_dir + 90)), 0] vectorAdd _centerPos;
+    // _leftPosA = [2500 * (sin (_dir - 90)), 2500 * (cos (_dir - 90)), 0] vectorAdd _centerPos;
+    // _rightPosA = [2500 * (sin (_dir + 90)), 2500 * (cos (_dir + 90)), 0] vectorAdd _centerPos;
+
+    // private _ambGroup = createGroup [sideLogic, true];
+    // for "_i" from 0 to 6 do {
+    //     _nPos = [[[selectRandom [_leftPos, _rightPos], 400]], []] call BIS_fnc_randomPos;
+    //     _unit = _ambGroup createUnit ["ModuleTracers_F", _nPos, [],0 , ""];
+    //     sleep 2;
+    // };
+
+    // while {!(triggerActivated _trg)} do {
+    //     // _amount = [2, 4] call BIS_fnc_randomInt;
+    //     // for "_i" from 0 to _amount do {
+    //     //     _artyPos = [[[selectRandom [_leftPosA, _rightPosA], 200]], []] call BIS_fnc_randomPos;
+    //     //     _support = _ambGroup createUnit ["ModuleOrdnance_F", _artyPos, [],0 , ""];
+    //     //     _support setVariable ["type", "ModuleOrdnanceHowitzer_F_Ammo"];
+    //     //     sleep ([1, 4] call BIS_fnc_randomInt);
+    //     // };
+    //     // sleep ([40, 120] call BIS_fnc_randomInt);
+    // };
+
+    // {
+    //     deleteVehicle _x;
+    // } forEach (units _ambGroup);
 };
 
 
@@ -323,6 +393,18 @@ dyn_place_player = {
     };
 };
 
+dyn_customice_playerside = {
+
+    {
+        _x addGoggles (selectRandom ["gm_headgear_foliage_summer_forest_01", "gm_headgear_foliage_summer_forest_02", "gm_headgear_foliage_summer_forest_03", "gm_headgear_foliage_summer_forest_04"]);
+        _faceunit = (face _x + (selectRandom ["_cfaces_BWTarn", "_cfaces_BWStripes"]));
+        _x setVariable ["JgKp_Face", _faceunit, true];
+    } forEach (allUnits select {side _x == playerSide});
+
+};
+
+[] call dyn_customice_playerside;
+
 dyn_place_support_deployed = {
     params ["_startPos", "_dest"];
 
@@ -405,6 +487,11 @@ dyn_place_arty = {
         _setPos = [(_pos1 select 0) + (_pos2 select 0), (_pos1 select 1) + (_pos2 select 1)];
         (vehicle _x) setPos _setPos;
     } forEach ((units artGrp_1) - [_artyLeader]);
+
+    _aaPOs = _batteryPos getPos [050, 90];
+    dyn_aa_vic setPos _aaPOs;
+    clearGroupIcons dyn_aa_vic_grp;
+    dyn_aa_vic_grp addGroupIcon ["b_antiair"];  
 };
 
 dyn_opfor_arty = [];
@@ -749,7 +836,7 @@ dyn_main_setup = {
                 // if ((random 1) > 0.35) then {_startDefense = true};
             };
             
-            // [getPos _loc, _dir, _endTrg] spawn dyn_ambiance;
+            [getPos _loc, _dir, _endTrg] spawn dyn_ambiance;
 
             [west, format ["task_%1", _i], ["Offensive", format ["Capture %1", _locationName], ""], getPos _loc, "ASSIGNED", 1, true, "attack", false] call BIS_fnc_taskCreate;
 
