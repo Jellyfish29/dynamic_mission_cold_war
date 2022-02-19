@@ -197,110 +197,116 @@ dyn_suppressing_grps = 0;
 dyn_select_atk_mode = {
     params ["_grp"];
 
-    waitUntil { sleep 10; ((leader  _grp) distance2D ((leader  _grp) findNearestEnemy (leader  _grp))) < 450};
+    if (true) exitWith {};
 
-    _nearestGrp = {
-        if ((group _x) != _grp) exitWith {group _x};
-        grpNull
-    } forEach (nearestObjects [getPos (leader _grp), ["Man"], 400, true]);
-    if !(isNull _nearestGrp) then {
-        if (_nearestGrp getVariable ["dyn_is_suppressing", false]) then {
-            [_grp] spawn dyn_auto_attack;
-        }
-        else
-        {
-            [_grp] spawn dyn_auto_suppress;
-        };
-    }
-    else
-    {
-        [_grp] spawn dyn_auto_suppress;
-    };
+    // waitUntil { sleep 10; ((leader  _grp) distance2D ((leader  _grp) findNearestEnemy (leader  _grp))) < 450};
+
+    // _nearestGrp = {
+    //     if ((group _x) != _grp) exitWith {group _x};
+    //     grpNull
+    // } forEach (nearestObjects [getPos (leader _grp), ["Man"], 400, true]);
+    // if !(isNull _nearestGrp) then {
+    //     if (_nearestGrp getVariable ["dyn_is_suppressing", false]) then {
+    //         [_grp] spawn dyn_auto_attack;
+    //     }
+    //     else
+    //     {
+    //         [_grp] spawn dyn_auto_suppress;
+    //     };
+    // }
+    // else
+    // {
+    //     [_grp] spawn dyn_auto_suppress;
+    // };
 
 };
 
 dyn_auto_suppress = {
     params ["_grp", ["_range", 400], ["_cover", true], ["_reveal", true]];
 
-    _units = units _grp;
-    _grp setVariable ["dyn_is_suppressing", true];
+    if (true) exitWith {};
 
-    waitUntil { sleep 2; ((leader  _grp) distance2D ((leader  _grp) findNearestEnemy (leader  _grp))) < _range};
+    // _units = units _grp;
+    // _grp setVariable ["dyn_is_suppressing", true];
 
-    if (_cover) then {
-        {
-            [_x, getDir _x, 10, true] spawn dyn_find_cover;
-        } forEach _units;
+    // waitUntil { sleep 2; ((leader  _grp) distance2D ((leader  _grp) findNearestEnemy (leader  _grp))) < _range};
 
-        sleep 15;
-    };
+    // if (_cover) then {
+    //     {
+    //         [_x, getDir _x, 10, true] spawn dyn_find_cover;
+    //     } forEach _units;
 
-    if (_reveal) then {
-        {
-            (leader _grp) reveal [_x, 3];
-        } forEach (allUnits select {side _x == west});
-    };
+    //     sleep 15;
+    // };
 
-    while {({alive _x} count _units) > 2} do {
-        _target = (leader  _grp) findNearestEnemy (leader  _grp);
-        {
-            if !((currentCommand _x) isEqualTo "Suppress") then {
-                _targetPos = [[[getPos _target, 30]], []] call BIS_fnc_randomPos;
-                _targetPos = ATLToASL _targetPos;
-                _vis = lineIntersectsSurfaces [eyePos _x, _targetPos, _x, vehicle _x, true, 1];
-                if !(_vis isEqualTo []) then {
-                    _targetPos = (_vis select 0) select 0;
-                };
-                _x doSuppressiveFire _targetPos;
-            };
-        } forEach _units;
-        sleep 20;
-        if (_grp getVariable ["dyn_is_retreating", false]) exitWith {};
-    };
-    _grp setVariable ["dyn_is_suppressing", false];
+    // if (_reveal) then {
+    //     {
+    //         (leader _grp) reveal [_x, 3];
+    //     } forEach (allUnits select {side _x == west});
+    // };
+
+    // while {({alive _x} count _units) > 2} do {
+    //     _target = (leader  _grp) findNearestEnemy (leader  _grp);
+    //     {
+    //         if !((currentCommand _x) isEqualTo "Suppress") then {
+    //             _targetPos = [[[getPos _target, 30]], []] call BIS_fnc_randomPos;
+    //             _targetPos = ATLToASL _targetPos;
+    //             _vis = lineIntersectsSurfaces [eyePos _x, _targetPos, _x, vehicle _x, true, 1];
+    //             if !(_vis isEqualTo []) then {
+    //                 _targetPos = (_vis select 0) select 0;
+    //             };
+    //             _x doSuppressiveFire _targetPos;
+    //         };
+    //     } forEach _units;
+    //     sleep 20;
+    //     if (_grp getVariable ["dyn_is_retreating", false]) exitWith {};
+    // };
+    // _grp setVariable ["dyn_is_suppressing", false];
 };
 
 dyn_auto_attack = {
     params ["_grp"];
 
-    _units = units _grp;
-    // [_grp] call dyn_spawn_smoke;
+    if (true) exitWith {};
 
-    // waitUntil { sleep 10; ((leader  _grp) distance2D ((leader  _grp) findNearestEnemy (leader  _grp))) < 650};
+    // _units = units _grp;
+    // // [_grp] call dyn_spawn_smoke;
 
-    _grp setSpeedMode "FULL";
-    {   
-        _X setUnitPos "UP";
-        _X disableAI "AUTOCOMBAT";
-        _X disableAI "SUPPRESSION";
-        _X disableAI "COVER";
-        _x setSuppression 0;
-        // _X disableAI "TARGET";
-        _x setStamina 240;
-        // _X disableAI "AUTOTARGET";
-    } forEach (units _grp);
+    // // waitUntil { sleep 10; ((leader  _grp) distance2D ((leader  _grp) findNearestEnemy (leader  _grp))) < 650};
 
-    [_grp, (currentWaypoint _grp)] setWaypointType "MOVE";
-    [_grp, (currentWaypoint _grp)] setWaypointPosition [getPosASL (leader _grp), -1];
-    sleep 0.1;
-    deleteWaypoint [_grp, (currentWaypoint _grp)];
-    for "_i" from count waypoints _grp - 1 to 0 step -1 do {
-        deleteWaypoint [_grp, _i];
-    };
+    // _grp setSpeedMode "FULL";
+    // {   
+    //     _X setUnitPos "UP";
+    //     _X disableAI "AUTOCOMBAT";
+    //     _X disableAI "SUPPRESSION";
+    //     _X disableAI "COVER";
+    //     _x setSuppression 0;
+    //     // _X disableAI "TARGET";
+    //     _x setStamina 240;
+    //     // _X disableAI "AUTOTARGET";
+    // } forEach (units _grp);
 
-    _targetPos = getPos ((leader  _grp) findNearestEnemy (leader  _grp));
-    _wp = _grp addWaypoint [_targetPos, 20];
-    _wp setWaypointType "SAD";
+    // [_grp, (currentWaypoint _grp)] setWaypointType "MOVE";
+    // [_grp, (currentWaypoint _grp)] setWaypointPosition [getPosASL (leader _grp), -1];
+    // sleep 0.1;
+    // deleteWaypoint [_grp, (currentWaypoint _grp)];
+    // for "_i" from count waypoints _grp - 1 to 0 step -1 do {
+    //     deleteWaypoint [_grp, _i];
+    // };
 
-    waitUntil { sleep 2; ((leader  _grp) distance2D ((leader  _grp) findNearestEnemy (leader  _grp))) < 40 or _grp getVariable ["dyn_is_retreating", false]};
+    // _targetPos = getPos ((leader  _grp) findNearestEnemy (leader  _grp));
+    // _wp = _grp addWaypoint [_targetPos, 20];
+    // _wp setWaypointType "SAD";
 
-    {   
-        _X setUnitPos "UP";
-        _X enableAI "AUTOCOMBAT";
-        _X enableAI "SUPPRESSION";
-        _X enableAI "COVER";
-    } forEach (units _grp);
-    _grp setCombatMode "YELLOW";
+    // waitUntil { sleep 2; ((leader  _grp) distance2D ((leader  _grp) findNearestEnemy (leader  _grp))) < 40 or _grp getVariable ["dyn_is_retreating", false]};
+
+    // {   
+    //     _X setUnitPos "UP";
+    //     _X enableAI "AUTOCOMBAT";
+    //     _X enableAI "SUPPRESSION";
+    //     _X enableAI "COVER";
+    // } forEach (units _grp);
+    // _grp setCombatMode "YELLOW";
 
 };
 

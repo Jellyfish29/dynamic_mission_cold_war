@@ -236,42 +236,12 @@ dyn_ambiance = {
         sleep 15;
     };
 
-
-
     waitUntil {triggerActivated _trg};
 
     {
         sleep 30;
         deleteVehicle _x;
     } forEach (units _smokeGroup);
-
-
-    // _leftPos = [2000 * (sin (_dir - 90)), 2000 * (cos (_dir - 90)), 0] vectorAdd _centerPos;
-    // _rightPos = [2000 * (sin (_dir + 90)), 2000 * (cos (_dir + 90)), 0] vectorAdd _centerPos;
-    // _leftPosA = [2500 * (sin (_dir - 90)), 2500 * (cos (_dir - 90)), 0] vectorAdd _centerPos;
-    // _rightPosA = [2500 * (sin (_dir + 90)), 2500 * (cos (_dir + 90)), 0] vectorAdd _centerPos;
-
-    // private _ambGroup = createGroup [sideLogic, true];
-    // for "_i" from 0 to 6 do {
-    //     _nPos = [[[selectRandom [_leftPos, _rightPos], 400]], []] call BIS_fnc_randomPos;
-    //     _unit = _ambGroup createUnit ["ModuleTracers_F", _nPos, [],0 , ""];
-    //     sleep 2;
-    // };
-
-    // while {!(triggerActivated _trg)} do {
-    //     // _amount = [2, 4] call BIS_fnc_randomInt;
-    //     // for "_i" from 0 to _amount do {
-    //     //     _artyPos = [[[selectRandom [_leftPosA, _rightPosA], 200]], []] call BIS_fnc_randomPos;
-    //     //     _support = _ambGroup createUnit ["ModuleOrdnance_F", _artyPos, [],0 , ""];
-    //     //     _support setVariable ["type", "ModuleOrdnanceHowitzer_F_Ammo"];
-    //     //     sleep ([1, 4] call BIS_fnc_randomInt);
-    //     // };
-    //     // sleep ([40, 120] call BIS_fnc_randomInt);
-    // };
-
-    // {
-    //     deleteVehicle _x;
-    // } forEach (units _ambGroup);
 };
 
 
