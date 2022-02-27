@@ -121,7 +121,7 @@ dyn_line_form_cover = {
         else
         {
             _unit setPos _setPos;
-            _unit setUnitPosWeak "MIDDLE";
+            _unit setUnitPos "MIDDLE";
             _unit doWatch _watchPos;
             _unit setDir _watchDir;
             _unit disableAI "PATH";

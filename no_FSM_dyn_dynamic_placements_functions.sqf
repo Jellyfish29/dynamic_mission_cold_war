@@ -15,7 +15,6 @@ dyn_retreat = {
     {
         _grp = _x;
         _grp setVariable ["dyn_is_retreating", true];
-        _grp setVariable ["pl_opfor_retreat", true];
         _grp enableDynamicSimulation false;
         if (vehicle (leader _grp) != leader _grp) then {
             vehicle (leader _grp) setFuel 1;
@@ -28,10 +27,6 @@ dyn_retreat = {
             _x disableAI "AUTOCOMBAT";
             _x setUnitPos "UP";
             _x setUnitPos "AUTO";
-            _x disableAI "TARGET";
-            _x disableAI "AUTOTARGET";
-            _x disableAI "SUPPRESSION";
-            _x setCombatBehaviour "AWARE";
             _allUnits pushBack _x;
         } forEach (units _grp);
 
@@ -56,30 +51,17 @@ dyn_retreat = {
 
 
         _grp addWaypoint [_retreatPos, 100];
-
-        [_grp, _retreatPos] spawn {
-            params ["_grp", "_retreatPos"];
-
-            waitUntil { sleep 10; [units _grp] call dyn_forget_targets; (leader _grp) distance2D _retreatPos < 40};
-
-            {
-                _x doFollow (leader _grp);
-                _x setUnitPos "AUTO";
-                _x enableAI "AUTOCOMBAT";
-                _x enableAI "TARGET";
-                _x enableAI "AUTOTARGET";
-                _x enableAI "SUPPRESSION";
-            } forEach (units _grp);
-
-            if (pl_opfor_enhanced_ai) then {
-                if (vehicle (leader _grp) == (leader _grp)) then {
-                    _grp execFSM "\Plmod\fsm\pl_opfor_cmd.fsm";
-                } else {
-                    _grp execFSM "\Plmod\fsm\pl_opfor_cmd_vic.fsm";
-                };
-            };
-        };
+        // _grp setFormation "COLUMN";
+        _grp setBehaviour "AWARE";
+        
     } forEach _grps;
+
+    [_allUnits] call dyn_forget_targets;
+
+    for "_i" from 0 to 20 do {
+        sleep 30;
+        [_allUnits] call dyn_forget_targets;
+    };
 };
 
 
@@ -120,7 +102,7 @@ dyn_spawn_counter_attack = {
             else
             {
                 if (_mech and !(_isForest)) then {
-                    _mechType = selectRandom ["cwr3_o_bmp1", "cwr3_o_bmp2", "cwr3_0_mtlb_pk", "cwr3_0_mtlb_pk"];
+                    _mechType = selectRandom ["cwr3_o_bmp1", "cwr3_o_bmp2"];
                     _vic = _mechType createVehicle _iPosFinal;
                     _vic setDir (_dir -180);
                     _grp = createVehicleCrew _vic;
@@ -142,6 +124,14 @@ dyn_spawn_counter_attack = {
                     [_grp] call dyn_opfor_change_uniform_grp;
                 };
             };
+            [_grp] spawn dyn_select_atk_mode;
+            _counterattack pushBack _grp;
+            _grp setFormation "VEE";
+            _grp setSpeedMode "Normal";
+            {
+                _x disableAI "AUTOCOMBAT";
+            } forEach (units _grp);
+            sleep 0.2;
         };
     };
 
@@ -164,6 +154,12 @@ dyn_spawn_counter_attack = {
                 _grp setFormation "LINE";
                 _grp setSpeedMode "FULL";
                 [_grp] call dyn_opfor_change_uniform_grp;
+                {
+                    _x disableAI "AUTOCOMBAT";
+                    _x disableAI "COVER";
+                    _x disableAI "SUPPRESSION";
+                } forEach (units _grp);
+                if ((random 1) > 0.5) then {[_grp, 400, true] spawn dyn_auto_suppress};
                 _counterattack pushBack _grp;
             }
             else
@@ -175,6 +171,7 @@ dyn_spawn_counter_attack = {
                 _vic setUnloadInCombat [true, false];
                 _vic allowCrewInImmobile true;
                 _grp = createVehicleCrew _vic;
+                if ((random 1) > 0.5) then {[_grp, 800, false] spawn dyn_auto_suppress};
                 _counterattack pushBack _grp;
             };
             sleep 0.2;
@@ -193,6 +190,7 @@ dyn_spawn_counter_attack = {
 
     _leaders = [];
     {
+        _x setBehaviour "AWARE";
         _leaders pushBack (leader _x);
     } forEach _counterattack;
 
@@ -211,7 +209,7 @@ dyn_spawn_counter_attack = {
                 //     _gWp setWaypointType "UNLOAD";
                 //     // _gWp setWaypointTimeout [60, 60, 60];
                 // };
-                // if (_mech and _i == 4) then {_gWp setWaypointType "UNLOAD"};
+                if (_mech and _i == 4) then {_gWp setWaypointType "UNLOAD"};
                 if (_i == 6) then {_gWp setWaypointType "SAD"};
             };
         } forEach _counterattack;
@@ -280,17 +278,15 @@ dyn_spawn_delay_action = {
         };
 
         _grp setVariable ["dyn_is_retreating", true];
-        _grp setVariable ["pl_opfor_retreat", true];
 
         {
-            _x disableAI "AUTOCOMBAT";
+            // _x disableAI "AUTOCOMBAT";
             // _x disableAI "FSM";
             _x disableAI "AUTOTARGET";
             _x disableAI "TARGET";
             _x enableAI "PATH";
             _x doFollow (leader _grp);
             _x setUnitPos "Auto";
-            _x setCombatBehaviour "AWARE";
         } forEach (units _grp);
         // _grp setBehaviour "AWARE";
 
@@ -308,25 +304,14 @@ dyn_spawn_delay_action = {
             };
 
             {
-                _x doFollow (leader _grp);
-                _x setUnitPos "AUTO";
-                _x enableAI "AUTOCOMBAT";
-                _x enableAI "TARGET";
                 _x enableAI "AUTOTARGET";
-                _x enableAI "SUPPRESSION";
-                _allUnits pushBack _x;
+                _x enableAI "TARGET";
+                _x enableAI "FSM";
             } forEach (units _grp);
 
             sleep 1;
             _aWp = _grp addWaypoint [_atkPos, 0];
             // _aWp setWaypointType "SAD";
-            if (pl_opfor_enhanced_ai) then {
-                if (vehicle (leader _grp) == (leader _grp)) then {
-                    _grp execFSM "\Plmod\fsm\pl_opfor_cmd.fsm";
-                } else {
-                    _grp execFSM "\Plmod\fsm\pl_opfor_cmd_vic.fsm";
-                };
-            };
             
         };
 

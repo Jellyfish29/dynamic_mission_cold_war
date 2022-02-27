@@ -729,10 +729,10 @@ dyn_town_defense = {
     };
 
     // Forest Patrols
-    [getPos _aoPos, 2000, 4, _aoPos, _dir] spawn dyn_spawn_forest_patrol;
+    [getPos _aoPos, 2000, 2, _aoPos, _dir] spawn dyn_spawn_forest_patrol;
 
     // Forest Position
-    // [[1000 * (sin _dir), 1000 * (cos _dir), 0] vectorAdd (getPos _aoPos), 600, _aoPos, _dir] spawn dyn_spawn_forest_position;
+    [getPos _aoPos, 2000, 2, _aoPos, _dir] spawn dyn_spawn_forest_position;
 
     // Bridge Defense
     [getPos _aoPos, 1500, 400, _watchPos] spawn dyn_spawn_bridge_defense;

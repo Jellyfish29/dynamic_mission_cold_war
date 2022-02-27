@@ -632,7 +632,7 @@ dyn_spawn_forest_patrol = {
 
     for "_i" from 0 to (_amount - 1) do {
         _pPos = _patrollPos#(2 * _i);
-        _grp = [_pPos, east, dyn_standart_fire_team] call BIS_fnc_spawnGroup;
+        _grp = [_pPos, east, dyn_standart_at_team] call BIS_fnc_spawnGroup;
         _grp setBehaviour "SAFE";
         _wpPos = [[[_pPos, 200]], [[_pPos, 50]]] call BIS_fnc_randomPos;
         _grp addWaypoint [_wpPos, 50];
@@ -654,16 +654,25 @@ dyn_spawn_forest_patrol = {
 };
 
 dyn_spawn_forest_position = {
-    params ["_pos", "_area", "_trg", "_dir"];
+    params ["_pos", "_area", "_amount", "_trg", "_defDir"];
 
-    private _forest = selectBestPlaces [_pos, _area, "(1 + forest + trees) * (1 - sea) * (1 - houses)", 20, 10];
+    private _forest = selectBestPlaces [_pos, _area, "(1 + forest + trees) * (1 - sea) * (1 - houses)", 70, 20];
+    _patrollPos = [];
+    private _allGrps = [];;
 
-    _forest = [_forest, [], {(_x#0) distance2D _pos}, "ASCEND"] call BIS_fnc_sortBy;
+    {
+        _patrollPos pushBack (_x#0);
+    } forEach _forest;
 
-    _grp = [(_forest#0)#0, _dir, true, false, true] call dyn_spawn_covered_inf;
-    _grp enableDynamicSimulation true;
+    _defPos = _pos getPos [1700, _defDir];
+    _patrollPos = [_patrollPos, [], {_x distance2D _defPos}, "ASCEND"] call BIS_fnc_sortBy;
 
-    [_trg, getPos _trg, [_grp], false] spawn dyn_retreat;
+    for "_i" from 0 to (_amount - 1) do {
+        _pPos = _patrollPos#(2 * _i);
+        _grp = [_pPos, _defDir, true, false, true] call dyn_spawn_covered_inf;
+        _grp enableDynamicSimulation true;
+    };
+
 };
 
 dyn_spawn_hill_overwatch = {

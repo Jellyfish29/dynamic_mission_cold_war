@@ -312,7 +312,7 @@ dyn_place_player = {
     _startPos = getMarkerPos "spawn_start";
     deleteMarker "spawn_start";
     _infGroups = [];
-    _vehicles = nearestObjects [_startPos,["LandVehicle"],300];
+    _vehicles = nearestObjects [_startPos,["LandVehicle"],200];
     {
         if(((_startPos distance2D (leader _x)) < 300) and !(vehicle (leader _x) in _vehicles)) then {
             _infGroups pushBack _x;
@@ -324,7 +324,7 @@ dyn_place_player = {
 
     _road = [_pos, 300] call BIS_fnc_nearestRoad;
     _usedRoads = [];
-    reverse _vehicles;
+    // reverse _vehicles;
 
     _roadsPos = [];
     for "_i" from 0 to (count _vehicles) - 1 step 1 do {
@@ -667,9 +667,11 @@ dyn_main_setup = {
 
     _aoStart = [_playerStart, 2500, ["TRAIL", "TRACK"]] call BIS_fnc_nearestRoad;
 
-    // [getPos _aoStart, _startPos] call dyn_place_player;
+    [getPos _aoStart, _startPos] call dyn_place_player;
 
-    [getMarkerPos "spawn_start", _playerStartDir, getPos _aoStart, _startPos, _supportPos] call dyn_place_player_deployed;
+    [_supportPos, _aoStart] call dyn_place_support_deployed;
+
+    // [getMarkerPos "spawn_start", _playerStartDir, getPos _aoStart, _startPos, _supportPos] call dyn_place_player_deployed;
     deleteMarker "spawn_start";
 
     [] call dyn_place_arty;
