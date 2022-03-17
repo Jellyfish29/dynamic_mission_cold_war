@@ -5,7 +5,7 @@ dyn_covers = [];
 dyn_find_cover = {
     params ["_unit", "_watchDir", "_radius", "_moveBehind", ["_covers",  []]];
 
-    (group _unit) setVariable ["onTask", true];
+    (group _unit) setVariable ["dyn_in_convoy", true];
     _addCovers = nearestTerrainObjects [getPos _unit, dyn_valid_cover, _radius, true, true];
     _covers = _covers + _addCovers;
     // _unit enableAI "AUTOCOMBAT";
@@ -190,7 +190,325 @@ dyn_garrison_building = {
     };
 };
 
+dyn_convoy_speed = 35;
 
+dyn_convoy = {
+    params ["_groups", "_dest"];
+
+    private _r2 = [_dest, 100,[]] call BIS_fnc_nearestRoad;
+
+    {
+        // [_x] spawn {
+        //     (_this#0) spawn pl_reset;
+        //     sleep 0.5;
+        //     (_this#0) spawn pl_reset;
+        // };
+        _r1 = [getPos (vehicle (leader _x)) , 50,[]] call BIS_fnc_nearestRoad;
+        if (isNull _r1) then {
+            _groups deleteAt (_groups find _x)
+        } else {
+            _path = [_r1, _r2] call dyn_convoy_parth_find;
+            _x setVariable ["dyn_convoy_path", _path];
+        };
+    } forEach _groups; 
+
+    _groups = ([_groups, [], {count (_x getVariable "dyn_convoy_path")}, "ASCEND"] call BIS_fnc_sortBy);
+
+    // sleep 1;
+    _convoyLeaderGroup = _groups#0;
+    _convoyLeader = vehicle (leader _convoyLeaderGroup);
+    _groups = ([_groups, [], {_convoyLeader distance2d (leader _x)}, "ASCEND"] call BIS_fnc_sortBy);
+
+    if ((_convoyLeaderGroup getVariable ["dyn_convoy_path", []]) isEqualTo []) exitWith {hint "oof"};
+
+    private _passigPoints = [[0,0,0]];
+    _noPPn = 0;
+    for "_p" from  0 to count (_convoyLeaderGroup getVariable "dyn_convoy_path") - 1 do {
+        private _r = (_convoyLeaderGroup getVariable "dyn_convoy_path")#_p;
+        if (count (roadsConnectedTo _r) > 2) then {
+            _valid = {
+                if (_x distance2D _r < 50) exitWith {false};
+                true
+            } forEach _passigPoints;
+            if (_valid) then {
+                _passigPoints pushBackUnique (getPosATL _r);
+                _noPPn = 0;
+            };
+        } else {
+            if (_p > 0) then {
+                if (((getRoadInfo _r)#0) != (getRoadInfo ((_convoyLeaderGroup getVariable "dyn_convoy_path")#(_p - 1)))#0) then {
+                    _valid = {
+                        if (_x distance2D _r < 50) exitWith {false};
+                        true
+                    } forEach _passigPoints;
+                    if (_valid) then {
+                        _passigPoints pushBackUnique (getPosATL _r);
+                        _noPPn = 0;
+                    };
+                } else {
+                    if (_p > 1 and _p < (count (_convoyLeaderGroup getVariable "dyn_convoy_path") - 2)) then {
+                        _dir1 = ((_convoyLeaderGroup getVariable "dyn_convoy_path")#(_p - 1)) getDir _r;
+                        _dir2 = _r getDir ((_convoyLeaderGroup getVariable "dyn_convoy_path")#(_p + 1));
+                        _dirs = [_dir1, _dir2];
+                        _dirs sort false;
+                        if ((_dirs#0) - (_dirs#1) > 50) then {
+                            _valid = {
+                                if (_x distance2D _r < 80) exitWith {false};
+                                true
+                            } forEach _passigPoints;
+                            if (_valid) then {
+                                _passigPoints pushBackUnique (getPosATL _r);
+                                _noPPn = 0;
+                            };
+                        } else {
+                            _noPPn = _noPPn + 1;
+                            if (_noPPn > 20) then {
+                                _noPPn = 0;
+                                _passigPoints pushBackUnique (getPosATL _r);
+                            };
+                        };
+                    };
+                };
+            };
+        };
+    };
+    _passigPoints deleteAt 0;
+    _passigPoints pushback getposATL _r2;
+
+    for "_i" from 0 to (count _groups) - 1 do {
+        // doStop (vehicle (leader _x));
+
+        private _group = _groups#_i;
+        private _vic = vehicle (leader _group);
+        _vic limitSpeed dyn_convoy_speed;
+        _group setVariable ["dyn_in_convoy", true];
+        
+        // _vic setConvoySeparation 5;
+        // _vic forceFollowRoad true;
+        _group setVariable ["dyn_pp_idx", 0];
+
+        {
+            _x disableAI "AUTOCOMBAT";
+        } forEach (units _group);
+        _group setBehaviourStrong "SAFE";
+        _vic doMove (_passigPoints#0);
+        _vic setDestination [(_passigPoints#0),"VEHICLE PLANNED" , true];
+
+        // _vic setDriveOnPath (_group getVariable "dyn_convoy_path");
+
+        if (_vic != _convoyLeader) then {
+
+            // player hcRemoveGroup _group;
+
+            [_group ,_vic, _convoyLeader, _groups, _i, _convoyLeaderGroup, _r2, _passigPoints] spawn {
+                params ["_group" , "_vic", "_convoyLeader", "_groups", "_i", "_convoyLeaderGroup", "_r2", "_passigPoints"];
+                private ["_ppidx"];
+
+                // _vic setDriveOnPath (_group getVariable "dyn_convoy_path");
+
+                _ppidx = 0;
+                private _startReset = false;
+                private _forward = vehicle (leader (_groups#(_i - 1)));
+                while {(_convoyLeaderGroup getVariable ["dyn_in_convoy", false]) and ((_groups#(_i - 1)) getVariable ["dyn_in_convoy", true])} do {
+
+                    if (!alive _vic or ({alive _x and (lifeState _x) != "INCAPACITATED"} count (units _group)) <= 0 or count (crew _vic) <= 0) exitWith {};
+                    if (!(alive _convoyLeader) or !(alive _forward)) exitWith {};
+                    if !(_group getVariable ["dyn_in_convoy", false]) exitWith {};
+
+                    _ppidx = _group getVariable "dyn_pp_idx";
+                    if (_vic distance2D (_passigPoints#_ppidx) < 35) then {
+                        _ppidx = _ppidx + 1;
+                        _group setVariable ["dyn_pp_idx", _ppidx];
+                        _vic doMove (_passigPoints#_ppidx);
+                        _vic setDestination [(_passigPoints#_ppidx),"VEHICLE PLANNED" , true];
+                    };
+
+                    private _convoyLeaderSpeedStr = vehicle (leader (_convoyLeaderGroup)) getVariable ["pl_speed_limit", "50"];
+                    private _convoyLeaderSpeed = dyn_convoy_speed;
+                    if ([getPOs _vic] call pl_is_city or [getPOs _vic] call pl_is_forest) then {
+                        _convoyLeaderSpeed = dyn_convoy_speed / 2 + 5;
+                    };
+                    _vic forceSpeed -1;
+                    _vic limitSpeed _convoyLeaderSpeed;
+                    _distance = _vic distance2D _forward;
+                    if (_distance > 60) then {
+                        _vic limitSpeed (_convoyLeaderSpeed + 5 + (_distance - 60));
+                    };
+                    if (_distance < 60) then {
+                        _vic limitSpeed _convoyLeaderSpeed;
+                    };
+                    if (_distance < 40) then {
+                        _vic limitSpeed (_convoyLeaderSpeed * 0.5);
+                    };
+                    if (_distance < 20) then {
+                        _vic forceSpeed 0;
+                        _vic limitSpeed 0;
+                    };
+                    if (_distance > 40 and (speed _vic) < 8) then {
+                        _vic limitSpeed 1000;
+                    };
+                    if ((speed _vic) == 0) then {
+                        _time = time + 20;
+                        if !(_startReset) then {
+                            _time = time + 5;
+                            _startReset = true;
+                        };
+                        waitUntil {sleep 0.5; speed _vic > 5 or time > _time or !(_group getVariable ["dyn_in_convoy", true])};
+                        if (((speed _vic) <= 0) and (_group getVariable ["dyn_in_convoy", true]) and (speed _forward) >= 5 and alive _vic) then {
+                            doStop _vic;
+                            sleep 0.3;
+                            _group setBehaviourStrong "SAFE";
+                            // _vic setVariable ["pl_phasing", true];
+                            _pp = (_passigPoints#_ppidx);
+                            _r0 = [getpos _vic, 100,[]] call BIS_fnc_nearestRoad;
+                            _r1 = ([roadsConnectedTo _r0, [], {_pp distance2d _x}, "ASCEND"] call BIS_fnc_sortBy)#0;
+                            _vic setVehiclePosition [getPos _r1, [], 0, "NONE"];
+                            _vic setDir  (_r0 getDir _r1);
+                            sleep 0.1;
+                            _vic limitSpeed dyn_convoy_speed;
+                            _vic doMove _pp;
+                            _vic setDestination [_pp,"VEHICLE PLANNED" , true];
+                        }; 
+                    };
+                    sleep 1;
+                };
+                _vic doMove getPos _vic;
+                _group setVariable ["dyn_in_convoy", false];
+                {
+                    _x enableAI "AUTOCOMBAT";
+                } forEach (units _group);
+            };
+        } else {
+            [_group ,_vic, _convoyLeader, _groups, _i, _convoyLeaderGroup, _r2, _passigPoints] spawn {
+                params ["_group" , "_vic", "_convoyLeader", "_groups", "_i", "_convoyLeaderGroup", "_r2", "_passigPoints"];
+                private ["_ppidx"];
+
+                private _dest = getPos ((_convoyLeaderGroup getVariable "dyn_convoy_path")#((count (_convoyLeaderGroup getVariable "dyn_convoy_path")) - 1));
+
+                while {(_convoyLeaderGroup getVariable ["dyn_in_convoy", false]) and (vehicle (leader _convoyLeaderGroup)) distance2D _dest > 40} do {
+
+                    if !(alive _vic or count (crew _vic) <= 0) exitWith {};
+
+                    private _convoyLeaderSpeedStr = vehicle (leader (_convoyLeaderGroup)) getVariable ["pl_speed_limit", "50"];
+                    private _convoyLeaderSpeed = dyn_convoy_speed;
+                    if ([getPOs _vic] call pl_is_city or [getPOs _vic] call pl_is_forest) then {
+                        _convoyLeaderSpeed = dyn_convoy_speed / 2 + 5;
+                    };
+                    _vic forceSpeed -1;
+                    _vic limitSpeed _convoyLeaderSpeed;
+
+                    _ppidx = _group getVariable "dyn_pp_idx";
+                    if (_vic distance2D (_passigPoints#_ppidx) < 35) then {
+                        _ppidx = _ppidx + 1;
+                        _convoyLeaderGroup setVariable ["dyn_pp_idx", _ppidx];
+                        _vic doMove (_passigPoints#_ppidx);
+                        _vic setDestination [(_passigPoints#_ppidx),"VEHICLE PLANNED" , true];
+                    };
+
+                    if ((speed _vic) == 0) then {
+                        _time = time + 10;
+                        waitUntil {sleep 0.5; speed _vic > 5 or time > _time or !(_group getVariable ["dyn_in_convoy", true])};
+                        if ((speed _vic) <= 0 and (_group getVariable ["dyn_in_convoy", true]) and alive _vic) then {
+                            // [_group] call pl_reset;
+                            doStop _vic;
+                            sleep 0.3;
+                            _group setBehaviourStrong "SAFE";
+                            _pp = (_passigPoints#_ppidx);
+                            _r0 = [getpos _vic, 100,[]] call BIS_fnc_nearestRoad;
+                            _r1 = ([roadsConnectedTo _r0, [], {_pp distance2d _x}, "ASCEND"] call BIS_fnc_sortBy)#0;
+                            _vic setVehiclePosition [getPos _r1, [], 0, "NONE"];
+                            _vic setDir  (_r0 getDir _r1);
+                            sleep 0.1;
+                            _vic limitSpeed dyn_convoy_speed;
+                            _vic doMove _pp;
+                            _vic setDestination [_pp,"VEHICLE PLANNED" , true];
+
+                        }; 
+                    };
+                    sleep 1;
+                };
+                _vic doMove getPos _vic;
+                _convoyLeaderGroup setVariable ["dyn_in_convoy", false];
+                {
+                    _x enableAI "AUTOCOMBAT";
+                } forEach (units _group);
+            };
+        };
+        _time = time + 1.5;
+        waituntil {(time >= _time and speed _vic > 13) or !((_convoyLeaderGroup) getVariable ["dyn_in_convoy", true])};
+    };
+};
+
+dyn_convoy_parth_find = {
+    params ["_start", "_goal"];
+
+    if (isNull _start or isNull _goal) exitWith {[]};
+
+    private _dummyGroup = createGroup [sideLogic, true];
+    private _closedSet = [];
+    private _openSet = [_start];
+    private _current = _start;
+    private _nodeCount = 0;
+    private _allRoads = [];
+    private _n = 0;
+    private _returnPath = [];
+    private _time = time + 4;
+    while {!(_openSet isEqualTo []) and time < _time} do {
+        private _closest = objNull;
+        {
+            if (_goal distance _x < _goal distance _closest) then {
+                _closest = _x;
+            };
+            nil
+        } count _openSet;
+        _current = _closest;
+        _nodeCount = _nodeCount + 1;
+        if (_current == _goal) exitWith {
+            private _parent = _dummyGroup getVariable ("NF_neighborParent_" + str _current);
+            while {!(isNil "_parent")} do {
+                _allRoads pushBack _parent;
+
+                // private _marker = createMarker [str _parent, getPos _parent];
+                // _marker setMarkerShape "ICON";
+                // _marker setMarkerColor "colorBLUFOR";
+                // _marker setMarkerType "MIL_DOT";
+                // _marker setMarkerSize [0.3, 0.3];
+                // _returnPath pushback getPos _parent;
+                _allRoads pushBackUnique _parent;
+                _parent = _dummyGroup getVariable ("NF_neighborParent_" + str _parent);
+                // pl_convoy_path_marker pushBack _marker;
+            };
+        };
+        _openSet = _openSet - [_current];
+        _closedSet pushBack _current;
+        private _neighbors = (getPos _current) nearRoads 20; // This includes current
+        _neighbors append (roadsConnectedTo _current);
+        {
+            if (!(_x in _closedSet)) then {
+                private _currentG = _dummyGroup getVariable ["NF_neighborG_" + str _current, 0];
+                private _gScore = _currentG + 1;
+                private _gScoreIsBest = false;
+                if (!(_x in _openSet)) then {
+                    _gScoreIsBest = true;
+                    _openSet pushBack _x;
+                } else {
+                    private _neighborG = _dummyGroup getVariable ("NF_neighborG_" + str _x);
+                    if (isNil "_neighborG") exitWith {};
+                    _gScoreIsBest = _gScore < _neighborG;
+                };
+                if (isNil "_gScoreIsBest") exitWith {};
+                if (_gScoreIsBest) then {
+                    _dummyGroup setVariable ["NF_neighborParent_" + str _x, _current];
+                    _dummyGroup setVariable ["NF_neighborG_" + str _x, _gScore];
+                };
+            };
+        } forEach _neighbors;
+    };
+    if (time > _time) exitWith {[]};
+    reverse _allRoads;
+    // _returnPath deleteRange [0, 3];
+    _allRoads
+};
 
 dyn_suppressing_grps = 0;
 
@@ -308,6 +626,27 @@ dyn_auto_attack = {
     // } forEach (units _grp);
     // _grp setCombatMode "YELLOW";
 
+};
+
+dyn_get_turn_vehicle = {
+    params ["_vic", "_turnDir"];
+
+    private _pos = [];
+    private _min = 20;      // Minimum range
+    private _i = 0;         // iterations
+
+    while {_pos isEqualTo []} do {
+        _pos = (_vic getPos [_min, _turnDir]) findEmptyPosition [0, 2.2, typeOf _vic];
+
+        // water
+        if !(_pos isEqualTo []) then {if (surfaceIsWater _pos) then {_pos = []};};
+
+        // update
+        _min = _min + 15;
+        _i = _i + 1;
+        if (_i > 6) exitWith {_pos = _vic modelToWorldVisual [0, -100, 0]};
+    };
+    _pos
 };
 
 dyn_garbage_clear = {
@@ -459,14 +798,10 @@ dyn_opfor_change_uniform_grp = {
 
 dyn_is_town = {
     params ["_pos"];
-
-    _buildings = nearestObjects [_pos, ["house"], 80];
-
-    if (count _buildings > 1) exitWith {true};
-
+    _buildings = nearestTerrainObjects [_pos, ["House"], 100, false, true];
+    if (count _buildings >= 3) exitWith {true};
     false
 };
-
 dyn_is_water = {
     params ["_pos"];
     private ["_isWater"];
@@ -477,4 +812,12 @@ dyn_is_water = {
     } forEach [0, 90, 180, 270]; 
     if (surfaceIsWater _pos) then {_isWater = true};
     _isWater 
+};
+
+dyn_hide_group_icon = {
+    params ["_group"];
+
+    _group setVariable ["pl_show_info", false];
+    player hcRemoveGroup _group;
+    clearGroupIcons _group;
 };

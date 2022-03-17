@@ -37,6 +37,7 @@ dyn_spawn_mg_team_garrisons = {
             _n = _n + 1;
         };
     };
+    _mgGrp setVariable ["pl_not_recon_able", true];
     _mgGrp enableDynamicSimulation true;
 };
 
@@ -810,7 +811,7 @@ dyn_spawn_side_town_guards = {
 
             if (_n < _limit) then {
 
-                [objNull, getPos _x, "b_recon", "RecPlt.", "colorOPFOR"] call dyn_spawn_intel_markers;
+                [objNull, getPos _x, "o_recon", "RecPlt.", "colorOPFOR"] call dyn_spawn_intel_markers;
 
                 _amount = [0,1] call BIS_fnc_randomInt;
                 if (type _x == "NameCityCapital") then {

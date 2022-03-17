@@ -77,7 +77,8 @@ dyn_create_markers = {
     _marker1 setMarkerText (_comp#1);
     _marker1 setMarkerSize [1.2, 1.2];
 
-    _marker2 = createMarker [format ["btl%1", _pos], _pos];
+    _strengthPos = _pos getPos [20, 0];
+    _marker2 = createMarker [format ["btl%1", _pos], _strengthPos];
     _marker2 setMarkerType "group_5";
     _marker2 setMarkerSize [1.2, 1.2];
 
@@ -366,7 +367,7 @@ dyn_place_player = {
 dyn_customice_playerside = {
 
     {
-        _x addGoggles (selectRandom ["gm_headgear_foliage_summer_forest_01", "gm_headgear_foliage_summer_forest_02", "gm_headgear_foliage_summer_forest_03", "gm_headgear_foliage_summer_forest_04"]);
+        // _x addGoggles (selectRandom ["gm_headgear_foliage_summer_forest_01", "gm_headgear_foliage_summer_forest_02", "gm_headgear_foliage_summer_forest_03", "gm_headgear_foliage_summer_forest_04"]);
         _faceunit = (face _x + (selectRandom ["_cfaces_BWTarn", "_cfaces_BWStripes"]));
         _x setVariable ["JgKp_Face", _faceunit, true];
     } forEach (allUnits select {side _x == playerSide});
@@ -460,8 +461,11 @@ dyn_place_arty = {
 
     _aaPOs = _batteryPos getPos [050, 90];
     dyn_aa_vic setPos _aaPOs;
-    clearGroupIcons dyn_aa_vic_grp;
-    dyn_aa_vic_grp addGroupIcon ["b_antiair"];  
+    // [dyn_aa_vic_grp] call dyn_hide_group_icon;
+    // [artGrp_1] call dyn_hide_group_icon;
+
+    // [objNull, getPos (leader artGrp_1), "b_art", "ArtCoy", "colorBLUFOR", 0.6] call dyn_spawn_intel_markers;
+    // [objNull, getPos (leader artGrp_1), "colorBLUFOR", 400] call dyn_spawn_intel_markers_area;
 };
 
 dyn_opfor_arty = [];
@@ -683,6 +687,8 @@ dyn_main_setup = {
 
         for "_i" from 0 to (count _locations) - 1 do {
             _loc = _locations#_i;
+            dyn_current_location = _loc;
+            dyn_next_location = _locations#(_i + 1);
 
             private _dir = 0;
             private _outerDefenses = false;
@@ -723,7 +729,7 @@ dyn_main_setup = {
 
             if (_i + 1 < (count _locations) - 1) then {
                 _mP1 = getPos (_locations#(_i + 1)) getPos [200, 0];
-                [objNull, _mP1 , "b_hq", "RegCP.", "colorOPFOR", 0.8] call dyn_spawn_intel_markers;
+                [objNull, _mP1 , "o_hq", "RegCP.", "colorOPFOR", 0.8] call dyn_spawn_intel_markers;
                 [objNull, _mP1, "colorOpfor", 1000] call dyn_spawn_intel_markers_area;
 
                 if (_i + 2 > (count _locations) - 1) then {
@@ -735,7 +741,7 @@ dyn_main_setup = {
             };
             if (_i + 2 < (count _locations) - 1) then {
                 _mP2 = getPos (_locations#(_i + 2)) getPos [200, 0];
-                [objNull, _mP2, "b_art", "ArtReg.", "colorOPFOR", 0.8] call dyn_spawn_intel_markers;
+                [objNull, _mP2, "o_art", "ArtReg.", "colorOPFOR", 0.8] call dyn_spawn_intel_markers;
                 [objNull, _mP2, "colorOpfor", 1600] call dyn_spawn_intel_markers_area;
                 _artyPos2 = getPos (_locations#(_i + 2)) getPos [300, 0];
                 [_artyPos2, _campaignDir] call dyn_place_opfor_arty;
@@ -751,8 +757,8 @@ dyn_main_setup = {
             _startDefense = false;
             
             if (((random 1) > 0.6 and (_dyn_defense_atkPos distance2D (getPos _loc)) > 3000 and _i > 0) or _startDefense) then {
-                _waitTime = 900;
-                if (_startDefense) then {_waitTime = 360};
+                _waitTime = 180;
+                if (_startDefense) then {_waitTime = 10};
                 if (dyn_debug) then {_waitTime = 5};
                 [_dyn_defense_atkPos, getPos _loc, _waitTime] spawn dyn_defense;
                 sleep 5;
@@ -808,7 +814,7 @@ dyn_main_setup = {
                 // if ((random 1) > 0.35) then {_startDefense = true};
             };
             
-            [getPos _loc, _dir, _endTrg] spawn dyn_ambiance;
+            // [getPos _loc, _dir, _endTrg] spawn dyn_ambiance;
 
             [west, format ["task_%1", _i], ["Offensive", format ["Capture %1", _locationName], ""], getPos _loc, "ASSIGNED", 1, true, "attack", false] call BIS_fnc_taskCreate;
 
@@ -827,14 +833,14 @@ dyn_main_setup = {
                 // _defenseType = "ambush";
 
                 switch (_defenseType) do { 
-                    case "line" : {[_midPoint, _trg, _dir, true] call dyn_defense_line}; 
-                    case "point" : {[_midPoint, _trg, _dir, true] call dyn_strong_point_defence};
-                    case "mobileTank" : {[_midPoint, _trg, _dir, true] call dyn_mobile_armor_defense};
-                    case "roadem" : {[_midPoint, _trg, _dir] call dyn_road_emplacemnets};
-                    case "recon" : {[_midPoint, _trg, _dir] call dyn_recon_convoy};
-                    case "ambush" : {[_midPoint, _trg, _dir] call dyn_ambush};
-                    case "minefield" : {[_midPoint, 2500, _dir, true] call dyn_spawn_mine_field};
-                    default {[_midPoint, _trg, _dir, true] call dyn_defense_line}; 
+                    case "line" : {[_midPoint, _trg, _dir, true] spawn dyn_defense_line}; 
+                    case "point" : {[_midPoint, _trg, _dir, true] spawn dyn_strong_point_defence};
+                    case "mobileTank" : {[_midPoint, _trg, _dir, true] spawn dyn_mobile_armor_defense};
+                    case "roadem" : {[_midPoint, _trg, _dir] spawn dyn_road_emplacemnets};
+                    case "recon" : {[_midPoint, _trg, _dir] spawn dyn_recon_convoy};
+                    case "ambush" : {[_midPoint, _trg, _dir] spawn dyn_ambush};
+                    case "minefield" : {[_midPoint, 2500, _dir, true] spawn dyn_spawn_mine_field};
+                    default {[_midPoint, _trg, _dir, true] spawn dyn_defense_line}; 
                 };
 
                 [_midPoint, 2000, [2, 3] call BIS_fnc_randomInt, _trg, _dir] spawn dyn_spawn_forest_patrol;
@@ -845,7 +851,7 @@ dyn_main_setup = {
 
                 [_endTrg, _midPoint, 1500, _midPoint] spawn dyn_spawn_side_town_guards;
 
-                [objNull, _midPoint getPos [[100, 300] call BIS_fnc_randomInt, [0, 359] call BIS_fnc_randomInt], "b_mech_inf", "MechInfCoy.", "colorOPFOR", 0.8] call dyn_spawn_intel_markers;
+                [objNull, _midPoint getPos [[100, 300] call BIS_fnc_randomInt, [0, 359] call BIS_fnc_randomInt], "o_mech_inf", "MechInfCoy.", "colorOPFOR", 0.8] call dyn_spawn_intel_markers;
 
                 if (dyn_debug) then {
                     _m = createMarker [str (random 1), _midPoint];
@@ -858,18 +864,18 @@ dyn_main_setup = {
                 _defenseType = selectRandom ["mobileTank", "recon", "ambush", "minefield", "point"];
 
                 // debug
-                // _defenseType = "point";
+                // _defenseType = "recon";
 
                 switch (_defenseType) do { 
-                    case "line" : {[getPos _loc, _trg, _dir] call dyn_defense_line}; 
-                    case "point" : {[getPos _loc, _trg, _dir] call dyn_strong_point_defence};
-                    case "mobileTank" : {[getPos _loc, _trg, _dir] call dyn_mobile_armor_defense};
-                    // case "roadem" : {[getPos _loc, _trg, _dir] call dyn_road_emplacemnets};
-                    case "recon" : {[getPos _loc, _trg, _dir] call dyn_recon_convoy};
-                    case "ambush" : {[getPos _loc, _trg, _dir] call dyn_ambush};
-                    case "minefield" : {[(getPos _loc) getPos [[1300, 1700] call BIS_fnc_randomInt, _dir], 2000, _dir, true] call dyn_spawn_mine_field};
+                    case "line" : {[getPos _loc, _trg, _dir] spawn dyn_defense_line}; 
+                    case "point" : {[getPos _loc, _trg, _dir] spawn dyn_strong_point_defence};
+                    case "mobileTank" : {[getPos _loc, _trg, _dir] spawn dyn_mobile_armor_defense};
+                    // case "roadem" : {[getPos _loc, _trg, _dir] spawn dyn_road_emplacemnets};
+                    case "recon" : {[getPos _loc, _trg, _dir] spawn dyn_recon_convoy};
+                    case "ambush" : {[getPos _loc, _trg, _dir] spawn dyn_ambush};
+                    case "minefield" : {[(getPos _loc) getPos [[1300, 1700] call BIS_fnc_randomInt, _dir], 2000, _dir, true] spawn dyn_spawn_mine_field};
                     case "empty" : {};
-                    default {[getPos _loc, _trg, _dir] call dyn_defense_line}; 
+                    default {[getPos _loc, _trg, _dir] spawn dyn_defense_line}; 
                 };
             };
 
@@ -906,7 +912,7 @@ dyn_main_setup = {
             sleep 10;
             if (_i < ((count _locations) - 1)) then {
                 _retreatPos = getPos (_locations#(_i + 1));
-                [_endTrg, _retreatPos, (allGroups select {side _x == east})] spawn dyn_retreat;
+                [_endTrg, _retreatPos, (allGroups select {(side _x) == east})] spawn dyn_retreat;
             };
 
             _garbagePos = getPos _endTrg;
@@ -940,5 +946,6 @@ dyn_main_setup = {
 };
 
 [] call dyn_main_setup;
+
 
 

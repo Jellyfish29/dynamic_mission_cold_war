@@ -4,7 +4,7 @@ dyn_spawn_smoke = {
     _sdir = getDir (leader _grp);
     _smokePos = [60 * (sin _sDir), 60 * (cos _sDir), 0] vectorAdd getPos (leader _grp);
     // _smokePos = getPos (leader _grp);
-    _smokeGroup = createGroup [east, true];
+    _smokeGroup = createGroup [sideLogic, true];
     _smoke = _smokeGroup createUnit ["ModuleSmoke_F", _smokePos, [],0 , ""];
     _smoke setVariable ["type", "SmokeShell"]
 };
@@ -34,7 +34,7 @@ dyn_spawn_heli_attack = {
             _plane = _p#0;
             [_plane, 40] call BIS_fnc_setHeight;
             // _plane forceSpeed 140;
-            _plane flyInHeight 40;
+            _plane flyInHeight 30;
             _wp = _casGroup addWaypoint [_targetPos, 0];
             _time = time + 300;
 
@@ -42,6 +42,7 @@ dyn_spawn_heli_attack = {
 
             _wp = _casGroup addWaypoint [_rearPos, 0];
             _time = time + 300;
+            _casGroup setBehaviourStrong "CARELESS";
 
             waitUntil {(_plane distance2D (waypointPosition _wp)) <= 200 or time >= _time};
 
@@ -86,40 +87,52 @@ dyn_arty = {
         case "heavy" : {_gunArray = dyn_opfor_arty}; 
         case "light" : {_gunArray = dyn_opfor_light_arty};
         case "rocket" : {_gunArray = dyn_opfor_rocket_arty};
+        case "rocketffe" : {_gunArray = dyn_opfor_rocket_arty};
         default {_gunArray = dyn_opfor_arty}; 
     };
 
 
-    for "_i" from 1 to _shells do {
-        if (_staticPos isEqualTo []) then {
-            _target = selectRandom (allUnits select {side _x == west});
-            _cords = getPos _target;
-        }
-        else
-        {
-            _cords = _staticPos;
+    if (_staticPos isEqualTo []) then {
+        _target = selectRandom (allUnits select {side _x == west});
+        _cords = getPos _target;
+    }
+    else
+    {
+        _cords = _staticPos;
+    };
+    if (_type != "rocketffe") then {
+        for "_i" from 1 to _shells do {
+            {
+                if (isNull _x) exitWith {};
+                _ammoType = (getArray (configFile >> "CfgVehicles" >> typeOf _x >> "Turrets" >> "MainTurret" >> "magazines")) select 0;
+                if (_smoke) then {
+                    _ammoType = (getArray (configFile >> "CfgVehicles" >> typeOf _x >> "Turrets" >> "MainTurret" >> "magazines") select {["smoke", _x] call BIS_fnc_inString})#0;
+                };
+                if (isNil "_ammoType") exitWith {};
+                _firePos = [[[_cords, 350]], [[position player, 55]]] call BIS_fnc_randomPos;
+                // player sidechat str (_firePos inRangeOfArtillery [[_x], _ammoType]);
+                _x commandArtilleryFire [_firePos, _ammoType, 1];
+                _x setVariable ["dyn_waiting_for_fired", true];
+                _eh = _x addEventHandler ["Fired", {
+                    params ["_unit", "_weapon", "_muzzle", "_mode", "_ammo", "_magazine", "_projectile", "_gunner"];
+                    _unit setVariable ["dyn_waiting_for_fired", false];
+                }];
+                // sleep 1;
+            } forEach _gunArray;
+            sleep 1;
+            _time = time + 10;
+            waitUntil {({_x getVariable ["dyn_waiting_for_fired", true]} count _gunArray) == 0 or time >= _time};
+            sleep 1;
         };
+    } else {
         {
             if (isNull _x) exitWith {};
             _ammoType = (getArray (configFile >> "CfgVehicles" >> typeOf _x >> "Turrets" >> "MainTurret" >> "magazines")) select 0;
-            if (_smoke) then {
-                _ammoType = (getArray (configFile >> "CfgVehicles" >> typeOf _x >> "Turrets" >> "MainTurret" >> "magazines") select {["smoke", _x] call BIS_fnc_inString})#0;
-            };
             if (isNil "_ammoType") exitWith {};
             _firePos = [[[_cords, 350]], [[position player, 55]]] call BIS_fnc_randomPos;
-            // player sidechat str (_firePos inRangeOfArtillery [[_x], _ammoType]);
-            _x commandArtilleryFire [_firePos, _ammoType, 1];
-            _x setVariable ["dyn_waiting_for_fired", true];
-            _eh = _x addEventHandler ["Fired", {
-                params ["_unit", "_weapon", "_muzzle", "_mode", "_ammo", "_magazine", "_projectile", "_gunner"];
-                _unit setVariable ["dyn_waiting_for_fired", false];
-            }];
-            // sleep 1;
+            _x commandArtilleryFire [_firePos, _ammoType, 10];
+            sleep 1;
         } forEach _gunArray;
-        sleep 1;
-        _time = time + 10;
-        waitUntil {({_x getVariable ["dyn_waiting_for_fired", true]} count _gunArray) == 0 or time >= _time};
-        sleep 1;
     };
 
     sleep 20;
@@ -127,7 +140,9 @@ dyn_arty = {
     {
         _ammoType = (getArray (configFile >> "CfgVehicles" >> typeOf _x >> "Turrets" >> "MainTurret" >> "magazines")) select 0;
         _x addMagazineTurret [_ammoType, [-1]];
-        _x removeEventHandler ["Fired", _eh];
+        if !(isNil "_eh") then {
+            _x removeEventHandler ["Fired", _eh];
+        };
     } forEach _gunArray;
 };
 
@@ -203,9 +218,12 @@ dyn_continous_counterattack = {
 
 
     if !(isNull _activationTrg) then {
+        _m = createMarker [str (random 1), getPos _activationTrg];
+        _m setMarkerType "mil_marker"; 
         waitUntil{sleep 1; triggerActivated _activationTrg};
         sleep ([20, 80] call BIS_fnc_randomInt);
     };
+
 
     while {!triggerActivated _endTrg} do {
 
@@ -220,16 +238,19 @@ dyn_continous_counterattack = {
                 [2] spawn dyn_arty;
             };  
             case 1 : {
-                _rearPos = _atkPos getPos [1000, _dir + selectRandom [90, -90, 180]];
-                [objNull, _atkPos, _rearPos, 2, 3, 0, false, dyn_standart_light_amored_vics, 0, [false, 100], true, false] spawn dyn_spawn_counter_attack;
+                _rearPos = dyn_next_location getPos [800, dyn_next_location getDir dyn_current_location];
+                // [objNull, _atkPos, _rearPos, 2, 3, 0, false, dyn_standart_light_amored_vics, 0, [false, 100], true, false] spawn dyn_spawn_counter_attack;
+                [getPos player, _rearPos, 2, 1, false, [dyn_standart_light_amored_vic]] spawn dyn_spawn_atk_complex;
             }; 
             case 2 : {
-                _rearPos = _atkPos getPos [1200, _dir + selectRandom [90, -90, 180]];
-                [objNull, _atkPos, _rearPos, 2, 2, 0, false, dyn_standart_combat_vehicles , 0, [false, 100], true, false] spawn dyn_spawn_counter_attack;
+                _rearPos = dyn_next_location getPos [600, dyn_next_location getDir dyn_current_location];
+                // [objNull, _atkPos, _rearPos, 2, 2, 0, false, dyn_standart_combat_vehicles , 0, [false, 100], true, false] spawn dyn_spawn_counter_attack;
+                [getPos player, _rearPos, 2, 1, false] spawn dyn_spawn_atk_complex;
             };
             case 3 : {
-                _rearPos = _atkPos getPos [1500, _dir + selectRandom [90, -90, 180]];
-                [objNull, _atkPos, _rearPos, 2, 2, 0, true, [dyn_standart_MBT], 0, [false, 100], true, false] spawn dyn_spawn_counter_attack
+                _rearPos = dyn_next_location getPos [400, dyn_next_location getDir dyn_current_location];
+                // [objNull, _atkPos, _rearPos, 2, 2, 0, true, [dyn_standart_MBT], 0, [false, 100], true, false] spawn dyn_spawn_counter_attack
+                [getPos player, _rearPos, 3, 2, false] spawn dyn_spawn_atk_complex;
             };
             default {}; 
          }; 

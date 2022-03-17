@@ -440,99 +440,22 @@ dyn_recon_convoy = {
     params ["_locPos", "_townTrg", "_dir", ["_exactPos", false]];
     private ["_allGrps", "_validRoads", "_iGrps"];
 
-    _trgPos = [2500 * (sin _dir), 2500 * (cos _dir), 0] vectorAdd _locPos;
+    _trgPos =_locPos getPos [2700, _dir];
     private _atkTrg = createTrigger ["EmptyDetector", _trgPos, true];
     _atkTrg setTriggerActivation ["WEST", "PRESENT", false];
     _atkTrg setTriggerStatements ["this", " ", " "];
-    _atkTrg setTriggerArea [2500, 65, _dir, true, 30];
+    _atkTrg setTriggerArea [3000, 65, _dir, true, 30];
     // _atkTrg setTriggerTimeout [30, 45, 70, false];
 
-    // debug
+    // // debug
     // _m = createMarker [str (random 1), _trgPos];
     // _m setMarkerType "mil_dot";
 
-    _rearPos = [2500 * (sin (_dir - 180)), 2500 * (cos (_dir - 180)), 0] vectorAdd _locPos;
-    _rearPos = _rearPos findEmptyPosition [0, 250, "cwr3_o_bm21"];
-    // _grad = "cwr3_o_bm21" createVehicle _rearPos;
-    // _grp = createVehicleCrew _grad;
 
-    _allGrps = [];
-    _validRoads = [];
-    _roads = _locPos nearRoads 500;
+    waitUntil { sleep 1; triggerActivated _atkTrg };
 
-    {
-        if (((getRoadInfo _x)#0) in ["ROAD", "MAIN ROAD"]) then {
-            _validRoads pushBack _x;
-        };
-    } forEach _roads;
-    _validRoads = [_validRoads, [], {(getPos _x) distance2D _trgPos}, "ASCEND"] call BIS_fnc_sortBy;
-    _road = _validRoads#0;
-
-    _vicTypes = ["cwr3_o_btr80", "cwr3_o_btr80", "cwr3_o_brdm2_atgm", "cwr3_o_brdm2um", "cwr3_o_brdm2"];
-    for "_i" from 0 to 4 do {
-        _road = ((roadsConnectedTo _road) - [_road]) select 0;
-        _near = roadsConnectedTo _road;
-        _info = getRoadInfo _road;
-        _endings = [_info#6, _info#7];
-        _endings = [_endings, [], {_x distance2D _trgPos}, "ASCEND"] call BIS_fnc_sortBy;
-        _rPos = _endings#0;
-        _rDir = (_endings#1) getDir (_endings#0);
-        _vicType = _vicTypes#_i;
-        _vic = _vicType createVehicle _rPos;
-        _vic setDir _rDir;
-        _vic limitSpeed 45;
-        _vic setUnloadInCombat [true, false];
-        // _vic forceFollowRoad true;
-        _grp = createVehicleCrew _vic;
-        _grp setBehaviour "SAFE";
-        _allGrps pushBack _grp;
-        if (_vicType isEqualTo "cwr3_o_btr80") then {
-            _iGrp = [_rPos, east, dyn_standart_squad] call BIS_fnc_spawnGroup;
-            {
-                _x assignAsCargo _vic;
-                _x moveInCargo _vic;
-                [_x] joinSilent _grp;
-            } forEach (units _iGrp);
-        };  
-    };
-
-    [_allGrps, _atkTrg, _rearPos, _townTrg, _locPos, _dir] spawn {
-        params ["_allGrps", "_atkTrg", "_rearPos", "_townTrg", "_locPos", "_dir"];
-
-         
-        _targetRaod = getPos ([getPos _atkTrg, 600] call BIS_fnc_nearestRoad);
-        waitUntil { sleep 1; triggerActivated _atkTrg };
-
-        reverse _allGrps;
-        {
-            _wp = _x addWaypoint [_targetRaod, 20];
-            _wp setWaypointType "TR UNLOAD";
-            // sleep 1;
-        } forEach _allGrps;
-
-        waitUntil {sleep 1; ({alive (leader _x)} count _allGrps) < (count _allGrps)};
-        
-        _fireSupport = selectRandom [1,2,3,4];
-
-        //debug
-        // _fireSupport = 1;
-
-        switch (_fireSupport) do { 
-            case 1 : {[6, "rocket"] spawn dyn_arty}; 
-            case 2 : {[7] spawn dyn_arty};
-            case 3 : {[_locPos, _dir] spawn dyn_spawn_heli_attack};
-            case 4 : {[_dir] spawn dyn_air_attack};
-            default {}; 
-         }; 
-
-        [objNull, _allGrps] spawn dyn_attack_nearest_enemy;
-
-        //create counterattack;
-        // if ((random 1) > 0.25) then {
-            [objNull, getPos _atkTrg, getPos _townTrg, [3, 5] call BIS_fnc_randomInt, [2, 3] call BIS_fnc_randomInt, 2] spawn dyn_spawn_counter_attack;
-            // [_aoPos, _grps] spawn dyn_attack_nearest_enemy;
-        // };
-    };
+    _rearPos = _locPos getPos [400, _dir];
+    [getPos _atkTrg, _rearPos, 5, 3] spawn dyn_spawn_atk_complex;
 };
 
 dyn_ambush = {
@@ -718,7 +641,7 @@ dyn_town_defense = {
 
     // Supply Convoy
     if ((random 1) > 0.25) then {
-        [_aoPos, getPos (selectRandom _solitaryBuildings), _dir - 180] spawn dyn_spawn_supply_convoy;
+        [_aoPos, getPos (selectRandom _solitaryBuildings)] spawn dyn_spawn_supply_convoy;
     };
 
     //AA
@@ -732,7 +655,7 @@ dyn_town_defense = {
     [getPos _aoPos, 2000, 2, _aoPos, _dir] spawn dyn_spawn_forest_patrol;
 
     // Forest Position
-    [getPos _aoPos, 2000, 2, _aoPos, _dir] spawn dyn_spawn_forest_position;
+    // [getPos _aoPos, 2000, 2, _aoPos, _dir] spawn dyn_spawn_forest_position;
 
     // Bridge Defense
     [getPos _aoPos, 1500, 400, _watchPos] spawn dyn_spawn_bridge_defense;
@@ -779,31 +702,36 @@ dyn_defense = {
 
     dyn_defense_active = true;
 
-    _linePos = [300 * (sin (_atkPos getDir _defPos)), 300 * (cos (_atkPos getDir _defPos)), 0] vectorAdd _atkPos;
-    _lineMarker = createMarker [format ["clLeft%1", _atkPos], _linePos];
-    _lineMarker setMarkerShape "RECTANGLE";
-    _lineMarker setMarkerSize [8, 800];
-    _lineMarker setMarkerDir ((_atkPos getDir _defPos) - 90);
-    _lineMarker setMarkerBrush "Horizontal";
-    _lineMarker setMarkerColor "colorBLUFOR";
+    // _linePos = [300 * (sin (_atkPos getDir _defPos)), 300 * (cos (_atkPos getDir _defPos)), 0] vectorAdd _atkPos;
+    // _lineMarker = createMarker [format ["clLeft%1", _atkPos], _linePos];
+    // _lineMarker setMarkerShape "RECTANGLE";
+    // _lineMarker setMarkerSize [8, 800];
+    // _lineMarker setMarkerDir ((_atkPos getDir _defPos) - 90);
+    // _lineMarker setMarkerBrush "Horizontal";
+    // _lineMarker setMarkerColor "colorBLUFOR";
+
+    _arrowPos = [(_defPos distance2d _atkPos) / 2 * (sin (_defPos getDir _atkPos)), (_defPos distance2d _atkPos) / 2 * (cos (_defPos getDir _atkPos)), 0] vectorAdd _defPos;
+    _arrowMarker = createMarker [format ["arrow%1", _atkPos], _arrowPos];
+    _arrowMarker setMarkerType "marker_std_atk";
+    _arrowMarker setMarkerSize [1.5, 1.5];
+    _arrowMarker setMarkerColor "colorOPFOR";
+    _arrowMarker setMarkerDir (_defPos getDir _atkPos);
+
+    [objNull, _defPos getPos [500, _defPos getdir _atkPos], "o_mech_inf", "Mech Btl.", "colorOPFOR", 0.8] call dyn_spawn_intel_markers;
+    [objNull, _defPos getPos [500, _defPos getdir _atkPos], "colorOpfor", 800] call dyn_spawn_intel_markers_area;
 
     sleep _waitTime;
     // sleep 2;
 
     [playerSide, "HQ"] sideChat format ["SPOTREP: Soviet MotRifBtl at GRID: %1 advancing towards %2", mapGridPosition _defPos, [round (_defPos getDir _atkPos)] call dyn_get_cardinal];
 
-    _arrowPos = [(_defPos distance2d _atkPos) / 2 * (sin (_defPos getDir _atkPos)), (_defPos distance2d _atkPos) / 2 * (cos (_defPos getDir _atkPos)), 0] vectorAdd _defPos;
-    _arrowMarker = createMarker [format ["arrow%1", _atkPos], _arrowPos];
-    _arrowMarker setMarkerType "cwr3_marker_arrow";
-    _arrowMarker setMarkerSize [1, 1];
-    _arrowMarker setMarkerColor "colorOPFOR";
-    _arrowMarker setMarkerDir ((_defPos getDir _atkPos) - 90);
 
     sleep 10;
 
     if (random 1 < 0.5) then {
         [4, "heavy", true] spawn dyn_arty;
-        [8, "rocket"] spawn dyn_arty;
+        // [8, "rocket"] spawn dyn_arty;
+        [1, "rocketffe"] spawn dyn_arty;
     }
     else
     {
@@ -812,46 +740,50 @@ dyn_defense = {
         [_atkPos getDir _defPos] spawn dyn_air_attack;
     };
 
-    _waves = [2, 3] call BIS_fnc_randomInt;
+    _rearPos = _defPos getPos [400, _defPos getDir _atkPos];
+    [_atkPos, _rearPos, 6, 5] spawn dyn_spawn_atk_complex;
+
+    // _waves = [2, 3] call BIS_fnc_randomInt;
     // _waves = 0;
 
-    for "_i" from 0 to _waves do {
-        _infAmount = [4, 5] call BIS_fnc_randomInt;
-        _vicAmount = [1, 2] call BIS_fnc_randomInt;
-        _delay = [true, 600];
-        _vicTypes = ["cwr3_o_t55"];
-        _mech = true;
-        if (_i == 0) then {
-            _vicTypes = [dyn_standart_MBT];
-            _vicAmount = _infAmount - 1};
-            _mech = true;
-        if !(_mech) then {
-            _vicAmount = _infAmount;
-            _vicTypes = dyn_standart_combat_vehicles
-        };
-        [objNull, _atkPos, _defPos, _infAmount, _vicAmount, 2, _mech, _vicTypes, 2000, _delay, true, true] spawn dyn_spawn_counter_attack;
+    // for "_i" from 0 to _waves do {
+    //     _infAmount = [4, 5] call BIS_fnc_randomInt;
+    //     _vicAmount = [1, 2] call BIS_fnc_randomInt;
+    //     _delay = [true, 600];
+    //     _vicTypes = ["cwr3_o_t55"];
+    //     _mech = true;
+    //     if (_i == 0) then {
+    //         _vicTypes = [dyn_standart_MBT];
+    //         _vicAmount = _infAmount - 1};
+    //         _mech = true;
+    //     if !(_mech) then {
+    //         _vicAmount = _infAmount;
+    //         _vicTypes = dyn_standart_combat_vehicles
+    //     };
+    //     [objNull, _atkPos, _defPos, _infAmount, _vicAmount, 2, _mech, _vicTypes, 2000, _delay, true, true] spawn dyn_spawn_counter_attack;
 
-        // player sideChat "wave spawn";
+    //     // player sideChat "wave spawn";
 
-        sleep 5;
-        { 
-            _x addCuratorEditableObjects [allUnits, true]; 
-            _x addCuratorEditableObjects [vehicles, true];  
-       } forEach allCurators; 
+    //     sleep 5;
+    //     { 
+    //         _x addCuratorEditableObjects [allUnits, true]; 
+    //         _x addCuratorEditableObjects [vehicles, true];  
+    //    } forEach allCurators; 
 
-        sleep 120;
+    //     sleep 120;
 
-        if (random 1 < 0.5) then {
-            [5] spawn dyn_arty;
-        };
-    };
+    //     if (random 1 < 0.5) then {
+    //         [5] spawn dyn_arty;
+    //     };
+    // };
 
     // player sideChat "spawn end";
     _time = time + 200;
-    waitUntil {(count (allGroups select {(side (leader _x)) isEqualTo east})) <= 8};
+    waitUntil {sleep 1;time >= _time and (count (allGroups select {(side (leader _x)) isEqualTo east})) <= 6};
 
+    dyn_intel_markers = [];
     deleteMarker _arrowMarker;
-    deleteMarker _lineMarker;
+    // deleteMarker _lineMarker;
 
     _defPos = [400 * (sin (_defPos getDir _atkPos)), 400 * (cos (_defPos getDir _atkPos)), 0] vectorAdd _defPos;
 
