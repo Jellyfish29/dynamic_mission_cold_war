@@ -24,6 +24,7 @@ dyn_standart_arty = "gm_gc_army_2s1";//"cwr3_o_d30";
 dyn_standart_rocket_arty = "gm_gc_army_ural375d_mlrs";
 dyn_standart_light_arty = "cwr3_o_2b14";
 dyn_attack_heli = "cwr3_o_mi24d";
+dyn_attack_plane = "cwr3_o_su25";
 dyn_recon_convoy = ["cwr3_o_btr80", "cwr3_o_btr80", "cwr3_o_brdm2_atgm", "cwr3_o_brdm2um", "cwr3_o_brdm2"];
 dyn_hq_vehicles = ["cwr3_o_bmp2_hq", "cwr3_o_ural_hq"];
 dyn_map_center = [worldSize / 2, worldsize / 2, 0];
@@ -31,6 +32,7 @@ dyn_opfor_comp = [["o_mech_inf", "232. MechInfBtl"], ["o_inf", "16. GdsInfBtl"],
 dyn_uniforms_dic = createHashMapFromArray [["o_mech_inf", "cwr3_o_uniform_kzs_v1"], ["o_inf", "cwr3_o_uniform_m1982"], ["o_motor_inf", "cwr3_o_uniform_kzs_v2"], ["o_armor", "cwr3_o_uniform_kzs_v2"]];
 
 execVM "dyn_ai_functions.sqf";
+execVM "dyn_ambiance_functions.sqf";
 execVm "dyn_satic_placements_functions.sqf";
 execVM "dyn_dynamic_placements_functions.sqf";
 execVm "dyn_ai_supports_functions.sqf";
@@ -48,8 +50,8 @@ dyn_player_repair_vic_type = typeOf dyn_repair_vic;
 pl_arty_enabled = false;
 [] call pl_show_fire_support_menu;
 
-pl_cas_Heli_1 = "gm_ge_army_bo105p_pah1a1";
+pl_cas_Heli_1 = "cwr3_b_ah1f";
 pl_medevac_Heli_1 = "cwr3_b_uh1_mev";
-pl_cas_plane_1 = "RHS_A10";
-pl_cas_plane_2 = "RHS_A10";
-pl_cas_plane_3 = "RHS_A10";
+pl_cas_plane_1 = "cwr3_b_a10";
+pl_cas_plane_2 = "cwr3_b_a10";
+pl_cas_plane_3 = "cwr3_b_a10";

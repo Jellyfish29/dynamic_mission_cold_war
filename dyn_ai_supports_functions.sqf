@@ -9,32 +9,87 @@ dyn_spawn_smoke = {
     _smoke setVariable ["type", "SmokeShell"]
 };
 
-dyn_spawn_heli_attack = {
-    params ["_locPos", "_dir", ["_trg", objNull]];
+// dyn_spawn_heli_attack = {
+//     params ["_locPos", "_dir", ["_trg", objNull]];
 
-    if (true) exitWith {};
+//     // if (true) exitWith {};
+
+//     if !(isNull _trg) then {
+//         waitUntil { sleep 1; triggerActivated _trg };
+//     };
+
+//     _rearPos = [3000 * (sin (_dir - 180)), 3000 * (cos (_dir - 180)), 0] vectorAdd _locPos;
+//     _units = allUnits+vehicles select {side _x == west};
+//     _targetPos = getPos (_units#0);
+
+//     // _frontPos = [3000 * (sin _dir), 3000 * (cos _dir), 0] vectorAdd _targetPos;
+
+//     // for "_i" from 0 to 1 do {
+
+//         [_rearPos, _targetPos, _dir] spawn {
+//             params ["_rearPos", "_targetPos", "_dir"];
+
+//             _casGroup = createGroup east;
+//             _p = [_rearPos, _dir, dyn_attack_heli, _casGroup] call BIS_fnc_spawnVehicle;
+//             _plane = _p#0;
+//             [_plane, 40] call BIS_fnc_setHeight;
+//             // _plane forceSpeed 140;
+//             _plane flyInHeight 40;
+//             _wp = _casGroup addWaypoint [_targetPos, 0];
+//             _time = time + 300;
+
+//             waitUntil {(_plane distance2D (waypointPosition _wp)) <= 200 or time >= _time};
+
+//             _wp = _casGroup addWaypoint [_rearPos, 0];
+//             _time = time + 300;
+//             _casGroup setBehaviourStrong "CARELESS";
+
+//             waitUntil {(_plane distance2D (waypointPosition _wp)) <= 200 or time >= _time};
+
+//             {
+//                 deleteVehicle _x;
+//             } forEach (units _casGroup);
+//             deleteVehicle _plane;
+//         };
+//         // sleep 10;
+//     // };
+// };
+
+dyn_air_attack = {
+    params ["_locPos", "_dir", ["_trg", objNull], ["_type", dyn_attack_heli]];     
+    
+    // if (true) exitWith {};
 
     if !(isNull _trg) then {
         waitUntil { sleep 1; triggerActivated _trg };
     };
 
     _rearPos = [3000 * (sin (_dir - 180)), 3000 * (cos (_dir - 180)), 0] vectorAdd _locPos;
-    _units = allUnits+vehicles select {side _x == west};
+    _units = allUnits+vehicles select {side _x == playerSide};
+    _units = [_units, [], {_x distance2D _rearPos}, "ASCEND"] call BIS_fnc_sortBy;
     _targetPos = getPos (_units#0);
+
 
     // _frontPos = [3000 * (sin _dir), 3000 * (cos _dir), 0] vectorAdd _targetPos;
 
-    // for "_i" from 0 to 1 do {
+    // for "_i" from 0 to dyn_attack_heli do {
 
-        [_rearPos, _targetPos, _dir] spawn {
-            params ["_rearPos", "_targetPos", "_dir"];
+        [_rearPos, _targetPos, _dir, _type] spawn {
+            params ["_rearPos", "_targetPos", "_dir", "_type"];
+            private ["_spawnHeight", "_fligthHeight"];
+
+            switch (_type) do { 
+                case dyn_attack_heli : {_spawnHeight = 60; _fligthHeight = 40}; 
+                case dyn_attack_plane : {_spawnHeight = 500; _fligthHeight = 100}; 
+                default {_spawnHeight = 500; _fligthHeight = 100}; 
+            };
 
             _casGroup = createGroup east;
-            _p = [_rearPos, _dir, dyn_attack_heli, _casGroup] call BIS_fnc_spawnVehicle;
+            _p = [_rearPos, _dir, _type, _casGroup] call BIS_fnc_spawnVehicle;
             _plane = _p#0;
-            [_plane, 40] call BIS_fnc_setHeight;
-            // _plane forceSpeed 140;
-            _plane flyInHeight 30;
+            [_plane, _spawnHeight, _rearPos, "ATL"] call BIS_fnc_setHeight;
+            _plane forceSpeed 1000;
+            _plane flyInHeight _fligthHeight;
             _wp = _casGroup addWaypoint [_targetPos, 0];
             _time = time + 300;
 
@@ -129,7 +184,7 @@ dyn_arty = {
             if (isNull _x) exitWith {};
             _ammoType = (getArray (configFile >> "CfgVehicles" >> typeOf _x >> "Turrets" >> "MainTurret" >> "magazines")) select 0;
             if (isNil "_ammoType") exitWith {};
-            _firePos = [[[_cords, 350]], [[position player, 55]]] call BIS_fnc_randomPos;
+            _firePos = [[[_cords, 450]], [[position player, 15]]] call BIS_fnc_randomPos;
             _x commandArtilleryFire [_firePos, _ammoType, 10];
             sleep 1;
         } forEach _gunArray;
@@ -169,23 +224,6 @@ dyn_spawn_harresment_arty = {
     };
 };
 
-dyn_air_attack = {
-    params ["_dir"];
-    private ["_vicPos"];
-
-    _vicPos = getPos (selectRandom (vehicles select {side _x == playerSide and !((getNumber (configFile >> "CfgVehicles" >> typeOf _x >> "artilleryScanner")) == 1) and !(_x getVariable ["pl_set_repair_vic", false]) and !(_x getVariable ["pl_set_supply_vic", false])}));
-     
-
-    _group = createGroup [east, true];
-    {
-        _atkPos = _vicPos getPos [_x, _dir + 90];
-        _support = _group createUnit ["ModuleCAS_F", _atkPos, [],0 , ""];
-        _support setVariable ["vehicle", "O_Plane_Fighter_02_F"];
-        _support setVariable ["type", 2];
-        _support setDir _dir;
-        sleep 3;
-    } forEach [0, 70];
-};
 
 dyn_continous_support = {
     params ["_activationTrg", "_endTrg", "_dir"];
@@ -203,8 +241,8 @@ dyn_continous_support = {
             case 0 : {}; 
             case 1 : {[4, "light"] spawn dyn_arty}; 
             case 2 : {[3, "heavy"] spawn dyn_arty};
-            case 3 : {[getPos _endTrg, _dir, objNull] spawn dyn_spawn_heli_attack};
-            case 4 : {[_dir] spawn dyn_air_attack};
+            case 3 : {[getPos _endTrg, _dir, objNull] spawn dyn_air_attack};
+            case 4 : {[getPos _endTrg, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
             case 5 : {[2, "rocket"] spawn dyn_arty};
             default {}; 
          }; 
@@ -308,7 +346,8 @@ dyn_spawn_mine_field = {
             // _westUnits = [_westUnits, [], {_x distance2D (getPos _endTrg)}, "ASCEND"] call BIS_fnc_sortBy;
             // _atkPos = getPos (_westUnits#0);
 
-            [objNull, _startPos getPos [100, _dir - 180], _rearPos, 5, 2, 0, true, [dyn_standart_MBT], 0, [false, 100], true, false] spawn dyn_spawn_counter_attack
+            // [objNull, _startPos getPos [100, _dir - 180], _rearPos, 5, 2, 0, true, [dyn_standart_MBT], 0, [false, 100], true, false] spawn dyn_spawn_counter_attack
+            [objNull, _startPos getPos [100, _dir - 180], _rearPos, [2, 3] call BIS_fnc_randomInt, [1, 2] call BIS_fnc_randomInt] spawn dyn_spawn_atk_simple;
         };
     };
 };

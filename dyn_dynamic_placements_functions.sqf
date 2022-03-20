@@ -84,168 +84,7 @@ dyn_retreat = {
 };
 
 
-dyn_spawn_counter_attack = {
-    params ["_trg", "_atkPos", "_defPos", "_inf", "_vics", "_breakPoint", ["_mech", false], ["_vicTypes", dyn_standart_combat_vehicles], ["_spawnDistance", 300], ["_delayAction", [false, 0]], ["_excactPos", false], ["_fromAtk", false]];
-    private ["_rearPos"];
 
-    if !(isNull _trg) then {
-        waitUntil {sleep 1; triggerActivated _trg};
-    };
-
-    // sleep 10;
-
-    private _counterattack = [];
-    private _dir = _atkPos getDir _defPos;
-    _rearPos = [_spawnDistance * (sin (_dir - 180)), _spawnDistance * (cos (_dir - 180)), 0] vectorAdd _defPos;
-    if (_fromAtk) then {
-        _rearPos = [_spawnDistance * (sin _dir), _spawnDistance * (cos _dir), 0] vectorAdd _atkPos;
-    };
-
-    if (_inf > 0) then {
-        _distance = 25;
-        for "_i" from 1 to _inf do {
-            _nDir = _dir - 90;
-            if (_i % 2 == 0) then {
-                _nDir = _dir + 90;
-                _distance = 50 * _i;
-            };
-            _iPos = [_distance * (sin _nDir), _distance * (cos _nDir), 0] vectorAdd _rearPos;
-            // _iPosFinal = _iPos findEmptyPosition [0, 150, "cwr3_o_t55"];
-            _iPosFinal = [_iPos, 0, 90, 0, 0, 0, 0, [], [_iPos, []]] call BIS_fnc_findSafePos;
-            _isForest = [_iPosFinal] call dyn_is_forest;
-            private _grp = grpNull;
-            if (_iPosFinal isEqualTo dyn_map_center) then {
-                _grp = [_iPos, east, dyn_standart_squad,[],[],[],[],[], (_dir - 180)] call BIS_fnc_spawnGroup;
-                [_grp] call dyn_opfor_change_uniform_grp;
-            }
-            else
-            {
-                if (_mech and !(_isForest)) then {
-                    _mechType = selectRandom ["cwr3_o_bmp1", "cwr3_o_bmp2", "cwr3_0_mtlb_pk", "cwr3_0_mtlb_pk"];
-                    _vic = _mechType createVehicle _iPosFinal;
-                    _vic setDir (_dir -180);
-                    _grp = createVehicleCrew _vic;
-                    _infGrp = [_iPosFinal, east, dyn_standart_squad,[],[],[],[],[], (_dir - 180)] call BIS_fnc_spawnGroup;
-                    [_infGrp] call dyn_opfor_change_uniform_grp;
-                    {
-                        _x assignAsCargo _vic;
-                        _x moveInAny _vic;
-                        [_x] joinSilent _grp;
-                    } forEach (units _infGrp);
-                    _vic setUnloadInCombat [true, false];
-                    _vic allowCrewInImmobile true;
-                    _vic limitSpeed 55;
-                    _counterattack pushBack _grp;
-                }
-                else
-                {
-                    _grp = [_iPosFinal, east, dyn_standart_squad,[],[],[],[],[], (_dir - 180)] call BIS_fnc_spawnGroup;
-                    [_grp] call dyn_opfor_change_uniform_grp;
-                };
-            };
-        };
-    };
-
-    if (_vics > 0) then {
-        private _vicType = selectRandom _vicTypes;
-        _distance = 25;
-        for "_i" from 1 to _vics do {
-            _nDir = _dir - 90;
-            if (_i % 2 == 0) then {
-                _nDir = _dir + 90;
-                _distance = 50 * _i;
-            };
-            _vPos = [_distance * (sin _nDir), _distance * (cos _nDir), 0] vectorAdd _rearPos;
-            _vPosFinal = [_vPos, 0, 90, 0, 0, 0, 0, [], []] call BIS_fnc_findSafePos;
-            _isForest = [_vPosFinal] call dyn_is_forest;
-            if (_vPosFinal isEqualTo dyn_map_center or _isForest) then {
-                _grp = [_vPos, east, dyn_standart_at_team,[],[],[],[],[_vPos, []], (_dir - 180)] call BIS_fnc_spawnGroup;
-                _grp2 = [_vPos, east, dyn_standart_fire_team,[],[],[],[],[_vPos, []], (_dir - 180)] call BIS_fnc_spawnGroup;
-                (units _grp2) joinSilent _grp;
-                [_grp] call dyn_opfor_change_uniform_grp;
-                _counterattack pushBack _grp;
-            }
-            else
-            {
-                _vic = _vicType createVehicle _vPosFinal;
-                _vic setDir (_dir -180);
-                _vic limitSpeed 20;
-                if (_mech) then {_vic limitSpeed 40};
-                _vic setUnloadInCombat [true, false];
-                _vic allowCrewInImmobile true;
-                _grp = createVehicleCrew _vic;
-                _counterattack pushBack _grp;
-            };
-            sleep 0.2;
-        };
-    };
-    sleep 5;
-    _leader = _counterattack#0;
-    if !(_excactPos) then {
-        _units = allUnits+vehicles select {side _x == west};
-        _units = [_units, [], {_x distance2D (leader _leader)}, "ASCEND"] call BIS_fnc_sortBy;
-        _atkPos = getPos (_units#0);
-    };
-    _atkDistance = _atkPos distance2D (getPos (leader _leader));
-    _wpIntervall = _atkDistance / 6;
-    _atkDir = (getPos (leader _leader)) getDir _atkPos;
-
-    _leaders = [];
-    {
-        _leaders pushBack (leader _x);
-    } forEach _counterattack;
-
-    private _syncWps = [];
-    _unloadaAt = 3;
-    if (_atkDistance > 1900) then {_unloadaAt = 4};
-
-    ////  WPS /////
-    for "_i" from 1 to 6 do {
-        {
-            _wPos = [(_wpIntervall * _i) * (sin _atkDir), (_wpIntervall * _i) * (cos _atkDir), 0] vectorAdd (getPos (leader _x));
-            _isForest = [_wPos] call dyn_is_forest;
-            if (!(_isForest) or _i == 6) then {
-                _gWp = _x addWaypoint [_wPos, 0];
-                // if (_i == ([3, 4] call BIS_fnc_randomInt) and _mech) then {
-                //     _gWp setWaypointType "UNLOAD";
-                //     // _gWp setWaypointTimeout [60, 60, 60];
-                // };
-                // if (_mech and _i == 4) then {_gWp setWaypointType "UNLOAD"};
-                if (_i == 6) then {_gWp setWaypointType "SAD"};
-            };
-        } forEach _counterattack;
-    };
-
-    //// PATH ////
-    // {
-    //     _grp = _x;
-    //     _path = [];
-    //     for "_i" from 1 to 6 do {
-    //         _wPos = [(_wpIntervall * _i) * (sin _atkDir), (_wpIntervall * _i) * (cos _atkDir), 0] vectorAdd (getPos (leader _grp));
-    //         _path pushBack _wPos;
-    //         _m = createMarker [str (random 1), _wPos];
-    //         _m setMarkerType "mil_dot";
-    //     };
-    //     { _x pushBack 25; } forEach _path;
-    //     (vehicle (leader _grp)) setDriveOnPath _path;
-    // } forEach _counterattack;
-
-    waitUntil {sleep 1; ({(_atkPos distance2D _x) < 500} count _leaders) > 0 or ({alive _x} count _leaders) <= _breakPoint};
-
-    if ((random 1) > 0.5) then {[8, "rocket"] spawn dyn_arty; [4, "heavy", true] spawn dyn_arty};
-
-    waitUntil {sleep 1; ({alive _x} count _leaders) <= _breakPoint};
-
-    if (random 1 > 0.5 and !(_delayAction#0)) then {
-        [objNull, _rearPos, _counterattack, false] spawn dyn_retreat;
-    }
-    else
-    {
-        [_rearPos, _counterattack, objNull, _delayAction#1] spawn dyn_spawn_delay_action;
-    };
-
-    [] spawn dyn_garbage_clear;
-};
 
 
 dyn_spawn_delay_action = {
@@ -496,6 +335,105 @@ dyn_spawn_qrf_patrol = {
     [_qrfTrg, _PatrolGrps] spawn dyn_attack_nearest_enemy;
 };
 
+dyn_spawn_atk_simple = {
+    params ["_trg", "_atkPos", "_rearPos", "_inf", "_tank", ["_mech", false], ["_mechVics", dyn_standart_mechs], ["_tankVics", dyn_standart_tanks]];
+    private ["_spawnPos", "_spawnPosFinal"];
+
+    if !(isNull _trg) then {
+        waitUntil {sleep 1; triggerActivated _trg};
+    };
+
+    private _tankType = selectRandom _tankVics;
+    private _mechType = selectRandom _mechVics;
+
+    private _atkDir = _rearPos getDir _atkPos;
+
+    private _infGrps = [];
+    private _tankGrps = [];
+    private _offset = 0;
+    private _offsetStep = 30;
+    for "_i" from 0 to _inf - 1 do {
+        if (_i % 2 == 0) then {
+            _spawnPos = _rearPos getPos [_offset, _atkDir + 90];
+        } else {
+            _spawnPos = _rearPos getPos [_offset, _atkDir - 90];
+        };
+        _offset = _offset + _offsetStep;
+        _spawnPosFinal = [_spawnPos, 0, 90, 0, 0, 0, 0, [], [_spawnPos, []]] call BIS_fnc_findSafePos;
+        _infGrp = [_spawnPosFinal, east, dyn_standart_squad,[],[],[],[],[], _atkDir] call BIS_fnc_spawnGroup;
+        // [_infGrp] call dyn_opfor_change_uniform_grp;
+        
+
+        if (_mech and !([_spawnPosFinal] call dyn_is_forest)) then {
+            _vic = _mechType createVehicle _spawnPosFinal;
+            _mechGrp = createVehicleCrew _vic;
+            _infGrps pushBack _mechGrp;
+            {
+                _x moveInCargo _vic;
+            } forEach (units _infGrp);
+            sleep 0.2;
+            {
+                if (vehicle _x == _x) then {
+                    deleteVehicle _x;
+                };
+            } forEach (units _infGrp);
+            private _step = (_vic distance2D _atkPos) / 3;
+            _wpPos = getPos _vic;
+            for "_j" from 1 to 3 do {
+                _wpPos = _wpPos getpos [_step, _atkDir];
+                if (!([_wpPos] call dyn_is_forest) and !([_wpPos] call dyn_is_town) or _j == 3) then {
+                    _gWp = _mechGrp addWaypoint [_wpPos, 0];
+                    if (_j == 3) then {_gWp setWaypointType "SAD"};
+                };
+            };
+        } else {
+            _infGrps pushBack _infGrp;
+            private _step = ((leader _infGrp) distance2D _atkPos) / 3;
+            _wpPos = getPos (leader _infGrp);
+            for "_j" from 1 to 3 do {
+                _wpPos = _wpPos getpos [_step, _atkDir];
+                _gWp = _infGrp addWaypoint [_wpPos, 0];
+                if (_j == 3) then {_gWp setWaypointType "SAD"};
+            };
+        };
+    };
+
+    private _tankPos = _rearPos getPos [50, _atkDir];
+    _offset = 0;
+    for "_i" from 0 to _tank - 1 do {
+        if (_i % 2 == 0) then {
+            _spawnPos = _tankPos getPos [_offset, _atkDir + 90];
+        } else {
+            _spawnPos = _tankPos getPos [_offset, _atkDir - 90];
+        };
+        _offset = _offset + _offsetStep;
+        _spawnPosFinal = [_spawnPos, 0, 90, 0, 0, 0, 0, [], [_spawnPos, []]] call BIS_fnc_findSafePos;
+        if !([_spawnPosFinal] call dyn_is_forest) then {
+            _vic = _tankType createVehicle _spawnPosFinal;
+            _tankGrp = createVehicleCrew _vic;
+            _tankGrps pushBack _tankGrp;
+
+            private _step = (_vic distance2D _atkPos) / 3;
+            _wpPos = getPos _vic;
+            for "_j" from 1 to 3 do {
+                _wpPos = _wpPos getpos [_step, _atkDir];
+                if (!([_wpPos] call dyn_is_forest) and !([_wpPos] call dyn_is_town) or _j == 3) then {
+                    _gWp = _tankGrp addWaypoint [_wpPos, 0];
+                    if (_j == 3) then {_gWp setWaypointType "SAD"};
+                };
+            };
+        };
+    };
+
+    private _allGrps = _infGrps + _tankGrps;
+
+    waitUntil {sleep 1; ({alive (leader _x)} count _allGrps) < (round ((count _allGrps) * 0.33))};
+
+    [_rearPos, _allGrps, objNull, 400] spawn dyn_spawn_delay_action;
+};
+
+// [objNull, getMarkerPos "atk", getMarkerPos "rear", 4, 4] spawn dyn_spawn_atk_simple;
+
 
 dyn_spawn_atk_complex = {
     params ["_atkPos", "_rearPos", "_inf", "_tanks", ["_enableRecon", true], ["_mechVics", dyn_standart_mechs], ["_tankVics", dyn_standart_tanks], ["_reconVics", dyn_standart_light_amored_vics]];
@@ -561,12 +499,13 @@ dyn_spawn_atk_complex = {
             // _m = createMarker [str (random 1), _targetRoad];
             // _m setMarkerType "mil_marker"; 
 
-            _fireSupport = selectRandom [1,2];
+            _fireSupport = selectRandom [1,2,2,2,3,4,5];
             switch (_fireSupport) do { 
                 case 1 : {[10, "rocket"] spawn dyn_arty}; 
                 case 2 : {[10] spawn dyn_arty};
                 case 3 : {[_locPos, _dir] spawn dyn_spawn_heli_attack};
-                case 4 : {[_dir] spawn dyn_air_attack};
+                case 4 : {[_locPos, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
+                case 5 : {[10, "rocketffe"] spawn dyn_arty}; 
                 default {}; 
              }; 
 
@@ -711,12 +650,13 @@ dyn_spawn_atk_complex = {
 
         [_rearPos, _allGrps, objNull, 400] spawn dyn_spawn_delay_action;
 
-        _fireSupport = selectRandom [1,2];
+        _fireSupport = selectRandom [1,2,5];
         switch (_fireSupport) do { 
             case 1 : {[8, "rocket"] spawn dyn_arty}; 
             case 2 : {[8] spawn dyn_arty};
             case 3 : {[_locPos, _dir] spawn dyn_spawn_heli_attack};
-            case 4 : {[_dir] spawn dyn_air_attack};
+            case 4 : {[_locPos, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
+            case 5 : {[8, "rocketffe"] spawn dyn_arty};
             default {}; 
          }; 
     };

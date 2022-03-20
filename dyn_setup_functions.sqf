@@ -117,11 +117,11 @@ dyn_create_markers = {
     // _marker6 setMarkerColor "colorOPFOR";
 
     _marker7 = createMarker [format ["player%1", _pos], _playerPos];
-    _marker7 setMarkerType "flag_Germany";
+    _marker7 setMarkerType "flag_usa";
 
     _arrowPos = [(_playerPos distance2d _pos) / 2 * (sin (_playerPos getDir _pos)), (_playerPos distance2d _pos) / 2 * (cos (_playerPos getDir _pos)), 0] vectorAdd _playerPos;
     _marker8 = createMarker [format ["arrow%1", _pos], _arrowPos];
-    _marker8 setMarkerType "cwr3_marker_arrow";
+    _marker8 setMarkerType "marker_std_atk";
     _marker8 setMarkerSize [1.5, 1.5];
     _marker8 setMarkerColor "colorBLUFOR";
     _marker8 setMarkerDir (_playerPos getDir _pos);
@@ -132,7 +132,7 @@ dyn_create_markers = {
     _marker9 setMarkerType "b_armor";
     _marker9 setMarkerSize [0.5, 0.5];
     // _marker9 setMarkerDir _dir;
-    _marker9 setMarkerText "2./PzBtl 203";
+    _marker9 setMarkerText "Team Yankee";
 
     _marker10 = createMarker [format ["teamsize%1", _pos], _teamPos];
     _marker10 setMarkerType "group_4";
@@ -172,77 +172,6 @@ dyn_create_markers = {
     deleteMarker _marker10;
     deleteMarker _marker11;
     deleteMarker _marker12;
-};
-
-dyn_ambiance = {
-    params ["_centerPos", "_dir", "_trg"];
-
-
-    dyn_ambient_sound_mod attachTo [player, [0,0,0]];
-
-    _smokeGroup = createGroup [civilian, true];
-    _civVics = ["cwr3_c_gaz24", "cwr3_c_mini", "cwr3_c_rapid", "gm_ge_civ_typ1200"];
-    _roads = _centerPos nearRoads 1300;
-
-    for "_l" from 0 to ([5, 9] call BIS_fnc_randomInt) do {
-        _vic = createVehicle [selectRandom _civVics, getPos (selectRandom _roads) , [], 15, "NONE"];
-        _vic setDir ([0, 359] call BIS_fnc_randomInt);
-        _vic setDamage 1;
-        _vic setVariable ["dyn_dont_delete", true];
-        [_vic] spawn {
-            params ["_vic"];
-            sleep 20;
-            _vic enableSimulation false;
-        };
-        for "_j" from 0 to ([1, 2] call BIS_fnc_randomInt) do {
-            _civ = _smokeGroup createUnit ["cwr3_c_civilian_random", getPos _vic, [], 8, "NONE"];
-            _civ setVariable ["dyn_dont_delete", true];
-            _civ setDamage 1;
-            [_civ] spawn {
-                params ["_civ"];
-                _civ setDir ([0, 359] call BIS_fnc_randomInt);
-                sleep 20;
-                _civ enableSimulation false;
-            };
-        };
-        sleep 1;
-    };
-
-    _houses = nearestTerrainObjects [_centerPos, ["HOUSE"], 1500, false, true];
-
-    for "_i" from 0 to ([3, 7] call BIS_fnc_randomInt) do {
-        _house = selectRandom _houses;
-        _house setDamage 1;
-        _pos = getPosATLVisual _house;
-        _smoke = _smokeGroup createUnit ["ModuleEffectsSmoke_F", _pos, [],0 , ""];
-        _fire = _smokeGroup createUnit ["ModuleEffectsFire_F", _pos, [],0 , ""];
-        // _support = _smokeGroup createUnit ["ModuleOrdnance_F", _pos, [],0 , ""];
-        // _support setVariable ["type", "ModuleOrdnanceMortar_F_ammo"];
-
-        for "_j" from 0 to ([1, 2] call BIS_fnc_randomInt) do {
-            _civ = _smokeGroup createUnit ["cwr3_c_civilian_random", _pos, [], 20, "NONE"];
-            _civ setVariable ["dyn_dont_delete", true];
-            _civ setDamage 1;
-            [_civ] spawn {
-                params ["_civ"];
-                _civ setDir ([0, 359] call BIS_fnc_randomInt);
-                sleep 20;
-                _civ enableSimulation false;
-            };
-        };
-
-        _fire setPosATL _pos;
-        _smoke setPosATL _pos;
-
-        sleep 15;
-    };
-
-    waitUntil {triggerActivated _trg};
-
-    {
-        sleep 30;
-        deleteVehicle _x;
-    } forEach (units _smokeGroup);
 };
 
 
@@ -814,7 +743,7 @@ dyn_main_setup = {
                 // if ((random 1) > 0.35) then {_startDefense = true};
             };
             
-            // [getPos _loc, _dir, _endTrg] spawn dyn_ambiance;
+            // [getPos _loc, _dir, _endTrg] spawn dyn_ambiance_execute;
 
             [west, format ["task_%1", _i], ["Offensive", format ["Capture %1", _locationName], ""], getPos _loc, "ASSIGNED", 1, true, "attack", false] call BIS_fnc_taskCreate;
 

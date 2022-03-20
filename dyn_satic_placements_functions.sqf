@@ -797,6 +797,7 @@ dyn_spawn_side_town_guards = {
         _validLocs = [_validLocs, [], {(getPos _x) distance2D _searchPos}, "ASCEND"] call BIS_fnc_sortBy;
         private _n = 0;
         {
+            [getPos _x, 0, _endTrg] spawn dyn_ambiance_execute;
             _validBuildings = [];
             _buildings = nearestObjects [(getPos _x), ["house"], 400];
             {
@@ -882,9 +883,10 @@ dyn_spawn_side_town_guards = {
         } forEach _validLocs;
     };
 
-    _friendlyLocs = nearestLocations [getPos Player, ["NameVillage", "NameCity", "NameCityCapital"], 4000];
+    _friendlyLocs = nearestLocations [_searchPos, ["NameVillage", "NameCity", "NameCityCapital"], 3000];
     {
         [objNull, (getPos _x) getPos [150, 0], "n_installation", "CIV", "ColorCivilian", 0.6] call dyn_spawn_intel_markers;
+        [getPos _x, 0, _endTrg, true] spawn dyn_ambiance_execute;
     } forEach (_friendlyLocs - _validLocs - [_mainLoc]);
 
 
@@ -1060,7 +1062,7 @@ dyn_spawn_observation_post = {
         // _fireSupport = 2;
 
         switch (_fireSupport) do {
-            case 1 : {[_locPos, _dir] spawn dyn_spawn_heli_attack};
+            case 1 : {[_locPos, _locPos getDir _atkTrg, objNull, dyn_attack_plane] spawn dyn_air_attack;};
             case 2 : {[4] spawn dyn_arty};
             case 3 : {[2] spawn dyn_arty};
             case 4 : {};
