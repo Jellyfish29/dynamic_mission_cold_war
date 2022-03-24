@@ -179,7 +179,7 @@ dyn_civilian_presence = {
     {
         _house = _x;
         _vpos = (getPos _house) getpOs [10, (getDir _house) - 180];
-        if (isNull (roadAt _vPos)) then {
+        if !(isOnRoad _vPos) then {
             _vic = createVehicle [selectRandom dyn_civ_vics, _vPos, [], 0, "NONE"];
             _vic setDir ((getDir _house) - 180);
             _vic enableSimulation false;
@@ -204,6 +204,8 @@ dyn_civilian_presence = {
 
 dyn_ambiance_execute = {
     params ["_centerPos", "_dir", "_trg", ["_isFriendly", false]];
+
+    if (true) exitwith {};
 
     [_centerPos, _dir, _trg] spawn dyn_destroyed_cars;
     [_centerPos, _dir, _trg] spawn dyn_destroyed_buildings;

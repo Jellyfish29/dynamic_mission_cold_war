@@ -58,7 +58,7 @@ dyn_spawn_covered_vehicle = {
         // _grp setBehaviour "SAFE";
         for "_i" from 0 to 3 do {
             _camoPos = [6 * (sin ((getDir _vic) + ([-10, 10] call BIS_fnc_randomInt))), 6 * (cos ((getDir _vic) + ([-10, 10] call BIS_fnc_randomInt))), 0] vectorAdd (getPos _vic);
-            "gm_b_crataegus_monogyna_01_summer" createVehicle _camoPos;
+            (selectRandom dyn_bushes) createVehicle _camoPos;
         };
         // _net =  createVehicle (getPos _vic);
 
@@ -74,11 +74,16 @@ dyn_spawn_covered_vehicle = {
         [_grp, _dismountGrp, _dir] spawn {
             params ["_grp", "_dismountGrp", "_dir"];
 
-            sleep 30;
+            sleep 15;
             {
                 [_x, _dir, 15, true, []] spawn dyn_find_cover;
+            } forEach (units _dismountGrp);
+
+            sleep 15;
+
+            {
                 [_x] joinSilent _grp;
-            } forEach (units _dismountGrp)
+            } forEach (units _dismountGrp);
 
         };
     };
@@ -173,7 +178,7 @@ dyn_spawn_covered_inf = {
 
             //     if (_bushes) then {
             //         for "_j" from 0 to 1 do {
-            //             _bush = "gm_b_crataegus_monogyna_01_summer" createVehicle _trenchPos;
+            //             _bush = (selectRandom dyn_bushes) createVehicle _trenchPos;
             //             _bush setDir ([0, 360] call BIS_fnc_randomInt);
             //             _bush setPos ([0,0, -0.3] vectorAdd (getPos _bush));
             //         };
@@ -219,7 +224,7 @@ dyn_spawn_covered_inf = {
 
                 if (_bushes) then {
                     for "_j" from 0 to 1 do {
-                        _bush = "gm_b_crataegus_monogyna_01_summer" createVehicle _wPos;
+                        _bush = (selectRandom dyn_bushes) createVehicle _wPos;
                         _bush setDir ([0, 360] call BIS_fnc_randomInt);
                         _bush setPos ([0,0, -0.3] vectorAdd (getPos _bush));
                         _bush enableSimulation false;
@@ -234,7 +239,7 @@ dyn_spawn_covered_inf = {
                 if ((random 1) > 0.3) then {
                     _distance = [1, 3] call BIS_fnc_randomInt;
                     _bPos = [_distance * (sin (getDir _x)), _distance * (cos (getDir _x)), 0] vectorAdd (getPos _x);
-                    _bush = "gm_b_crataegus_monogyna_01_summer" createVehicle _bPos;
+                    _bush = (selectRandom dyn_bushes) createVehicle _bPos;
                     _bush setDir ([0, 360] call BIS_fnc_randomInt);
                     _covers pushBack _bush;
                 };
@@ -301,74 +306,7 @@ dyn_spawn_dimounted_inf = {
     _grp
 };
 
-dyn_spawn_hq_garrison = {
-    params ["_pos", "_area", "_atkDir"];
 
-    _buildings = nearestObjects [_pos, ["house"], _area];
-
-    private _validBuildings = [];
-    {
-        if ((count ([_x] call BIS_fnc_buildingPositions)) >= 8) then {
-            _validBuildings pushBack _x;
-        };
-    } forEach _buildings;
-
-    _validBuildings = [_validBuildings, [], {_x distance2D _pos}, "ASCEND"] call BIS_fnc_sortBy;
-
-    _hq = _validBuildings#([0, 4] call BIS_fnc_randomInt);
-    _dir = getDir _hq;
-
-    _grp = [_pos, east, dyn_standart_fire_team] call BIS_fnc_spawnGroup;
-    [_hq, _grp, _dir] spawn dyn_garrison_building;
-
-    _atkTrg = createTrigger ["EmptyDetector", _pos, true];
-    _atkTrg setTriggerActivation ["WEST", "PRESENT", false];
-    _atkTrg setTriggerStatements ["this", " ", " "];
-    _atkTrg setTriggerArea [100, 100, 0, false, 30];
-
-    // small trench
-    _tPos = [[[getPos _hq, 30]], [[getPos _hq, 10], "water"]] call BIS_fnc_randomPos;
-    [_tPos, _dir] spawn dyn_spawn_small_trench;
-
-    // [_atkTrg, _grps] spawn dyn_attack_nearest_enemy;
-
-    // sorounding garrisons
-    _validBuildings = [_validBuildings, [], {_x distance2D (getPos _hq)}, "ASCEND"] call BIS_fnc_sortBy;
-
-    for "_i" from 1 to ([1, 2] call BIS_fnc_randomInt) do {
-        _grp = [_pos, east, dyn_standart_fire_team] call BIS_fnc_spawnGroup;
-        [(_validBuildings#_i), _grp, _dir] spawn dyn_garrison_building;   
-    };
-
-    // hq Vehicles
-    _roads = (getPos _hq) nearRoads 70;
-    _roads = [_roads, [], {_x distance2D (getPos _hq)}, "ASCEND"] call BIS_fnc_sortBy;
-
-    for "_i" from 0 to ([0, 1] call BIS_fnc_randomInt) do {
-        _vic = createVehicle [selectRandom dyn_hq_vehicles, getPos (_roads#_i), [], 0, "CAN_COLLIDE"];
-        _roadDir = (getPos ((roadsConnectedTo (_roads#0)) select 0)) getDir getPos (_roads#_i);
-        _vic setDir _roadDir;
-    };
-
-    // Roadblocks
-    _roads = [_roads, [], {_x distance2D player}, "ASCEND"] call BIS_fnc_sortBy;
-    _grp = [_roads#0, 20, true, true] spawn dyn_spawn_dimounted_inf;
-    // reverse _roads;
-    // _grp = [_roads#0, 20, true, true] spawn dyn_spawn_dimounted_inf;
-
-    // static Weapon
-    _stDir = _atkDir + ([-20, 20] call BIS_fnc_randomInt);
-    _stPos = [18 * (sin _stDir), 18 * (cos _stDir), 0] vectorAdd (getPos _hq);
-    [_stPos, _stDir, false, false] spawn dyn_spawn_static_weapon;
-
-    _tentPos = [10 * (sin _dir), 10 * (cos _dir), 0] vectorAdd (getPos _hq);
-    _tent = "gm_gc_tent_5x5m" createVehicle _tentPos;
-    _tent setDir _dir;
-
-    _flagPos = [6 * (sin _dir), 6 * (cos _dir), 0] vectorAdd _tentPos;
-    _flag = "cwr3_flag_ussr" createVehicle _flagPos;
-    _hq
-};
 
 
 dyn_spawn_strongpoint = {
@@ -518,7 +456,7 @@ dyn_spawn_small_trench = {
         if (_camo) then {
             for "_i" from 0 to 3 do {
                 _camoPos = [8 * (sin (_tDir + ([-10, 10] call BIS_fnc_randomInt))), 8 * (cos (_tDir + ([-10, 10] call BIS_fnc_randomInt))), 0] vectorAdd _tPos;
-                "gm_b_crataegus_monogyna_01_summer" createVehicle _camoPos;
+                (selectRandom dyn_bushes) createVehicle _camoPos;
             };
             _tNetPos = [9 * (sin _tDir), 9 * (cos _tDir), 0] vectorAdd _tPos;
             _tNet = "land_gm_camonet_01_nato" createVehicle _tNetPos;
@@ -551,33 +489,39 @@ dyn_spawn_static_weapon = {
     _soldier1 assignAsGunner _static;
     _soldier1 moveInGunner _static;
     _soldier2 = _vGrp createUnit [dyn_standart_soldier, _swPos, [], 2, "NONE"];
-    _soldier2 setPos ([2, 2] vectorAdd (getPos _static));
+    _soldier2 setPos ((getPos _static) getPos [4, _dir - 135]);
     _soldier2 setDir _dir;
     doStop _soldier2;
-    _comp = selectRandom ["land_gm_sandbags_01_round_01"];
+    private _comp = selectRandom ["land_gm_sandbags_01_round_01"];
     if (_low) then {
         _comp = "land_gm_sandbags_01_low_01";
         _soldier2 setUnitPos "DOWN";
     };
     _sPos = [2.5 * (sin _dir), 2.5 * (cos _dir), 0] vectorAdd _swPos;
-    _sCover =  _comp createVehicle _sPos;
+    private _sCover =  _comp createVehicle _sPos;
     _sCover setDir _dir;
-    if (_low) then {
-        _sCover attachTo [_static, [0,2,-1.2]];
-    }
-    else
-    {
-        _sCover attachTo [_static, [0,2,-2]];
+    if !(isNil "_sCover") then {
+        if (_low) then {
+            _sCover attachTo [_static, [0,2,-1.2]];
+        }
+        else
+        {
+            _sCover attachTo [_static, [0,2,-2]];
+        };
     };
     if (!_low and _camo) then {
         for "_i" from 0 to 1 do {
             _bPos = [1 * (sin _dir), 1 * (cos _dir), 0] vectorAdd _sPos;
-            _bush = "gm_b_crataegus_monogyna_01_summer" createVehicle _bPos;
+            _bush = (selectRandom dyn_bushes) createVehicle _bPos;
             _bush setDir ([0, 360] call BIS_fnc_randomInt);
         };
     };
     // detach _sCover;
-    _vGrp enableDynamicSimulation true;
+    [_vGrp] spawn {
+        params ["_vGrp"];
+        sleep 5;
+        _vGrp enableDynamicSimulation true;
+    };
     _vGrp
 };
 
@@ -779,6 +723,7 @@ dyn_all_side_town_guards = [];
 
 dyn_spawn_side_town_guards = {
     params ["_endTrg", "_pos", "_area", "_searchPos", ["_limit", 1]];
+    private ["_taskname", "_endTrg"];
 
     _mainLoc =  nearestLocation [_pos, ""];
     _locs = nearestLocations [_searchPos, ["NameVillage", "NameCity", "NameCityCapital"], _area];
@@ -786,11 +731,19 @@ dyn_spawn_side_town_guards = {
     private _allGrps = [];
     {
         if !(_x in dyn_locations) then {
-            _validLocs pushBackUnique _x;
-            
-            dyn_defended_side_towns pushBackUnique _x;
+            if (((getpos _x) distance2D player) > 700) then {
+                _validLocs pushBackUnique _x;
+                
+                dyn_defended_side_towns pushBackUnique _x;
+            };
         };
     } forEach (_locs - [_mainLoc]);
+
+    _friendlyLocs = nearestLocations [getPos player, ["NameVillage", "NameCity", "NameCityCapital"], 1500];
+    {
+        [objNull, (getPos _x) getPos [150, 0], "n_installation", "CIV", "ColorCivilian", 0.6] call dyn_spawn_intel_markers;
+        [getPos _x, 0, _endTrg, true] spawn dyn_ambiance_execute;
+    } forEach (_friendlyLocs - _validLocs - [_mainLoc]);
 
     if !(_validLocs isEqualTo []) then {
 
@@ -798,8 +751,8 @@ dyn_spawn_side_town_guards = {
         private _n = 0;
         {
             [getPos _x, 0, _endTrg] spawn dyn_ambiance_execute;
-            _validBuildings = [];
-            _buildings = nearestObjects [(getPos _x), ["house"], 400];
+            private _validBuildings = [];
+            private _buildings = nearestObjects [(getPos _x), ["house"], 400];
             {
                 if (count ([_x] call BIS_fnc_buildingPositions) >= 8) then {
                     _validBuildings pushBack _x;
@@ -813,6 +766,11 @@ dyn_spawn_side_town_guards = {
             if (_n < _limit) then {
 
                 [objNull, getPos _x, "o_recon", "RecPlt.", "colorOPFOR"] call dyn_spawn_intel_markers;
+
+                private _qrfTrg = createTrigger ["EmptyDetector", getPos _x , true];
+                _qrfTrg setTriggerActivation ["WEST", "PRESENT", false];
+                _qrfTrg setTriggerStatements ["this", " ", " "];
+                _qrfTrg setTriggerArea [300, 300, _dir, true, 30];
 
                 _amount = [0,1] call BIS_fnc_randomInt;
                 if (type _x == "NameCityCapital") then {
@@ -840,11 +798,6 @@ dyn_spawn_side_town_guards = {
                     _allGrps pushBack _vicGrp;
                 };
 
-                _atgmPos = (getPos (_validBuildings#0)) getPos [30, _dir];
-                if ((random 1) > 0.5) then {
-                    [_atgmPos, _dir, true, true, selectRandom dyn_standart_statics_atgm] call dyn_spawn_static_weapon;
-                };
-
                 if ((random 1) > 0.5) then {
                     _grp = [getPos _x, 250, dyn_standart_light_amored_vics] call dyn_spawn_parked_vehicle;
                 };
@@ -862,13 +815,30 @@ dyn_spawn_side_town_guards = {
                 [_validBuildings, [2, 3] call BIS_fnc_randomInt, _dir] call dyn_spawn_random_garrison;
 
                 if ((random 1) > 0.5) then {
-                    _qrfTrg = createTrigger ["EmptyDetector", getPos _x , true];
-                    _qrfTrg setTriggerActivation ["WEST", "PRESENT", false];
-                    _qrfTrg setTriggerStatements ["this", " ", " "];
-                    _qrfTrg setTriggerArea [300, 300, _dir, true, 30];
 
                     [_qrfTrg, getPos _x, 1000, [2, 3] call BIS_fnc_randomInt] spawn dyn_spawn_qrf;
                 };
+
+                if ((random 1) > 0) then {
+                    [getPos _x, 700, 1, _qrfTrg, _dir] spawn dyn_spawn_forest_patrol;
+                };
+
+                if ((random 1) > 0) then {
+                    [_qrfTrg, getPos (selectRandom _validBuildings)] spawn dyn_spawn_supply_convoy;
+                };
+
+                [getPos _x, _dir, _buildings, _qrfTrg, [0, 2] call BIS_fnc_randomInt] spawn dyn_town_at_defence;
+
+                [getPos _x, 200, _qrfTrg, [0, 1] call BIS_fnc_randomInt] spawn dyn_spawn_qrf_patrol;
+
+                _endTrg = createTrigger ["EmptyDetector", (getPos _x), true];
+                _endTrg setTriggerActivation ["WEST SEIZED", "PRESENT", false];
+                _endTrg setTriggerStatements ["this", " ", " "];
+                _endTrg setTriggerArea [400, 400, _dir, false, 30];
+                _endTrg setTriggerTimeout [30, 60, 120, false];
+                _taskname = format ["task_%1", random 1];
+
+                [west, _taskname, ["Offensive", format ["CLEAR %1", text _x], ""], getPos _x, "CREATED", 1, false, "attack", false] call BIS_fnc_taskCreate;
             }
             else
             {
@@ -881,13 +851,12 @@ dyn_spawn_side_town_guards = {
             };
             _n = _n + 1;
         } forEach _validLocs;
+
+        waitUntil {sleep 2; triggerActivated _endTrg};
+
+        [_taskname, "SUCCEEDED", true] call BIS_fnc_taskSetState;
     };
 
-    _friendlyLocs = nearestLocations [_searchPos, ["NameVillage", "NameCity", "NameCityCapital"], 3000];
-    {
-        [objNull, (getPos _x) getPos [150, 0], "n_installation", "CIV", "ColorCivilian", 0.6] call dyn_spawn_intel_markers;
-        [getPos _x, 0, _endTrg, true] spawn dyn_ambiance_execute;
-    } forEach (_friendlyLocs - _validLocs - [_mainLoc]);
 
 
 
@@ -916,7 +885,7 @@ dyn_spawn_raod_block = {
 };
 
 dyn_spawn_razor_road_block = {
-    params ["_road", ["_armed", false]];
+    params ["_road", ["_armed", false], ["_vehicle", false]];
     private ["_bPos", "_roadDir"];
 
     _info = getRoadInfo _road;    
@@ -942,6 +911,15 @@ dyn_spawn_razor_road_block = {
         //     _soldier = _vGrp createUnit [dyn_standart_soldier, _sPos, [], 2, "NONE"];
         //     [_soldier] joinSilent _vGrp;
         // };
+    };
+
+    if (_vehicle) then {
+        _vic = createVehicle [selectRandom (dyn_standart_mechs + [dyn_standart_light_amored_vic]), _bPos getPos [4, _roadDir - 180], [], 0, "CAN_COLLIDE"];
+        _grp = createVehicleCrew _vic;
+        _vic setDir _roadDir;
+        _grp enableDynamicSimulation true;
+        _vic enableDynamicSimulation true;
+
     };
 };
 
@@ -1025,7 +1003,7 @@ dyn_spawn_observation_post = {
         _s enableDynamicSimulation true;
         _bPos = _s getPos [10, _dir];
         for "_i" from 0 to 1 do {
-            _bush = "gm_b_crataegus_monogyna_01_summer" createVehicle _bPos;
+            _bush = (selectRandom dyn_bushes) createVehicle _bPos;
             _bush setDir ([0, 360] call BIS_fnc_randomInt);
         };
     } forEach [dyn_standart_mg, dyn_standart_at_soldier];
@@ -1136,7 +1114,7 @@ dyn_crossroad_position = {
         _s disableAI "PATH";
         _s setUnitPos "MIDDLE";
 
-        [_road, false] call dyn_spawn_razor_road_block;
+        [_road, false, true] call dyn_spawn_razor_road_block;
         _grp enableDynamicSimulation true;
         // [_grp, 300, false] spawn dyn_auto_suppress;
         _n = _n + 1;
@@ -1145,6 +1123,88 @@ dyn_crossroad_position = {
     } forEach _crossRoads;
 };
 
+dyn_town_at_defence = {
+    params ["_locPos", "_dir", "_allBuildings", "_trg", "_amount"];
+    private ["_losPos"];
+
+    if (_amount == 0) exitWith {};
+
+    private _watchPos = _locPos getPos [1000, _dir];
+
+    _allBuildings = [_allBuildings, [], {_x distance2D _watchPos}, "ASCEND"] call BIS_fnc_sortBy;;
+
+    private _losOffset = 15;
+    private _maxLos = 0;
+    private _losStartLine = (getpos (_allBuildings#0)) getpos [[5, 20] call BIS_fnc_randomInt, _dir];
+    private _validLosPos = [];
+    private _accuracy = [10, 20] call BIS_fnc_randomInt;
+    private _defenceArea = [100, 250] call BIS_fnc_randomInt;
+
+    for "_j" from 0 to _accuracy do {
+        if (_j % 2 == 0) then {
+            _losPos = (_losStartLine getPos [2, _dir]) getPos [_losOffset, _dir + 90];
+        }
+        else
+        {
+            _losPos = (_losStartLine getPos [2, _dir]) getPos [_losOffset, _dir - 90];
+        };
+        _losOffset = _losOffset + (_defenceArea / _accuracy);
+
+
+        _losPos = [_losPos, 1] call dyn_convert_to_heigth_ASL;
+
+        private _losCount = 0;
+        for "_l" from 10 to 510 step 50 do {
+
+            _checkPos = _losPos getPos [_l, _dir];
+            _checkPos = [_checkPos, 1] call dyn_convert_to_heigth_ASL;
+            _vis = lineIntersectsSurfaces [_losPos, _checkPos, objNull, objNull, true, 1, "VIEW"];
+
+            if !(_vis isEqualTo []) exitWith {};
+
+            _losCount = _losCount + 1;
+        };
+        if (isNull (roadAt _losPos)) then {
+            _validLosPos pushback [_losPos, _losCount];
+        };
+    };
+
+    _validLosPos = [_validLosPos, [], {_x#1}, "DESCEND"] call BIS_fnc_sortBy;
+
+    for "_i" from 1 to _amount do {
+        [(_validLosPos#_i)#0, _dir, true, true, selectRandom dyn_standart_statics_atgm] call dyn_spawn_static_weapon;
+
+        _spawnPos = ((_validLosPos#_i)#0) getpos [10, _dir + 90];
+
+        _grp = createGroup [east, true];
+        _grp setVariable ["pl_not_recon_able", true];
+        {    
+            _s = _grp createUnit [_x, _spawnPos, [], 0, "NONE"];
+            _s disableAI "PATH"; 
+            _s setUnitPos "MIDDLE";
+            _s setDir _dir;
+            _s enableDynamicSimulation true;
+            _bPos = _s getPos [[8, 15] call BIS_fnc_randomInt, _dir + ([-15, 15] call BIS_fnc_randomInt)];
+            for "_i" from 0 to ([0, 1] call BIS_fnc_randomInt) do {
+                _bush = (selectRandom dyn_bushes) createVehicle _bPos;
+                _bush setDir ([0, 360] call BIS_fnc_randomInt);
+            };
+        } forEach [dyn_standart_at_soldier, dyn_standart_at_soldier];
+
+        [_grp, _dir, 2, false] call dyn_line_form_cover;
+
+        _sPos = _spawnPos getPos [2, _dir];
+        _sCover =  "land_gm_sandbags_01_wall_01" createVehicle _sPos;
+        _sCover setDir _dir; 
+
+        _tNetPos = _spawnPos getPos [8, _dir];
+        _tNet = "land_gm_camonet_01_nato" createVehicle _tNetPos;
+        _tNet allowDamage false;
+        _tNet setDir (_dir - 90);
+        _tNet setPos ((getPos _tNet) vectorAdd [0,0,-2.7]);
+    };
+
+};
 
 
 dyn_intel_markers = [];

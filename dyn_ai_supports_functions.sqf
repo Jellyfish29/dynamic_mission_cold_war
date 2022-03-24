@@ -143,6 +143,7 @@ dyn_arty = {
         case "light" : {_gunArray = dyn_opfor_light_arty};
         case "rocket" : {_gunArray = dyn_opfor_rocket_arty};
         case "rocketffe" : {_gunArray = dyn_opfor_rocket_arty};
+        case "balistic" : {_gunArray = dyn_opfor_balistic_arty, _shells = 1};
         default {_gunArray = dyn_opfor_arty}; 
     };
 
@@ -276,17 +277,17 @@ dyn_continous_counterattack = {
                 [2] spawn dyn_arty;
             };  
             case 1 : {
-                _rearPos = dyn_next_location getPos [800, dyn_next_location getDir dyn_current_location];
+                _rearPos = (getPos dyn_next_location) getPos [800, (getpos dyn_next_location) getDir (getpos dyn_current_location)];
                 // [objNull, _atkPos, _rearPos, 2, 3, 0, false, dyn_standart_light_amored_vics, 0, [false, 100], true, false] spawn dyn_spawn_counter_attack;
                 [getPos player, _rearPos, 2, 1, false, [dyn_standart_light_amored_vic]] spawn dyn_spawn_atk_complex;
             }; 
             case 2 : {
-                _rearPos = dyn_next_location getPos [600, dyn_next_location getDir dyn_current_location];
+                _rearPos = (getPos dyn_next_location) getPos [600, (getpos dyn_next_location) getDir (getpos dyn_current_location)];
                 // [objNull, _atkPos, _rearPos, 2, 2, 0, false, dyn_standart_combat_vehicles , 0, [false, 100], true, false] spawn dyn_spawn_counter_attack;
                 [getPos player, _rearPos, 2, 1, false] spawn dyn_spawn_atk_complex;
             };
             case 3 : {
-                _rearPos = dyn_next_location getPos [400, dyn_next_location getDir dyn_current_location];
+                _rearPos = (getPos dyn_next_location) getPos [400, (getpos dyn_next_location) getDir (getpos dyn_current_location)];
                 // [objNull, _atkPos, _rearPos, 2, 2, 0, true, [dyn_standart_MBT], 0, [false, 100], true, false] spawn dyn_spawn_counter_attack
                 [getPos player, _rearPos, 3, 2, false] spawn dyn_spawn_atk_complex;
             };

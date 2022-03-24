@@ -359,15 +359,14 @@ dyn_convoy = {
                             sleep 0.3;
                             _group setBehaviourStrong "SAFE";
                             // _vic setVariable ["pl_phasing", true];
-                            _pp = (_passigPoints#_ppidx);
                             _r0 = [getpos _vic, 100,[]] call BIS_fnc_nearestRoad;
-                            _r1 = ([roadsConnectedTo _r0, [], {_pp distance2d _x}, "ASCEND"] call BIS_fnc_sortBy)#0;
+                            _r1 = ([roadsConnectedTo _r0, [], {(_passigPoints#_ppidx) distance2d _x}, "ASCEND"] call BIS_fnc_sortBy)#0;
                             _vic setVehiclePosition [getPos _r1, [], 0, "NONE"];
                             _vic setDir  (_r0 getDir _r1);
                             sleep 0.1;
                             _vic limitSpeed dyn_convoy_speed;
-                            _vic doMove _pp;
-                            _vic setDestination [_pp,"VEHICLE PLANNED" , true];
+                            _vic doMove (_passigPoints#_ppidx);
+                            _vic setDestination [(_passigPoints#_ppidx),"VEHICLE PLANNED" , true];
                         }; 
                     };
                     sleep 1;
@@ -413,15 +412,14 @@ dyn_convoy = {
                             doStop _vic;
                             sleep 0.3;
                             _group setBehaviourStrong "SAFE";
-                            _pp = (_passigPoints#_ppidx);
                             _r0 = [getpos _vic, 100,[]] call BIS_fnc_nearestRoad;
-                            _r1 = ([roadsConnectedTo _r0, [], {_pp distance2d _x}, "ASCEND"] call BIS_fnc_sortBy)#0;
+                            _r1 = ([roadsConnectedTo _r0, [], {(_passigPoints#_ppidx) distance2d _x}, "ASCEND"] call BIS_fnc_sortBy)#0;
                             _vic setVehiclePosition [getPos _r1, [], 0, "NONE"];
                             _vic setDir  (_r0 getDir _r1);
                             sleep 0.1;
                             _vic limitSpeed dyn_convoy_speed;
-                            _vic doMove _pp;
-                            _vic setDestination [_pp,"VEHICLE PLANNED" , true];
+                            _vic doMove (_passigPoints#_ppidx);
+                            _vic setDestination [(_passigPoints#_ppidx),"VEHICLE PLANNED" , true];
 
                         }; 
                     };
@@ -821,3 +819,21 @@ dyn_hide_group_icon = {
     player hcRemoveGroup _group;
     clearGroupIcons _group;
 };
+
+dyn_convert_to_heigth_ASL = {
+    params ["_pos", "_height"];
+
+    _pos = ASLToATL _pos;
+    _pos = [_pos#0, _pos#1, _height];
+    _pos = ATLToASL _pos;
+
+    _pos
+};
+
+dyn_is_indoor = {
+    params ["_pos"];
+    _pos = AGLToASL _pos;
+    if (lineIntersects [_pos, _pos vectorAdd [0, 0, 10]]) exitWith {true};
+    false
+};
+

@@ -220,7 +220,7 @@ dyn_spawn_def_waves = {
             sleep 5;
             _grp leaveVehicle _tVic;
             [objNull, [_grp]] spawn dyn_attack_nearest_enemy;
-            sleep ([600, 900] call BIS_fnc_randomInt);
+            sleep ([300, 600] call BIS_fnc_randomInt);
         };
     };                                                                                                                                                                                                                                                                                                       
 };
@@ -330,6 +330,12 @@ dyn_spawn_qrf_patrol = {
         _sPos = getPos (selectRandom _roads);
         _grp = [_sPos, east, dyn_standart_fire_team] call BIS_fnc_spawnGroup;
         _PatrolGrps pushBack _grp;
+        for "_j" from 0 to 3 do {
+            _grp addWaypoint [getPos (selectRandom _roads), 0];
+        };
+        _wp = _grp addWaypoint [getPos (selectRandom _roads), 0];
+        _wp setWaypointType "CYCLE";
+        _grp setBehaviour "SAFE";
         // _grp enableDynamicSimulation true;
     };
     [_qrfTrg, _PatrolGrps] spawn dyn_attack_nearest_enemy;
@@ -499,13 +505,14 @@ dyn_spawn_atk_complex = {
             // _m = createMarker [str (random 1), _targetRoad];
             // _m setMarkerType "mil_marker"; 
 
-            _fireSupport = selectRandom [1,2,2,2,3,4,5];
+            _fireSupport = selectRandom [1,2,2,2,3,4,5,6];
             switch (_fireSupport) do { 
                 case 1 : {[10, "rocket"] spawn dyn_arty}; 
                 case 2 : {[10] spawn dyn_arty};
                 case 3 : {[_locPos, _dir] spawn dyn_spawn_heli_attack};
                 case 4 : {[_locPos, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
-                case 5 : {[10, "rocketffe"] spawn dyn_arty}; 
+                case 5 : {[10, "rocketffe"] spawn dyn_arty};
+                case 6 : {[8, "balistic"] spawn dyn_arty};
                 default {}; 
              }; 
 
@@ -573,75 +580,80 @@ dyn_spawn_atk_complex = {
         private _offsetStep = 50 - (count _atkColumn);
         private _atkLeaderPos = (getPos _atkLeader) getPos [100, _atkDir];
         private _wpPos = [];
-        for "_i" from 0 to (count (_atkTanks select {alive _x})) - 1 do {
-            if (_i % 2 == 0) then {
-                _wpPos = _atkLeaderPos getPos [_offset, _atkDir + 90];
-            } else {
-                _wpPos = _atkLeaderPos getPos [_offset, _atkDir - 90];
-            };
-            _tank = (_atkTanks select {alive _X})#_i;
-            
-            _offset = _offset + _offsetStep;
 
-            [_tank, _wpPos, _atkDir, _atkPos] spawn {
-                params ["_tank", "_wpPos", "_atkDir", "_atkPos"];
+        if !([getpos _targetRoad] call dyn_is_town) then {
+            for "_i" from 0 to (count (_atkTanks select {alive _x})) - 1 do {
+                if (_i % 2 == 0) then {
+                    _wpPos = _atkLeaderPos getPos [_offset, _atkDir + 90];
+                } else {
+                    _wpPos = _atkLeaderPos getPos [_offset, _atkDir - 90];
+                };
+                _tank = (_atkTanks select {alive _X})#_i;
+                
+                _offset = _offset + _offsetStep;
 
-                _tank doMove _wpPos;
-                _tank setDestination [_wpPos,"VEHICLE PLANNED" , true];
-                _tank limitSpeed 30;
-                group (driver _tank) setVariable ["dyn_in_convoy", false];
-                group (driver _tank) setBehaviourStrong "COMBAT";
+                [_tank, _wpPos, _atkDir, _atkPos] spawn {
+                    params ["_tank", "_wpPos", "_atkDir", "_atkPos"];
 
-                sleep 4;
+                    _tank doMove _wpPos;
+                    _tank setDestination [_wpPos,"VEHICLE PLANNED" , true];
+                    _tank limitSpeed 30;
+                    group (driver _tank) setVariable ["dyn_in_convoy", false];
+                    group (driver _tank) setBehaviourStrong "COMBAT";
 
-                group (driver _tank) addWaypoint [_wpPos, 0];
+                    sleep 4;
 
-                private _step = (_tank distance2D _atkPos) / 7;
-                for "_j" from 1 to 6 do {
-                    _wpPos = _wpPos getpos [_step, _atkDir];
-                    if (!([_wpPos] call dyn_is_forest) and !([_wpPos] call dyn_is_town) or _j == 6) then {
-                        _gWp = group (driver _tank) addWaypoint [_wpPos, 0];
-                        if (_j == 6) then {_gWp setWaypointType "SAD"};
+                    group (driver _tank) addWaypoint [_wpPos, 0];
+
+                    private _step = (_tank distance2D _atkPos) / 7;
+                    for "_j" from 1 to 6 do {
+                        _wpPos = _wpPos getpos [_step, _atkDir];
+                        if (!([_wpPos] call dyn_is_forest) and !([_wpPos] call dyn_is_town) or _j == 6) then {
+                            _gWp = group (driver _tank) addWaypoint [_wpPos, 0];
+                            if (_j == 6) then {_gWp setWaypointType "SAD"};
+                        };
                     };
                 };
             };
-        };
 
-        sleep 1;
+            sleep 1;
 
-        private _atkLeaderPos = (getPos _atkLeader) getPos [10, _atkDir];
-        _offset = 0;
-        for "_i" from 0 to (count (_atkMech select {alive _x})) - 1 do {
-            if (_i % 2 == 0) then {
-                _wpPos = _atkLeaderPos getPos [_offset, _atkDir + 90];
-            } else {
-                _wpPos = _atkLeaderPos getPos [_offset, _atkDir - 90];
-            };
-            _mech = (_atkMech select {alive _X})#_i;
-            _offset = _offset + _offsetStep;
+            private _atkLeaderPos = (getPos _atkLeader) getPos [10, _atkDir];
+            _offset = 0;
+            for "_i" from 0 to (count (_atkMech select {alive _x})) - 1 do {
+                if (_i % 2 == 0) then {
+                    _wpPos = _atkLeaderPos getPos [_offset, _atkDir + 90];
+                } else {
+                    _wpPos = _atkLeaderPos getPos [_offset, _atkDir - 90];
+                };
+                _mech = (_atkMech select {alive _x})#_i;
+                _offset = _offset + _offsetStep;
 
-            [_mech, _wpPos, _atkDir, _atkPos] spawn {
-                params ["_mech", "_wpPos", "_atkDir", "_atkPos"];
+                [_mech, _wpPos, _atkDir, _atkPos] spawn {
+                    params ["_mech", "_wpPos", "_atkDir", "_atkPos"];
 
-                _mech doMove _wpPos;
-                _mech setDestination [_wpPos,"VEHICLE PLANNED" , true];
-                _mech limitSpeed 30;
-                group (driver _mech) setVariable ["dyn_in_convoy", false];
-                group (driver _mech) setBehaviourStrong "COMBAT";
+                    _mech doMove _wpPos;
+                    _mech setDestination [_wpPos,"VEHICLE PLANNED" , true];
+                    _mech limitSpeed 30;
+                    group (driver _mech) setVariable ["dyn_in_convoy", false];
+                    group (driver _mech) setBehaviourStrong "COMBAT";
 
-                sleep 4;
+                    sleep 4;
 
-                group (driver _mech) addWaypoint [_wpPos, 0];
+                    group (driver _mech) addWaypoint [_wpPos, 0];
 
-                private _step = (_mech distance2D _atkPos) / 6;
-                for "_j" from 1 to 6 do {
-                    _wpPos = _wpPos getpos [_step, _atkDir];
-                    if (!([_wpPos] call dyn_is_forest) and !([_wpPos] call dyn_is_town) or _j == 6) then {
-                        _gWp = group (driver _mech) addWaypoint [_wpPos, 0];
-                        if (_j == 6) then {_gWp setWaypointType "SAD"};
+                    private _step = (_mech distance2D _atkPos) / 6;
+                    for "_j" from 1 to 6 do {
+                        _wpPos = _wpPos getpos [_step, _atkDir];
+                        if (!([_wpPos] call dyn_is_forest) and !([_wpPos] call dyn_is_town) or _j == 6) then {
+                            _gWp = group (driver _mech) addWaypoint [_wpPos, 0];
+                            if (_j == 6) then {_gWp setWaypointType "SAD"};
+                        };
                     };
                 };
             };
+        } else {
+            [objNull, _allGrps + _atkColumn] call dyn_attack_nearest_enemy;
         };
 
         _allGrps = _allGrps + _atkColumn;

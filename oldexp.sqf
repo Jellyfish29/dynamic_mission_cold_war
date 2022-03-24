@@ -422,3 +422,72 @@ dyn_road_emplacemnets = {
     //     _i = _i + 1
     // } forEach _validRoads;
 };
+
+dyn_spawn_hq_garrison = {
+    params ["_pos", "_area", "_atkDir"];
+
+    _buildings = nearestObjects [_pos, ["house"], _area];
+
+    private _validBuildings = [];
+    {
+        if ((count ([_x] call BIS_fnc_buildingPositions)) >= 8) then {
+            _validBuildings pushBack _x;
+        };
+    } forEach _buildings;
+
+    _validBuildings = [_validBuildings, [], {_x distance2D _pos}, "ASCEND"] call BIS_fnc_sortBy;
+
+    _hq = _validBuildings#([0, 4] call BIS_fnc_randomInt);
+    _dir = getDir _hq;
+
+    _grp = [_pos, east, dyn_standart_fire_team] call BIS_fnc_spawnGroup;
+    [_hq, _grp, _dir] spawn dyn_garrison_building;
+
+    _atkTrg = createTrigger ["EmptyDetector", _pos, true];
+    _atkTrg setTriggerActivation ["WEST", "PRESENT", false];
+    _atkTrg setTriggerStatements ["this", " ", " "];
+    _atkTrg setTriggerArea [100, 100, 0, false, 30];
+
+    // small trench
+    _tPos = [[[getPos _hq, 30]], [[getPos _hq, 10], "water"]] call BIS_fnc_randomPos;
+    [_tPos, _dir] spawn dyn_spawn_small_trench;
+
+    // [_atkTrg, _grps] spawn dyn_attack_nearest_enemy;
+
+    // sorounding garrisons
+    _validBuildings = [_validBuildings, [], {_x distance2D (getPos _hq)}, "ASCEND"] call BIS_fnc_sortBy;
+
+    for "_i" from 1 to ([1, 2] call BIS_fnc_randomInt) do {
+        _grp = [_pos, east, dyn_standart_fire_team] call BIS_fnc_spawnGroup;
+        [(_validBuildings#_i), _grp, _dir] spawn dyn_garrison_building;   
+    };
+
+    // hq Vehicles
+    _roads = (getPos _hq) nearRoads 70;
+    _roads = [_roads, [], {_x distance2D (getPos _hq)}, "ASCEND"] call BIS_fnc_sortBy;
+
+    for "_i" from 0 to ([0, 1] call BIS_fnc_randomInt) do {
+        _vic = createVehicle [selectRandom dyn_hq_vehicles, getPos (_roads#_i), [], 0, "CAN_COLLIDE"];
+        _roadDir = (getPos ((roadsConnectedTo (_roads#0)) select 0)) getDir getPos (_roads#_i);
+        _vic setDir _roadDir;
+    };
+
+    // Roadblocks
+    _roads = [_roads, [], {_x distance2D player}, "ASCEND"] call BIS_fnc_sortBy;
+    _grp = [_roads#0, 20, true, true] spawn dyn_spawn_dimounted_inf;
+    // reverse _roads;
+    // _grp = [_roads#0, 20, true, true] spawn dyn_spawn_dimounted_inf;
+
+    // static Weapon
+    _stDir = _atkDir + ([-20, 20] call BIS_fnc_randomInt);
+    _stPos = [18 * (sin _stDir), 18 * (cos _stDir), 0] vectorAdd (getPos _hq);
+    [_stPos, _stDir, false, false] spawn dyn_spawn_static_weapon;
+
+    _tentPos = [10 * (sin _dir), 10 * (cos _dir), 0] vectorAdd (getPos _hq);
+    _tent = "gm_gc_tent_5x5m" createVehicle _tentPos;
+    _tent setDir _dir;
+
+    _flagPos = [6 * (sin _dir), 6 * (cos _dir), 0] vectorAdd _tentPos;
+    _flag = "cwr3_flag_ussr" createVehicle _flagPos;
+    _hq
+};

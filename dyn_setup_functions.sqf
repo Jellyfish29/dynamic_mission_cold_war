@@ -1,62 +1,99 @@
 dyn_debug = false;
 // setGroupIconsVisible [true,false];
 
-// addMissionEventHandler ["TeamSwitch", {
-//     params ["_previousUnit", "_newUnit"];
-//     _hcc = allMissionObjects "HighCommand" select 0;
-//     _hcs = allMissionObjects "HighCommandSubordinate" select 0;
-//     deleteVehicle _hcc;
-//     // deleteVehicle _previousUnit;
-//     createGroup (sideLogic) createUnit ["HighCommand", [0, 0, 0], [], 0, "NONE"];
-//     _hcc = allMissionObjects "HighCommand" select 0;
-//     _newUnit synchronizeObjectsAdd [_hcc];
-//     _hcc synchronizeObjectsAdd [_hcs];
-//     [] call dyn_add_all_groups;
+addMissionEventHandler ["TeamSwitch", {
+    params ["_previousUnit", "_newUnit"];
+    _hcc = allMissionObjects "HighCommand" select 0;
+    _hcs = allMissionObjects "HighCommandSubordinate" select 0;
+    _zeus = allMissionObjects "ModuleCurator_F" select 0;
+    _hcUnits = synchronizedObjects _hcs;
+    deleteVehicle _previousUnit;
+    deleteVehicle _hcc;
+    deleteVehicle _hcs;
+    deleteVehicle _zeus;
+    _logicGroup = createGroup sideLogic;
+    _newHcc = _logicGroup createUnit ["HighCommand", [0, 0, 0], [], 0, "NONE"];
+    _newHcs = _logicGroup createUnit ["HighCommandSubordinate", [0, 0, 0], [], 0, "NONE"];
+    _newZeus = _logicGroup createUnit ["ModuleCurator_F", [0, 0, 0], [], 0, "NONE"];
+    _newUnit synchronizeObjectsAdd [_newHcc];
+    _newUnit synchronizeObjectsAdd [_newZeus];
+    _newHcs synchronizeObjectsAdd _hcUnits;
+    _newHcc synchronizeObjectsAdd [_newHcs];
+    (group _newUnit) selectLeader _newUnit;
+    player hcSetGroup [group player];
+    // [] call dyn_add_all_groups;
 
-//     _newUnit addEventHandler ["GetInMan", {
-//         params ["_unit", "_role", "_vehicle", "_turret"];
-//         private ["_group"];
-//         _group = group player;
-//         _vicGroup = group (driver (vehicle player));
-//         if (_vicGroup != (group player)) then {
-//             player setVariable ["pl_player_vicGroup", _vicGroup];
-//             // _vicGroup setVariable ["setSpecial", true];
-//             // _vicGroup setVariable ["specialIcon", "\A3\ui_f\data\igui\cfg\simpleTasks\types\truck_ca.paa"];
-//             _vicGroup setVariable ["pl_has_cargo", true];
-//             // _group setVariable ["pl_show_info", false];
-//             [_group] call pl_hide_group_icon;
-//             // player hcRemoveGroup _group;
-//         };
-//     }];
+    [] spawn {
 
-//     _newUnit addEventHandler ["GetOutMan", {
-//         params ["_unit", "_role", "_vehicle", "_turret"];
-//         private ["_group"];
-//         _group = group player;
-//         _vicGroup = player getVariable ["pl_player_vicGroup", (group player)];
-//         _group setVariable ["setSpecial", false];
-//         _group setVariable ["onTask", false];
-//         // _group setVariable ["pl_show_info", true];
-//         if !(_group getVariable ["pl_show_info", false]) then {
-//             [_group, "hq"] call pl_show_group_icon;
-//         };
-//         // player hcSetGroup [_group];
+        sleep 3;
 
-//         _cargo = fullCrew [(vehicle ((units _vicGroup)#0)), "cargo", false];
-//         if ((count _cargo == 0)) exitWith {
-//             // _vicGroup setVariable ["setSpecial", false];
-//             _vicGroup setVariable ["pl_has_cargo", false];
-//         };
-//         if (({(group (_x#0)) isEqualTo _group} count _cargo) > 0) then {
-//             [_vicGroup, _cargo, _group] spawn {
-//                 params ["_vicGroup", "_cargo", "_group"];
-//                 waitUntil {sleep 1; (({(group (_x#0)) isEqualTo _group} count (fullCrew [(vehicle ((units _vicGroup)#0)), "cargo", false])) == 0)};
-//                 // _vicGroup setVariable ["setSpecial", false];
-//                 _vicGroup setVariable ["pl_has_cargo", false];
-//             };
-//         };
-//     }];
-// }];
+        onGroupIconOverEnter {scriptname "HC: onGroupIconOverEnter";
+            if !(hcshownbar) exitwith {};
+
+            _is3D = _this select 0;
+            _group = _this select 1;
+            _wpID = _this select 2;
+            _posx = _this select 3;
+            _posy = _this select 4;
+            _logic = player getvariable "BIS_HC_scope";
+
+            if (_wpID < 0) then {
+                _logic setvariable ["groupover",_group];
+                _logic setvariable ["wpover",[grpnull]];
+            } else {
+                if (_group in hcallgroups player && !(_logic getvariable "LMB_hold")) then {
+                    _logic setvariable ["groupover",grpnull];
+                    _logic setvariable ["wpover",[_group,_wpID]];
+                };
+            };
+
+        };
+    };
+
+    _newUnit addEventHandler ["GetInMan", {
+        params ["_unit", "_role", "_vehicle", "_turret"];
+        private ["_group"];
+        _group = group player;
+        _vicGroup = group (driver (vehicle player));
+        if (_vicGroup != (group player)) then {
+            player setVariable ["pl_player_vicGroup", _vicGroup];
+            // _vicGroup setVariable ["setSpecial", true];
+            // _vicGroup setVariable ["specialIcon", "\A3\ui_f\data\igui\cfg\simpleTasks\types\truck_ca.paa"];
+            _vicGroup setVariable ["pl_has_cargo", true];
+            // _group setVariable ["pl_show_info", false];
+            [_group] call pl_hide_group_icon;
+            // player hcRemoveGroup _group;
+        };
+    }];
+
+    _newUnit addEventHandler ["GetOutMan", {
+        params ["_unit", "_role", "_vehicle", "_turret"];
+        private ["_group"];
+        _group = group player;
+        _vicGroup = player getVariable ["pl_player_vicGroup", (group player)];
+        _group setVariable ["setSpecial", false];
+        _group setVariable ["onTask", false];
+        // _group setVariable ["pl_show_info", true];
+        if !(_group getVariable ["pl_show_info", false]) then {
+            [_group, "hq"] call pl_show_group_icon;
+        };
+        // player hcSetGroup [_group];
+
+        _cargo = fullCrew [(vehicle ((units _vicGroup)#0)), "cargo", false];
+        if ((count _cargo == 0)) exitWith {
+            // _vicGroup setVariable ["setSpecial", false];
+            _vicGroup setVariable ["pl_has_cargo", false];
+        };
+        if (({(group (_x#0)) isEqualTo _group} count _cargo) > 0) then {
+            [_vicGroup, _cargo, _group] spawn {
+                params ["_vicGroup", "_cargo", "_group"];
+                waitUntil {sleep 1; (({(group (_x#0)) isEqualTo _group} count (fullCrew [(vehicle ((units _vicGroup)#0)), "cargo", false])) == 0)};
+                // _vicGroup setVariable ["setSpecial", false];
+                _vicGroup setVariable ["pl_has_cargo", false];
+            };
+        };
+    }];
+}];
 
 dyn_add_all_groups = {
     {
@@ -447,6 +484,28 @@ dyn_place_opfor_rocket_arty = {
     };
 };
 
+dyn_opfor_balistic_arty = [];
+
+dyn_palace_opfor_balistic_arty = {
+    params ["_artyPos", "_dir"];
+
+    if (count dyn_opfor_balistic_arty > 0) then {
+        {
+            {
+                deleteVehicle _x;
+            } forEach (crew _x);
+            deleteVehicle _x;
+        } forEach dyn_opfor_balistic_arty;
+    };
+    dyn_opfor_balistic_arty = [];
+    _artyPos = ((selectBestPlaces [_artyPos, 1000, "2*meadow", 95, 1])#0)#0;
+    _artyPos = _artyPos findEmptyPosition [100, 500, dyn_standart_balistic_arty];
+    _arty = createVehicle [dyn_standart_balistic_arty, _artyPos, [], 0, "NONE"];
+    _arty setdir _dir;
+    _grp = createVehicleCrew _arty;
+    dyn_opfor_balistic_arty pushBack _arty;
+};
+
 dyn_opfor_light_arty = [];
 
 dyn_place_opfor_light_arty = {
@@ -487,6 +546,8 @@ dyn_place_opfor_light_arty = {
         };
     };
 };
+
+
 
 // dyn_start_markers = [["start_0", "obj_0"], ["start_1", "obj_1"], ["start_2", "obj_2"], ["start_3", "obj_3"], ["start_4", "obj_4"], ["start_5", "obj_5"], ["start_6", "obj_6"], ["start_7", "obj_7"], ["start_8", "obj_8"], ["start_9", "obj_9"], ["start_10", "obj_10"], ["start_11", "obj_11"], ["start_12", "obj_12"], ["start_13", "obj_13"], ["start_14", "obj_14"], ["start_15", "obj_15"]];
 
@@ -666,6 +727,8 @@ dyn_main_setup = {
                     [_artyPos2, _campaignDir] call dyn_place_opfor_arty;
                     _artyPos3 = getPos (_locations#(_i + 1)) getPos [300, 180];
                     [_artyPos3, _campaignDir] call dyn_place_opfor_rocket_arty;
+                    _artyPos4 = getPos (_locations#(_i + 1)) getPos [1000, _campaignDir - 180];
+                    [_artyPos4, _campaignDir] call dyn_palace_opfor_balistic_arty;
                 };
             };
             if (_i + 2 < (count _locations) - 1) then {
@@ -676,6 +739,8 @@ dyn_main_setup = {
                 [_artyPos2, _campaignDir] call dyn_place_opfor_arty;
                 _artyPos3 = getPos (_locations#(_i + 2)) getPos [300, 180];
                 [_artyPos3, _campaignDir] call dyn_place_opfor_rocket_arty;
+                _artyPos4 = getPos (_locations#(_i + 2)) getPos [1000, _campaignDir - 180];
+                [_artyPos4, _campaignDir] call dyn_palace_opfor_balistic_arty;
             };
                         
             dyn_defense_active = false;
@@ -756,7 +821,7 @@ dyn_main_setup = {
 
             if (_midDefenses) then {
 
-                _defenseType = selectRandom ["point", "ambush", "minefield"];
+                _defenseType = selectRandom ["ambush", "minefield"];
 
                 // debug
                 // _defenseType = "ambush";

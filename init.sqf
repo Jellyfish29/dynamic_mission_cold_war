@@ -22,6 +22,7 @@ dyn_standart_statics_atgm = ["cwr3_o_konkurs_tripod"];
 dyn_standart_statics_atgun = ["cwr3_o_spg9"];
 dyn_standart_arty = "gm_gc_army_2s1";//"cwr3_o_d30";
 dyn_standart_rocket_arty = "gm_gc_army_ural375d_mlrs";
+dyn_standart_balistic_arty = "gm_gc_army_2p16";
 dyn_standart_light_arty = "cwr3_o_2b14";
 dyn_attack_heli = "cwr3_o_mi24d";
 dyn_attack_plane = "cwr3_o_su25";
@@ -30,6 +31,7 @@ dyn_hq_vehicles = ["cwr3_o_bmp2_hq", "cwr3_o_ural_hq"];
 dyn_map_center = [worldSize / 2, worldsize / 2, 0];
 dyn_opfor_comp = [["o_mech_inf", "232. MechInfBtl"], ["o_inf", "16. GdsInfBtl"], ["o_motor_inf", "45. MotInfBtl"], ["o_motor_inf", "101. MotInfBtl"], ["o_armor", "3. ArmBtl"]];
 dyn_uniforms_dic = createHashMapFromArray [["o_mech_inf", "cwr3_o_uniform_kzs_v1"], ["o_inf", "cwr3_o_uniform_m1982"], ["o_motor_inf", "cwr3_o_uniform_kzs_v2"], ["o_armor", "cwr3_o_uniform_kzs_v2"]];
+dyn_bushes = ["gm_b_crataegus_monogyna_01_summer", "gm_b_crataegus_monogyna_02_summer", "gm_b_corylus_avellana_01_summer", "gm_b_sambucus_nigra_01_summer"];
 
 execVM "dyn_ai_functions.sqf";
 execVM "dyn_ambiance_functions.sqf";
