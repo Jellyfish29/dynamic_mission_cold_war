@@ -195,7 +195,7 @@ dyn_recon_convoy = {
     waitUntil { sleep 1; triggerActivated _atkTrg };
 
     _rearPos = _locPos getPos [400, _dir];
-    [getPos _atkTrg, _rearPos, 5, 3] spawn dyn_spawn_atk_complex;
+    [getPos _atkTrg, _rearPos, 3, 2] spawn dyn_spawn_atk_complex;
 };
 
 dyn_ambush = {
