@@ -290,10 +290,10 @@ dyn_town_defense = {
     _validBuildings = [_validBuildings, [], {_x distance2D _watchPos}, "ASCEND"] call BIS_fnc_sortBy;
 
     // front Garrison
-    [_validBuildings, [0, 5] call BIS_fnc_randomInt, _dir] call dyn_spawn_mg_team_garrisons; //[2, 4] call BIS_fnc_randomInt
+    [_validBuildings, [2, 4] call BIS_fnc_randomInt, _dir] call dyn_spawn_mg_team_garrisons; //[2, 4] call BIS_fnc_randomInt
 
     // Random Garrison
-    [_validBuildings, [2, 7] call BIS_fnc_randomInt, _dir] call dyn_spawn_random_garrison;
+    [_validBuildings, [5, 7] call BIS_fnc_randomInt, _dir] call dyn_spawn_random_garrison;
     if (_weferlingen) then {
         [_validBuildings, 2, _dir] call dyn_spawn_random_garrison;
     };
@@ -331,7 +331,7 @@ dyn_town_defense = {
     _solitaryBuildings = [_solitaryBuildings, [], {_x distance2D _watchPos}, "ASCEND"] call BIS_fnc_sortBy;
 
     // Vehicle in Position
-    _vicAmount = ([0, 2] call BIS_fnc_randomInt) * 2;
+    _vicAmount = ([0, 1] call BIS_fnc_randomInt) * 2;
     for "_i" from 0 to _vicAmount step 2 do {
         _b = _solitaryBuildings#_i;
         _solitaryBuildings deleteAt _i;
@@ -342,7 +342,7 @@ dyn_town_defense = {
     };
 
     // small Strongpoint
-    for "_i" from 0 to ([0, 2] call BIS_fnc_randomInt) do {
+    for "_i" from 0 to ([0, 1] call BIS_fnc_randomInt) do {
         _infB = selectRandom _solitaryBuildings;
         _solitaryBuildings deleteAt (_solitaryBuildings find _infB);
         _grp = [_infB, _dir] spawn dyn_spawn_small_strong_point;
@@ -355,7 +355,7 @@ dyn_town_defense = {
 
     // create Tank/APC
     private _vGrps = [];
-    for "_i" from 0 to ([0, 2] call BIS_fnc_randomInt) do {
+    for "_i" from 0 to ([0, 1] call BIS_fnc_randomInt) do {
         _grp = [getPos _aoPos, 250, dyn_standart_combat_vehicles + [dyn_standart_MBT] + [dyn_standart_light_amored_vic]] call dyn_spawn_parked_vehicle;
         _vGrps pushBack _grp;
         _allGrps pushBack _grp;
@@ -367,7 +367,7 @@ dyn_town_defense = {
     };
 
     // Supply Convoy
-    if ((random 1) > 0.25) then {
+    if ((random 1) > 0.5) then {
         [_aoPos, getPos (selectRandom _solitaryBuildings)] spawn dyn_spawn_supply_convoy;
     };
 
@@ -412,12 +412,12 @@ dyn_town_defense = {
     // };
 
     //atgms
-    [getpos _aoPos, _dir, _allBuildings, _aoPos, [0, 3] call BIS_fnc_randomInt] spawn dyn_town_at_defence;
+    [getpos _aoPos, _dir, _allBuildings, _aoPos, [0, 2] call BIS_fnc_randomInt] spawn dyn_town_at_defence;
 
     // CrossRoad
     [getPos _aoPos, (triggerArea _aoPos)#0, 2] spawn dyn_crossroad_position;
 
-    [(getpos _aoPos) nearRoads ((triggerArea _aoPos)#0), [0, 2] call BIS_fnc_randomInt] spawn dyn_spawn_sandbag_positions;
+    [(getpos _aoPos) nearRoads ((triggerArea _aoPos)#0), [0, 1] call BIS_fnc_randomInt] spawn dyn_spawn_sandbag_positions;
 
     // Continuos Inf Spawn
     _solCount = count _solitaryBuildings;

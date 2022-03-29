@@ -855,7 +855,7 @@ dyn_main_setup = {
 
             if (_outerDefenses) then {
 
-                _defenseType = selectRandom ["mobileTank", "recon", "ambush", "minefield", "point"];
+                _defenseType = selectRandom ["mobileTank", "recon", "ambush", "minefield"];
 
                 // debug
                 // _defenseType = "recon";

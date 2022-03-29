@@ -248,7 +248,7 @@ dyn_spawn_supply_convoy = {
         private _supplyGrps = [];
         private _infGrps = [];
         private _road = _rearRoad;
-        for "_i" from 0 to ([2, 4] call BIS_fnc_randomInt) do {
+        for "_i" from 0 to ([1, 2] call BIS_fnc_randomInt) do {
             _road = ((roadsConnectedTo _road) - [_road]) select 0;
             _roadPos = getPos _road;
             _info = getRoadInfo _road;    
@@ -461,7 +461,7 @@ dyn_spawn_atk_complex = {
             private _reconGrps = [];
             private _reconInfGrp = [];
             private _road = _rearRoad;
-            for "_i" from 0 to ([3, 5] call BIS_fnc_randomInt) do {
+            for "_i" from 0 to ([1, 3] call BIS_fnc_randomInt) do {
                 _road = ((roadsConnectedTo _road) - [_road]) select 0;
                 _roadPos = getPos _road;
                 _info = getRoadInfo _road;    

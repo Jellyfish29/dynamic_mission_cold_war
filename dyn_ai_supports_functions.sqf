@@ -274,7 +274,7 @@ dyn_continous_counterattack = {
 
         switch (_atkType) do {
             case 0 : {
-                [2] spawn dyn_arty;
+                [8] spawn dyn_arty;
             };  
             case 1 : {
                 _rearPos = (getPos dyn_next_location) getPos [800, (getpos dyn_next_location) getDir (getpos dyn_current_location)];
@@ -289,7 +289,7 @@ dyn_continous_counterattack = {
             case 3 : {
                 _rearPos = (getPos dyn_next_location) getPos [400, (getpos dyn_next_location) getDir (getpos dyn_current_location)];
                 // [objNull, _atkPos, _rearPos, 2, 2, 0, true, [dyn_standart_MBT], 0, [false, 100], true, false] spawn dyn_spawn_counter_attack
-                [getPos player, _rearPos, 3, 2, false] spawn dyn_spawn_atk_complex;
+                [getPos player, _rearPos, 2, 2, false] spawn dyn_spawn_atk_complex;
             };
             default {}; 
          }; 
