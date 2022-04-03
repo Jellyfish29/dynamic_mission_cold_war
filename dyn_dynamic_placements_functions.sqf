@@ -72,13 +72,6 @@ dyn_retreat = {
                 _x enableAI "SUPPRESSION";
             } forEach (units _grp);
 
-            if (pl_opfor_enhanced_ai) then {
-                if (vehicle (leader _grp) == (leader _grp)) then {
-                    _grp execFSM "\Plmod\fsm\pl_opfor_cmd.fsm";
-                } else {
-                    _grp execFSM "\Plmod\fsm\pl_opfor_cmd_vic.fsm";
-                };
-            };
         };
     } forEach _grps;
 };
@@ -164,14 +157,7 @@ dyn_spawn_delay_action = {
                 _grp setFormDir _atkDir;
             };
             // _aWp setWaypointType "SAD";
-            if (pl_opfor_enhanced_ai) then {
-                _grp setVariable ["pl_opfor_ai_enabled", true];
-                if (vehicle (leader _grp) == (leader _grp)) then {
-                    _grp execFSM "\Plmod\fsm\pl_opfor_cmd.fsm";
-                } else {
-                    _grp execFSM "\Plmod\fsm\pl_opfor_cmd_vic.fsm";
-                };
-            };
+            _grp setVariable ["dyn_is_retreating", false];
             
         };
 
@@ -220,7 +206,7 @@ dyn_spawn_def_waves = {
             sleep 5;
             _grp leaveVehicle _tVic;
             [objNull, [_grp]] spawn dyn_attack_nearest_enemy;
-            sleep ([300, 600] call BIS_fnc_randomInt);
+            sleep ([240, 400] call BIS_fnc_randomInt);
         };
     };                                                                                                                                                                                                                                                                                                       
 };
@@ -253,7 +239,7 @@ dyn_spawn_supply_convoy = {
             _roadPos = getPos _road;
             _info = getRoadInfo _road;    
             _endings = [_info#6, _info#7];
-            _endings = [_endings, [], {_x distance2D player}, "ASCEND"] call BIS_fnc_sortBy;
+            _endings = [_endings, [], {_x distance2D _hqPos}, "ASCEND"] call BIS_fnc_sortBy;
             _dir = (_endings#1) getDir (_endings#0);
             _vic = createVehicle [selectRandom _vicTypes, _roadPos, [], 0, "CAN_COLLIDE"];
             _grp = createVehicleCrew _vic;
@@ -357,7 +343,7 @@ dyn_spawn_atk_simple = {
     private _infGrps = [];
     private _tankGrps = [];
     private _offset = 0;
-    private _offsetStep = 30;
+    private _offsetStep = 50;
     for "_i" from 0 to _inf - 1 do {
         if (_i % 2 == 0) then {
             _spawnPos = _rearPos getPos [_offset, _atkDir + 90];
@@ -372,6 +358,7 @@ dyn_spawn_atk_simple = {
 
         if (_mech and !([_spawnPosFinal] call dyn_is_forest)) then {
             _vic = _mechType createVehicle _spawnPosFinal;
+            _vic setDir _atkDir;
             _mechGrp = createVehicleCrew _vic;
             _infGrps pushBack _mechGrp;
             {
@@ -416,6 +403,7 @@ dyn_spawn_atk_simple = {
         _spawnPosFinal = [_spawnPos, 0, 90, 0, 0, 0, 0, [], [_spawnPos, []]] call BIS_fnc_findSafePos;
         if !([_spawnPosFinal] call dyn_is_forest) then {
             _vic = _tankType createVehicle _spawnPosFinal;
+            _vic setDir _atkDir;
             _tankGrp = createVehicleCrew _vic;
             _tankGrps pushBack _tankGrp;
 
@@ -451,7 +439,10 @@ dyn_spawn_atk_complex = {
     //recon -> artillery -> main attack -> retreat / artillery
 
     private _targetRoad = [_atkPos, 1000] call BIS_fnc_nearestRoad;
-    private _rearRoad = [_rearPos, 1000] call BIS_fnc_nearestRoad;
+    private _rearRoad = [_startPos, 600, ["TRAIL", "TRACK", "HIDE"]] call dyn_nearestRoad;
+    if (isNull _rearRoad) then {
+        _rearRoad = [_startPos, 2000] call dyn_nearestRoad;
+    };
 
     // _m = createMarker [str (random 1), _targetRoad];
     // _m setMarkerType "mil_marker"; 
@@ -461,12 +452,12 @@ dyn_spawn_atk_complex = {
             private _reconGrps = [];
             private _reconInfGrp = [];
             private _road = _rearRoad;
-            for "_i" from 0 to ([1, 3] call BIS_fnc_randomInt) do {
+            for "_i" from 0 to ([_tanks, _inf + _tanks] call BIS_fnc_randomInt) do {
                 _road = ((roadsConnectedTo _road) - [_road]) select 0;
                 _roadPos = getPos _road;
                 _info = getRoadInfo _road;    
                 _endings = [_info#6, _info#7];
-                _endings = [_endings, [], {_x distance2D player}, "ASCEND"] call BIS_fnc_sortBy;
+                _endings = [_endings, [], {_x distance2D _atkPos}, "ASCEND"] call BIS_fnc_sortBy;
                 _dir = (_endings#1) getDir (_endings#0);
                 _vic = createVehicle [selectRandom _reconVics, _roadPos, [], 0, "CAN_COLLIDE"];
                 _grp = createVehicleCrew _vic;
@@ -528,7 +519,7 @@ dyn_spawn_atk_complex = {
             _roadPos = getPos _road;
             _info = getRoadInfo _road;    
             _endings = [_info#6, _info#7];
-            _endings = [_endings, [], {_x distance2D player}, "ASCEND"] call BIS_fnc_sortBy;
+            _endings = [_endings, [], {_x distance2D _atkPos}, "ASCEND"] call BIS_fnc_sortBy;
             _dir = (_endings#1) getDir (_endings#0);
             _vic = createVehicle [_tankType, _roadPos, [], 0, "CAN_COLLIDE"];
             _atkTanks pushBack _vic;
@@ -545,7 +536,7 @@ dyn_spawn_atk_complex = {
             _roadPos = getPos _road;
             _info = getRoadInfo _road;    
             _endings = [_info#6, _info#7];
-            _endings = [_endings, [], {_x distance2D player}, "ASCEND"] call BIS_fnc_sortBy;
+            _endings = [_endings, [], {_x distance2D _atkPos}, "ASCEND"] call BIS_fnc_sortBy;
             _dir = (_endings#1) getDir (_endings#0);
             _vic = createVehicle [_mechType, _roadPos, [], 0, "CAN_COLLIDE"];
             _atkMech pushBack _vic;
@@ -554,7 +545,7 @@ dyn_spawn_atk_complex = {
             _atkColumn pushBack _grp;
             _infGrp = [[0,0,0], east, dyn_standart_squad] call BIS_fnc_spawnGroup;
             _infGrp addVehicle _vic,
-            [_infGrp] call dyn_opfor_change_uniform_grp;
+            // [_infGrp] call dyn_opfor_change_uniform_grp;
             _allGrps pushBack _infGrp;
             {
                 _x moveInCargo _vic;
@@ -581,79 +572,35 @@ dyn_spawn_atk_complex = {
         private _atkLeaderPos = (getPos _atkLeader) getPos [100, _atkDir];
         private _wpPos = [];
 
-        if !([getpos _targetRoad] call dyn_is_town) then {
-            for "_i" from 0 to (count (_atkTanks select {alive _x})) - 1 do {
-                if (_i % 2 == 0) then {
-                    _wpPos = _atkLeaderPos getPos [_offset, _atkDir + 90];
-                } else {
-                    _wpPos = _atkLeaderPos getPos [_offset, _atkDir - 90];
-                };
-                _tank = (_atkTanks select {alive _X})#_i;
-                
-                _offset = _offset + _offsetStep;
+        for "_i" from 0 to (count (_atkTanks select {alive _x})) - 1 do {
 
-                [_tank, _wpPos, _atkDir, _atkPos] spawn {
-                    params ["_tank", "_wpPos", "_atkDir", "_atkPos"];
+            _tank = (_atkTanks select {alive _X})#_i;
+            group (driver _tank) setVariable ["dyn_in_convoy", false];
+            group (driver _tank) setBehaviourStrong "COMBAT";
 
-                    _tank doMove _wpPos;
-                    _tank setDestination [_wpPos,"VEHICLE PLANNED" , true];
-                    _tank limitSpeed 30;
-                    group (driver _tank) setVariable ["dyn_in_convoy", false];
-                    group (driver _tank) setBehaviourStrong "COMBAT";
+            if ((random 1) > 0.5) then {
+                [group (driver _tank)] spawn pl_opfor_attack_closest_enemy;
+            } else {
+                [group (driver _tank)] spawn pl_opfor_flanking_move;
+            };
+        };
 
-                    sleep 4;
+        sleep 1;
 
-                    group (driver _tank) addWaypoint [_wpPos, 0];
+        private _atkLeaderPos = (getPos _atkLeader) getPos [10, _atkDir];
+        _offset = 0;
+        for "_i" from 0 to (count (_atkMech select {alive _x})) - 1 do {
 
-                    private _step = (_tank distance2D _atkPos) / 7;
-                    for "_j" from 1 to 6 do {
-                        _wpPos = _wpPos getpos [_step, _atkDir];
-                        if (!([_wpPos] call dyn_is_forest) and !([_wpPos] call dyn_is_town) or _j == 6) then {
-                            _gWp = group (driver _tank) addWaypoint [_wpPos, 0];
-                            if (_j == 6) then {_gWp setWaypointType "SAD"};
-                        };
-                    };
-                };
+            _mech = (_atkMech select {alive _X})#_i;
+            group (driver _mech) setVariable ["dyn_in_convoy", false];
+            group (driver _mech) setBehaviourStrong "COMBAT";
+
+            if ((random 1) > 0.5) then {
+                [group (driver _mech)] spawn pl_opfor_attack_closest_enemy;
+            } else {
+                [group (driver _mech)] spawn pl_opfor_flanking_move;
             };
 
-            sleep 1;
-
-            private _atkLeaderPos = (getPos _atkLeader) getPos [10, _atkDir];
-            _offset = 0;
-            for "_i" from 0 to (count (_atkMech select {alive _x})) - 1 do {
-                if (_i % 2 == 0) then {
-                    _wpPos = _atkLeaderPos getPos [_offset, _atkDir + 90];
-                } else {
-                    _wpPos = _atkLeaderPos getPos [_offset, _atkDir - 90];
-                };
-                _mech = (_atkMech select {alive _x})#_i;
-                _offset = _offset + _offsetStep;
-
-                [_mech, _wpPos, _atkDir, _atkPos] spawn {
-                    params ["_mech", "_wpPos", "_atkDir", "_atkPos"];
-
-                    _mech doMove _wpPos;
-                    _mech setDestination [_wpPos,"VEHICLE PLANNED" , true];
-                    _mech limitSpeed 30;
-                    group (driver _mech) setVariable ["dyn_in_convoy", false];
-                    group (driver _mech) setBehaviourStrong "COMBAT";
-
-                    sleep 4;
-
-                    group (driver _mech) addWaypoint [_wpPos, 0];
-
-                    private _step = (_mech distance2D _atkPos) / 6;
-                    for "_j" from 1 to 6 do {
-                        _wpPos = _wpPos getpos [_step, _atkDir];
-                        if (!([_wpPos] call dyn_is_forest) and !([_wpPos] call dyn_is_town) or _j == 6) then {
-                            _gWp = group (driver _mech) addWaypoint [_wpPos, 0];
-                            if (_j == 6) then {_gWp setWaypointType "SAD"};
-                        };
-                    };
-                };
-            };
-        } else {
-            [objNull, _allGrps + _atkColumn] call dyn_attack_nearest_enemy;
         };
 
         _allGrps = _allGrps + _atkColumn;

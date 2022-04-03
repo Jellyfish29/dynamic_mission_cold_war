@@ -71,16 +71,11 @@ dyn_spawn_covered_vehicle = {
     if (_dismounted) then {
         _diPos = [5 * (sin (_dir + 90)), 5 * (cos (_dir + 90)), 0] vectorAdd _pos;
         _dismountGrp = [_diPos, east, dyn_standart_fire_team] call BIS_fnc_spawnGroup;
+        _dismountGrp enableDynamicSimulation true;
         [_grp, _dismountGrp, _dir] spawn {
             params ["_grp", "_dismountGrp", "_dir"];
 
-            sleep 15;
-            {
-                [_x, _dir, 15, true, []] spawn dyn_find_cover;
-            } forEach (units _dismountGrp);
-
-            sleep 15;
-
+            sleep 20;
             {
                 [_x] joinSilent _grp;
             } forEach (units _dismountGrp);
@@ -479,48 +474,57 @@ dyn_spawn_static_weapon = {
             _weapon = selectRandom dyn_standart_statics_low;
         };
     };
-    _swPos = _pos findEmptyPosition [0, 30, _weapon];
-    _static = _weapon createVehicle _swPos;
-    _static setDir _dir;
-    // _vGrp = createVehicleCrew _static;
-    _vGrp = createGroup [east, true];
-    _vGrp setVariable ["pl_not_recon_able", true];
-    _soldier1 = _vGrp createUnit [dyn_standart_soldier, _swPos, [], 2, "NONE"];
-    _soldier1 assignAsGunner _static;
-    _soldier1 moveInGunner _static;
-    _soldier2 = _vGrp createUnit [dyn_standart_soldier, _swPos, [], 2, "NONE"];
-    _soldier2 setPos ((getPos _static) getPos [4, _dir - 135]);
-    _soldier2 setDir _dir;
-    doStop _soldier2;
-    private _comp = selectRandom ["land_gm_sandbags_01_round_01"];
-    if (_low) then {
-        _comp = "land_gm_sandbags_01_low_01";
-        _soldier2 setUnitPos "DOWN";
-    };
-    _sPos = [2.5 * (sin _dir), 2.5 * (cos _dir), 0] vectorAdd _swPos;
-    private _sCover =  _comp createVehicle _sPos;
-    _sCover setDir _dir;
-    if !(isNil "_sCover") then {
+    // _swPos = _pos findEmptyPosition [0, 50, _weapon];
+    // _static = _weapon createVehicle _swPos;
+
+    _vGrp = grpNull;
+    _static = createVehicle [_weapon, _pos, [], 20, "NONE"];
+    if !(isNull _static) then {
+        _static setDir _dir;
+        // _vGrp = createVehicleCrew _static;
+        _vGrp = createGroup [east, true];
+        _vGrp setVariable ["pl_not_recon_able", true];
+        _soldier1 = _vGrp createUnit [dyn_standart_soldier, _pos, [], 2, "NONE"];
+        _soldier1 assignAsGunner _static;
+        _soldier1 moveInGunner _static;
+        _soldier2 = _vGrp createUnit [dyn_standart_soldier, _pos, [], 2, "NONE"];
+        _soldier2 setPos ((getPos _static) getPos [4, _dir - 135]);
+        _soldier2 setDir _dir;
+        doStop _soldier2;
+        private _comp = selectRandom ["land_gm_sandbags_01_round_01"];
         if (_low) then {
-            _sCover attachTo [_static, [0,2,-1.2]];
-        }
-        else
+            _comp = "land_gm_sandbags_01_low_01";
+            _soldier2 setUnitPos "DOWN";
+        };
+        _sPos = [2.5 * (sin _dir), 2.5 * (cos _dir), 0] vectorAdd _pos;
+        private _sCover =  _comp createVehicle _sPos;
+        _sCover setDir _dir;
+        if !(isNil "_sCover") then {
+            if (_low) then {
+                _sCover attachTo [_static, [0,2,-1.2]];
+            }
+            else
+            {
+                _sCover attachTo [_static, [0,2,-2]];
+            };
+        };
+        if (!_low and _camo) then {
+            for "_i" from 0 to 1 do {
+                _bPos = [1 * (sin _dir), 1 * (cos _dir), 0] vectorAdd _sPos;
+                _bush = (selectRandom dyn_bushes) createVehicle _bPos;
+                _bush setDir ([0, 360] call BIS_fnc_randomInt);
+            };
+        };
+
         {
-            _sCover attachTo [_static, [0,2,-2]];
+            _x disableAI "PATH";
+        } forEach (units _vGrp);
+        // detach _sCover;
+        [_vGrp] spawn {
+            params ["_vGrp"];
+            sleep 5;
+            _vGrp enableDynamicSimulation true;
         };
-    };
-    if (!_low and _camo) then {
-        for "_i" from 0 to 1 do {
-            _bPos = [1 * (sin _dir), 1 * (cos _dir), 0] vectorAdd _sPos;
-            _bush = (selectRandom dyn_bushes) createVehicle _bPos;
-            _bush setDir ([0, 360] call BIS_fnc_randomInt);
-        };
-    };
-    // detach _sCover;
-    [_vGrp] spawn {
-        params ["_vGrp"];
-        sleep 5;
-        _vGrp enableDynamicSimulation true;
     };
     _vGrp
 };
@@ -810,6 +814,10 @@ dyn_spawn_side_town_guards = {
                 if ((random 1) > 0.5) then {
                     // CrossRoad
                     [getPos _x, 400, 1] spawn dyn_crossroad_position;
+                };
+
+                if ((random 1) > 0.5) then {
+                    [_qrfTrg, getPos _x, (getPos _x) getpos [800, (getpos _x) getdir (getpos dyn_current_location)], 2, 2] spawn dyn_spawn_atk_simple;
                 };
 
                 [_validBuildings, [2, 3] call BIS_fnc_randomInt, _dir] call dyn_spawn_random_garrison;

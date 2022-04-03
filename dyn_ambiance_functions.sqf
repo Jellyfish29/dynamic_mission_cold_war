@@ -4,7 +4,7 @@ dyn_ambient_sound_mod attachTo [player, [0,0,0]];
 
 dyn_random_weather = {
     skipTime -24;
-    86400 setOvercast (selectRandom [0.1, 0.3, 0.6, 1]);
+    86400 setOvercast (selectRandom [0.1, 0.3, 0.5]);
     skipTime 24;
     0 = [] spawn {
         sleep 0.1;

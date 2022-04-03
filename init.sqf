@@ -32,7 +32,9 @@ dyn_map_center = [worldSize / 2, worldsize / 2, 0];
 dyn_opfor_comp = [["o_mech_inf", "232. MechInfBtl"], ["o_inf", "16. GdsInfBtl"], ["o_motor_inf", "45. MotInfBtl"], ["o_motor_inf", "101. MotInfBtl"], ["o_armor", "3. ArmBtl"]];
 dyn_uniforms_dic = createHashMapFromArray [["o_mech_inf", "cwr3_o_uniform_kzs_v1"], ["o_inf", "cwr3_o_uniform_m1982"], ["o_motor_inf", "cwr3_o_uniform_kzs_v2"], ["o_armor", "cwr3_o_uniform_kzs_v2"]];
 dyn_bushes = ["gm_b_crataegus_monogyna_01_summer", "gm_b_crataegus_monogyna_02_summer", "gm_b_corylus_avellana_01_summer", "gm_b_sambucus_nigra_01_summer"];
+dyn_phase_names = ["PL VICTORY", "PL ABLE", "PL RHINO", "PL BISON", "PL HAMMER", "PL WIDOW"];
 
+execVM "dyn_util_functions.sqf";
 execVM "dyn_ai_functions.sqf";
 execVM "dyn_ambiance_functions.sqf";
 execVm "dyn_satic_placements_functions.sqf";

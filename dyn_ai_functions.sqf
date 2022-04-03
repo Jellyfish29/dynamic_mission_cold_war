@@ -290,7 +290,7 @@ dyn_convoy = {
         {
             _x disableAI "AUTOCOMBAT";
         } forEach (units _group);
-        _group setBehaviourStrong "SAFE";
+        _group setBehaviourStrong "CARELESS";
         _vic doMove (_passigPoints#0);
         _vic setDestination [(_passigPoints#0),"VEHICLE PLANNED" , true];
 
@@ -347,17 +347,18 @@ dyn_convoy = {
                     if (_distance > 40 and (speed _vic) < 8) then {
                         _vic limitSpeed 1000;
                     };
-                    if ((speed _vic) == 0) then {
-                        _time = time + 20;
+                    if ((speed _vic) <= 3) then {
+                        _time = time + 10;
                         if !(_startReset) then {
                             _time = time + 5;
                             _startReset = true;
                         };
                         waitUntil {sleep 0.5; speed _vic > 5 or time > _time or !(_group getVariable ["dyn_in_convoy", true])};
-                        if (((speed _vic) <= 0) and (_group getVariable ["dyn_in_convoy", true]) and (speed _forward) >= 5 and alive _vic) then {
+                        if (((speed _vic) <= 3) and (_group getVariable ["dyn_in_convoy", true]) and (speed _forward) >= 5 and alive _vic) then {
                             doStop _vic;
                             sleep 0.3;
-                            _group setBehaviourStrong "SAFE";
+                            [getPos _vic, 20] call pl_clear_obstacles;
+                            _group setBehaviour "CARELESS";
                             // _vic setVariable ["pl_phasing", true];
                             _r0 = [getpos _vic, 100,[]] call BIS_fnc_nearestRoad;
                             _r1 = ([roadsConnectedTo _r0, [], {(_passigPoints#_ppidx) distance2d _x}, "ASCEND"] call BIS_fnc_sortBy)#0;
@@ -376,6 +377,7 @@ dyn_convoy = {
                 {
                     _x enableAI "AUTOCOMBAT";
                 } forEach (units _group);
+                _group setBehaviour "AWARE";
             };
         } else {
             [_group ,_vic, _convoyLeader, _groups, _i, _convoyLeaderGroup, _r2, _passigPoints] spawn {
@@ -386,7 +388,7 @@ dyn_convoy = {
 
                 while {(_convoyLeaderGroup getVariable ["dyn_in_convoy", false]) and (vehicle (leader _convoyLeaderGroup)) distance2D _dest > 40} do {
 
-                    if !(alive _vic or count (crew _vic) <= 0) exitWith {};
+                    if (!alive _vic or count (crew _vic) <= 0) exitWith {};
 
                     private _convoyLeaderSpeedStr = vehicle (leader (_convoyLeaderGroup)) getVariable ["pl_speed_limit", "50"];
                     private _convoyLeaderSpeed = dyn_convoy_speed;
@@ -404,11 +406,12 @@ dyn_convoy = {
                         _vic setDestination [(_passigPoints#_ppidx),"VEHICLE PLANNED" , true];
                     };
 
-                    if ((speed _vic) == 0) then {
+                    if ((speed _vic) <= 3) then {
                         _time = time + 10;
                         waitUntil {sleep 0.5; speed _vic > 5 or time > _time or !(_group getVariable ["dyn_in_convoy", true])};
-                        if ((speed _vic) <= 0 and (_group getVariable ["dyn_in_convoy", true]) and alive _vic) then {
+                        if ((speed _vic) <= 3 and (_group getVariable ["dyn_in_convoy", true]) and alive _vic) then {
                             // [_group] call pl_reset;
+                            [getPos _vic, 20] call pl_clear_obstacles;
                             doStop _vic;
                             sleep 0.3;
                             _group setBehaviourStrong "SAFE";
@@ -430,6 +433,7 @@ dyn_convoy = {
                 {
                     _x enableAI "AUTOCOMBAT";
                 } forEach (units _group);
+                _group setBehaviour "AWARE"
             };
         };
         _time = time + 1.5;
@@ -626,105 +630,6 @@ dyn_auto_attack = {
 
 };
 
-dyn_get_turn_vehicle = {
-    params ["_vic", "_turnDir"];
-
-    private _pos = [];
-    private _min = 20;      // Minimum range
-    private _i = 0;         // iterations
-
-    while {_pos isEqualTo []} do {
-        _pos = (_vic getPos [_min, _turnDir]) findEmptyPosition [0, 2.2, typeOf _vic];
-
-        // water
-        if !(_pos isEqualTo []) then {if (surfaceIsWater _pos) then {_pos = []};};
-
-        // update
-        _min = _min + 15;
-        _i = _i + 1;
-        if (_i > 6) exitWith {_pos = _vic modelToWorldVisual [0, -100, 0]};
-    };
-    _pos
-};
-
-dyn_garbage_clear = {
-
-    sleep 240;
-
-    {
-        if (side _x != playerSide and !(_x getVariable ["dyn_dont_delete", false])) then {
-            deleteVehicle _x;
-        };
-    } forEach allDeadMen; 
-
-    sleep 1;
-    {
-        deleteVehicle _x;
-    } forEach (allMissionObjects "WeaponHolder");
-
-    sleep 1;
-    {
-        if ((count units _x) isEqualTo 0) then {
-            deleteGroup _x;
-        };
-    } forEach allGroups;
-
-    sleep 1;
-    {
-        deleteVehicle _x;
-    } forEach (allMissionObjects "CraterLong");
-
-    sleep 1;
-    _deadVicLimiter = 0;
-    {
-        if ((_x distance2D player) > 2000 and _deadVicLimiter <= 10 and !(_x getVariable ["dyn_dont_delete", false])) then {
-            deleteVehicle _x;
-            _deadVicLimiter = _deadVicLimiter + 1;
-        };
-    } forEach (allDead - allDeadMen);
-
-    sleep 1;
-    {
-        if ((count (crew _x)) == 0) then {
-            deleteVehicle _x;
-        };
-    } forEach (allMissionObjects "StaticWeapon");
-};
-
-
-dyn_forget_targets = {
-    params ["_units"];
-
-    {
-        _wGrp = _x;
-        {
-            _wGrp forgetTarget _x;
-        } forEach _units;
-    } forEach (allGroups select {side _x == playerSide});  
-};
-
-dyn_get_cardinal = {
-    params ["_ang"];
-    private ["_compass"];
-    _ang = _this select 0;
-    _ang = _ang + 11.25; 
-    if (_ang > 360) then {_ang = _ang - 360};
-    _points = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
-    _num = floor (_ang / 22.5);
-    _compass = _points select _num;
-    _compass  
-};
-
-dyn_is_forest = {
-    params ["_pos"];
-
-    _trees = nearestTerrainObjects [_pos, ["Tree"], 50, false, true];
-
-    if (count _trees > 25) exitWith {true};
-
-    false
-};
-
 dyn_attack_nearest_enemy = {
     params ["_trg", "_grps"];
 
@@ -770,70 +675,4 @@ dyn_attack_nearest_enemy = {
     } forEach _grps;
 };
 
-dyn_opfor_change_uniform = {
-    params ["_comp"];
-    _uniformType = dyn_uniforms_dic get _comp;
-    {
-        _unit = _x;
-        if (vehicle _unit == _unit) then {
-            _mags = getMagazineCargo uniformContainer _unit;     
-            _unit addUniform _uniformType;
-            _unit addMagazines [(_mags#0)#0, (_mags#1)#0];
-        };
-    } forEach (allUnits select {side _x isEqualTo east});   
-};
-
-dyn_opfor_change_uniform_grp = {
-    params ["_grp"];
-    _uniformType = dyn_uniforms_dic get (dyn_en_comp#0);
-    {    
-        _unit = _x;
-        _mags = getMagazineCargo uniformContainer _unit;     
-        _unit addUniform _uniformType;
-        _unit addMagazines [(_mags#0)#0, (_mags#1)#0];
-    } forEach (units _grp);
-};
-
-dyn_is_town = {
-    params ["_pos"];
-    _buildings = nearestTerrainObjects [_pos, ["House"], 100, false, true];
-    if (count _buildings >= 3) exitWith {true};
-    false
-};
-dyn_is_water = {
-    params ["_pos"];
-    private ["_isWater"];
-
-    _isWater = {
-        if (surfaceIsWater (_pos getPos [35, _x])) exitWith {true};
-        false
-    } forEach [0, 90, 180, 270]; 
-    if (surfaceIsWater _pos) then {_isWater = true};
-    _isWater 
-};
-
-dyn_hide_group_icon = {
-    params ["_group"];
-
-    _group setVariable ["pl_show_info", false];
-    player hcRemoveGroup _group;
-    clearGroupIcons _group;
-};
-
-dyn_convert_to_heigth_ASL = {
-    params ["_pos", "_height"];
-
-    _pos = ASLToATL _pos;
-    _pos = [_pos#0, _pos#1, _height];
-    _pos = ATLToASL _pos;
-
-    _pos
-};
-
-dyn_is_indoor = {
-    params ["_pos"];
-    _pos = AGLToASL _pos;
-    if (lineIntersects [_pos, _pos vectorAdd [0, 0, 10]]) exitWith {true};
-    false
-};
 

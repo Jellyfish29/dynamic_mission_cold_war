@@ -491,3 +491,491 @@ dyn_spawn_hq_garrison = {
     _flag = "cwr3_flag_ussr" createVehicle _flagPos;
     _hq
 };
+
+
+    dyn_start_markers = [];
+
+    for "_i" from 0 to 15 do {
+        _m1 = format ["start_%1", _i];
+        _m2 = format ["obj_%1", _i];
+        _m3 = format ["support_%1", _i];
+
+        dyn_start_markers pushBack [_m1, _m2, _m3];        
+    };
+
+    dyn_locations = [];
+
+    ///-------------------Version 1 ------------------------
+    // dyn_map_center = [worldSize / 2, worldsize / 2, 0];
+    // _locations = nearestLocations [dyn_map_center, ["NameVillage", "NameCity"], worldSize * 0.3];
+    // _startLoc = selectRandom _locations;
+    // _startPos = getPos _startLoc;
+    // private _campaignDir = ((getPos _startLoc) getDir dyn_map_center) - 180;
+    // _playerStart = [3600 * (sin _campaignDir), 3600 * (cos _campaignDir), 0] vectorAdd _startPos;
+    // dyn_locations pushBack _startLoc;
+
+    ////---------------------Version 2------------------------------
+    dyn_map_center = [worldSize / 2, worldsize / 2, 0];
+    
+    _startPair = selectRandom dyn_start_markers;
+
+    // debug override
+    // _startPair = ["start_14", "obj_14", "support_14"];
+    _playerStartDir = markerDir (_startPair#0);
+
+    _playerStart = getMarkerPos (_startPair#0);
+    _startLoc = nearestLocation [getMarkerPos (_startPair#1), ""];
+    _startPos = getPos _startLoc;
+    _supportPos = getMarkerPos (_startPair#2);
+    dyn_locations pushBack _startLoc;
+    private _campaignDir = ((getPos _startLoc) getDir dyn_map_center) - 180;
+
+    if (dyn_debug) then {
+        _pm = createMarker [str (random 1), _playerStart];
+        _pm setMarkerType "mil_marker";
+        _lm = createMarker [str (random 1), _startPos];
+        _lm setMarkerType "mil_circle";
+    };
+
+    if !(dyn_debug) then {
+        {
+            deleteMarker (_x#0);
+            deleteMarker (_x#1);
+            deleteMarker (_x#2);
+        } forEach dyn_start_markers;
+
+        deleteMarker "test_m_1";
+        deleteMarker "test_m_2";
+        
+    };
+
+
+    _intervals = 2000;
+    _campaignDir = _campaignDir + ([-20, 20] call BIS_fnc_randomInt);
+    _offsetPos = [1500 * (sin (_campaignDir - 180)), 1500 * (cos (_campaignDir - 180)), 0] vectorAdd _startPos;
+    for "_i" from 0 to 8 do {
+        _pos = [(_intervals * _i) * (sin (_campaignDir - 180)), (_intervals * _i) * (cos (_campaignDir - 180)), 0] vectorAdd _offsetPos;
+        _loc = nearestLocation [_pos, "NameVillage"];
+        if ((_pos distance2D (getPos _loc)) < 3000) then {
+            _valid = {
+                if (((getPos _x) distance2D (getPos _loc)) < 2500) exitWith {false};
+                true 
+            } forEach dyn_locations;
+            if (_valid) then {dyn_locations pushBackUnique _loc};
+        };
+        _loc = nearestLocation [_pos, "NameCity"];
+        if ((_pos distance2D (getPos _loc)) < 3000) then {
+            _valid = {
+                if (((getPos _x) distance2D (getPos _loc)) < 2500) exitWith {false};
+                true 
+            } forEach dyn_locations;
+            if (_valid) then {dyn_locations pushBackUnique _loc};
+        };
+        _loc = nearestLocation [_pos, "NameCityCapital"];
+        if ((_pos distance2D (getPos _loc)) < 3000) then {
+            _valid = {
+                if (((getPos _x) distance2D (getPos _loc)) < 2500) exitWith {false};
+                true 
+            } forEach dyn_locations;
+            if (_valid) then {dyn_locations pushBackUnique _loc};
+        };
+        // debug
+        if (dyn_debug) then {
+            _m = createMarker [str (random 1), _pos];
+            _m setMarkerText str _i;
+            _m setMarkerType "mil_dot";
+        };
+    };
+
+    if (dyn_debug) then {
+        _i = 0;
+        {
+            _m = createMarker [str (random 1), getPos _x];
+            _m setMarkerText str _i;
+            _m setMarkerType "mil_circle";
+            _i = _i + 1;
+        } forEach dyn_locations;
+    };
+
+    
+dyn_msr_markers = [];
+
+dyn_define_msr = {
+    params ["_start", "_goal"];
+    private _dummyGroup = createGroup sideLogic;
+    private _closedSet = [];
+    private _openSet = [_start];
+    private _current = _start;
+    private _nodeCount = 0;
+    private _allRoads = [];
+    while {!(_openSet isEqualTo [])} do {
+        private _closest = objNull;
+        {
+            if (_goal distance _x < _goal distance _closest) then {
+                _closest = _x;
+            };
+            nil
+        } count _openSet;
+        _current = _closest;
+        _nodeCount = _nodeCount + 1;
+        if (_current == _goal) exitWith {
+            private _parent = _dummyGroup getVariable ("NF_neighborParent_" + str _current);
+            while {!(isNil "_parent")} do {
+                _allRoads pushBack _parent;
+                dyn_msr_markers pushBack (getPos _parent);
+
+                // private _marker = createMarker [str _parent, getPos _parent];
+                // _marker setMarkerShape "ICON";
+                // _marker setMarkerColor "colorBLUFOR";
+                // _marker setMarkerType "MIL_DOT";
+                // _marker setMarkerSize [0.3, 0.3];
+
+                _parent = _dummyGroup getVariable ("NF_neighborParent_" + str _parent);
+            };
+        };
+        _openSet = _openSet - [_current];
+        _closedSet pushBack _current;
+        private _neighbors = (getPos _current) nearRoads 15; // This includes current
+        _neighbors append (roadsConnectedTo _current);
+        {
+            if (!(_x in _closedSet)) then {
+                private _currentG = _dummyGroup getVariable ["NF_neighborG_" + str _current, 0];
+                private _gScore = _currentG + 1;
+                private _gScoreIsBest = false;
+                if (!(_x in _openSet)) then {
+                    _gScoreIsBest = true;
+                    _openSet pushBack _x;
+                } else {
+                    private _neighborG = _dummyGroup getVariable ("NF_neighborG_" + str _x);
+                    _gScoreIsBest = _gScore < _neighborG;
+                };
+                if (_gScoreIsBest) then {
+                    _dummyGroup setVariable ["NF_neighborParent_" + str _x, _current];
+                    _dummyGroup setVariable ["NF_neighborG_" + str _x, _gScore];
+                };
+            };
+        } forEach _neighbors;
+    };
+    // count _allRoads
+};
+
+
+dyn_place_support_deployed = {
+    params ["_startPos", "_dest"];
+
+    _spawnPos = getMarkerPos "support_spawn";
+    deleteMarker "support_spawn";
+
+    _vehicles = nearestObjects [_spawnPos,["LandVehicle"], 100];
+
+    _road = [_startPos, 300] call BIS_fnc_nearestRoad;
+    _usedRoads = [];
+    // reverse _vehicles;
+
+    _roadsPos = [];
+    for "_i" from 0 to (count _vehicles) - 1 step 1 do {
+        _road = ((roadsConnectedTo _road) - [_road]) select 0;
+        _roadPos = getPos _road;
+        _near = roadsConnectedTo _road;
+        _near = [_near, [], {(getPos _x) distance2D _dest}, "DESCEND"] call BIS_fnc_sortBy;
+        _dir = (getPos (_near#0)) getDir (getPos _road);
+        _roadsPos pushBack [_roadPos, _dir];
+    };
+
+    _roadsPos = [_roadsPos, [], {(_x#0) distance2D _dest}, "ASCEND"] call BIS_fnc_sortBy;
+
+    for "_i" from 0 to (count _vehicles) - 1 step 1 do {
+        (_vehicles#_i) setPos ((_roadsPos#_i)#0);
+        (_vehicles#_i) setdir ((_roadsPos#_i)#1);
+        group (driver (_vehicles#_i)) addWaypoint [(_roadsPos#_i)#0, 0];
+    };
+};
+
+dyn_place_player_deployed = {
+    params ["_startPos", "_startDir", "_placePos", "_dest", "_supportPos"];
+    _vehicles = nearestObjects [_startPos,["LandVehicle"], 300];
+    {
+        _dis = _startPos distance2D _x;
+        _dir = _startPos getDir _x;
+        _x setVariable ["dyn_rel_data", [_dis, _dir]];
+    } forEach _vehicles;
+
+    {
+        _relData = _x getVariable "dyn_rel_data";
+        _setPos = _placePos getPos [_relData#0, _startDir - (_relData#1)];
+        _x setPos _setPos;
+        _x setDir _startDir;
+        group (driver _x) addWaypoint [_setPos, 0];
+    } forEach _vehicles;
+
+    [_supportPos, _dest] call dyn_place_support_deployed;
+};
+
+
+
+dyn_create_markers = {
+    params ["_pos", "_dir", "_trg", "_campaignDir", "_playerPos", "_comp"];
+
+    _pos = [250 * (sin 0), 250 * (cos 0), 0] vectorAdd _pos;
+
+    _marker1 = createMarker [str _pos, _pos];
+    _marker1 setMarkerColor "colorOPFOR";
+    _marker1 setMarkerType (_comp#0);
+    _marker1 setMarkerText (_comp#1);
+    _marker1 setMarkerSize [1.2, 1.2];
+
+    _strengthPos = _pos getPos [20, 0];
+    _marker2 = createMarker [format ["btl%1", _pos], _strengthPos];
+    _marker2 setMarkerType "group_5";
+    _marker2 setMarkerSize [1.2, 1.2];
+
+
+    // _leftPos = [1800 * (sin (_dir - 90)), 1800 * (cos (_dir - 90)), 0] vectorAdd _pos;
+    // _rightPos = [1800 * (sin (_dir + 90)), 1800 * (cos (_dir + 90)), 0] vectorAdd _pos;
+
+    // _marker3 = createMarker [format ["left%1", _pos], _leftPos];
+    // _marker3 setMarkerShape "RECTANGLE";
+    // _marker3 setMarkerSize [8, 2100];
+    // _marker3 setMarkerDir _dir;
+    // _marker3 setMarkerBrush "SolidFull";
+    // _marker3 setMarkerColor "colorBLACK";
+
+    // _marker4 = createMarker [format ["right%1", _pos], _rightPos];
+    // _marker4 setMarkerShape "RECTANGLE";
+    // _marker4 setMarkerSize [8, 2100];
+    // _marker4 setMarkerDir _dir;
+    // _marker4 setMarkerBrush "SolidFull";
+    // _marker4 setMarkerColor "colorBLACK";
+
+    // _clRightPos = [8000 * (sin (_campaignDir + 90)), 8000 * (cos (_campaignDir + 90)), 0] vectorAdd _pos;
+    // _marker5 = createMarker [format ["clright%1", _pos], _clRightPos];
+    // _marker5 setMarkerShape "RECTANGLE";
+    // _marker5 setMarkerSize [40, 5500];
+    // _marker5 setMarkerDir _campaignDir + 90;
+    // _marker5 setMarkerBrush "Horizontal";
+    // _marker5 setMarkerColor "colorOPFOR";
+
+    // _clLeftPos = [8000 * (sin (_campaignDir - 90)), 8000 * (cos (_campaignDir - 90)), 0] vectorAdd _pos;
+    // _marker6 = createMarker [format ["clLeft%1", _pos], _clLeftPos];
+    // _marker6 setMarkerShape "RECTANGLE";
+    // _marker6 setMarkerSize [40, 5500];
+    // _marker6 setMarkerDir _campaignDir - 90;
+    // _marker6 setMarkerBrush "Horizontal";
+    // _marker6 setMarkerColor "colorOPFOR";
+
+    _marker7 = createMarker [format ["player%1", _pos], _playerPos];
+    _marker7 setMarkerType "flag_usa";
+
+    _arrowPos = [(_playerPos distance2d _pos) / 2 * (sin (_playerPos getDir _pos)), (_playerPos distance2d _pos) / 2 * (cos (_playerPos getDir _pos)), 0] vectorAdd _playerPos;
+    _marker8 = createMarker [format ["arrow%1", _pos], _arrowPos];
+    _marker8 setMarkerType "marker_std_atk";
+    _marker8 setMarkerSize [1.5, 1.5];
+    _marker8 setMarkerColor "colorBLUFOR";
+    _marker8 setMarkerDir (_playerPos getDir _pos);
+    _marker8 setMarkerAlpha 0;
+
+    // _teamPos = [2200 * (sin _dir), 2200 * (cos _dir), 0] vectorAdd _rightPos;
+    // _marker9 = createMarker [format ["team%1", _pos], _teamPos];
+    // _marker9 setMarkerType "b_armor";
+    // _marker9 setMarkerSize [0.5, 0.5];
+    // // _marker9 setMarkerDir _dir;
+    // _marker9 setMarkerText "Team Yankee";
+
+    // _marker10 = createMarker [format ["teamsize%1", _pos], _teamPos];
+    // _marker10 setMarkerType "group_4";
+    // _marker10 setMarkerSize [0.5, 0.5];
+
+    // _unitLeftPos = [100 * (sin (_dir - 90)), 100 * (cos (_dir - 90)), 0] vectorAdd _leftPos;
+    // _type = selectRandom ["group_5", "group_7", "group_6"];
+    // _marker11 = createMarker [format ["leftUnit%1", _pos], _unitLeftPos];
+    // _marker11 setMarkerType _type;
+    // _marker11 setMarkerSize [1.5, 1.5];
+    // _marker11 setMarkerDir _dir + 90;
+
+    // _unitRightPos = [100 * (sin (_dir - 90)), 100 * (cos (_dir - 90)), 0] vectorAdd _RightPos;
+    // _type = selectRandom ["group_5", "group_7", "group_6"];
+    // _marker12 = createMarker [format ["rightUnit%1", _pos], _unitRightPos];
+    // _marker12 setMarkerType _type;
+    // _marker12 setMarkerSize [1.5, 1.5];
+    // _marker12 setMarkerDir _dir + 90;
+
+    sleep 1;
+
+    waitUntil {!(dyn_defense_active)};
+
+    _marker8 setMarkerAlpha 1;
+
+    waitUntil {sleep 1; triggerActivated _trg};
+
+    deleteMarker _marker1;
+    deleteMarker _marker2;
+    deleteMarker _marker3;
+    deleteMarker _marker4;
+    // deleteMarker _marker5;
+    // deleteMarker _marker6;
+    deleteMarker _marker7;
+    deleteMarker _marker8;
+    deleteMarker _marker9;
+    deleteMarker _marker10;
+    deleteMarker _marker11;
+    deleteMarker _marker12;
+};
+
+
+
+dyn_strong_point_defence = {
+    params ["_locPos", "_townTrg", "_dir", ["_exactPos", false]];
+    private ["_distance","_aoPos", "_grps"];
+
+    if (_exactPos) then {
+        _distance = 0;
+    }
+    else
+    {
+         _distance = [800, 1000] call BIS_fnc_randomInt;
+         _locPos = _locPos getPos [_distance, _dir + ([-15, 15] call BIS_fnc_randomInt)];
+    };
+
+    _grps = [];
+    _infGrp = grpNull;
+    {
+        _trenchPos = _locPos getPos [_x#1, _dir + (_x#0)];
+        _isWater = [_trenchPos] call dyn_is_water;
+        _isTown = [_trenchPos] call dyn_is_town;
+
+        if !(_isWater) then {
+            if !(_isTown) then {
+                _isForest = [_trenchPos] call dyn_is_forest;
+                if !(_isForest) then {
+                    _infGrp = [_trenchPos, _dir, false, false, false, true, true] call dyn_spawn_covered_inf;
+                }
+                else
+                {
+                    _infGrp = [_trenchPos, _dir, false, false, true, false, false] call dyn_spawn_covered_inf;
+                };
+
+                _vicPos = _trenchPos getPos [15, _dir - 180];
+                _vicGrp = [_vicPos, dyn_standart_combat_vehicles#1, _dir, true, false] call dyn_spawn_covered_vehicle;
+
+                [_infGrp, _vicGrp] spawn {
+                    params ["_infGrp", "_vicGrp"];
+                    sleep 5;
+                    (units _infGrp) joinSilent _vicGrp;
+                };
+
+                _grps pushBack _vicGrp;
+
+                _mbtPos = _trenchPos getPos [50, _dir + 90];
+                _mbtGrp = [_mbtPos, dyn_standart_MBT, _dir, true, false] call dyn_spawn_covered_vehicle;
+            }
+            else
+            {
+                _buildings = nearestObjects [_trenchPos, ["house"], 100];
+
+                _building = {
+                    if (count ([_x] call BIS_fnc_buildingPositions) >= 8) exitWith {_x};
+                    objNull
+                } forEach _buildings;
+
+                if !(isNull _building) then { 
+                    _grp = [[0,0,0], east, dyn_standart_squad] call BIS_fnc_spawnGroup;
+                    [_building, _grp, _dir] call dyn_garrison_building;
+                };
+            };
+        };
+    } forEach [[90, [150, 200] call BIS_fnc_randomInt],  [0, 0], [-90, [150, 200] call BIS_fnc_randomInt], [-180, [200, 250] call BIS_fnc_randomInt]];
+
+    _opPos = createTrigger ["EmptyDetector", _locPos getPos [500, _dir], true];
+    _opPos setTriggerActivation ["WEST", "PRESENT", false];
+    _opPos setTriggerStatements ["this", " ", " "];
+    _opPos setTriggerArea [1500, 10, _dir, true, 30];
+
+    // // debug
+    // _m = createMarker [str (random 1), getPos _opPos];
+    // _m setMarkerType "mil_dot";
+
+    [_grps, _opPos] spawn {
+        params ["_grps", "_opPos"];
+
+        waitUntil {triggerActivated _opPos};
+
+        {
+            [_x, 600, false, true] spawn dyn_auto_suppress;
+        } forEach _grps;
+    };
+
+    {
+        if ((random 1) > 0.25 ) then {
+            _fieldPos = _locPos getPos [500, _dir + _x];
+            [_fieldPos, 500, _dir] call dyn_spawn_mine_field;
+        };
+    } forEach [90, -90];
+
+};
+
+
+dyn_ambush = {
+    params ["_locPos", "_townTrg", "_dir", ["_exactPos", false]];
+
+    _defPos = _locPos getPos [1400, _dir];
+
+    _trgPos = _defPos getPos [300, _dir];
+    private _atkTrg = createTrigger ["EmptyDetector", _trgPos, true];
+    _atkTrg setTriggerActivation ["WEST", "PRESENT", false];
+    _atkTrg setTriggerStatements ["this", " ", " "];
+    _atkTrg setTriggerArea [2500, 65, _dir, true, 30];
+
+    // //debug
+    // _m = createMarker [str (random 1), _trgPos];
+    // _m setMarkerType "mil_objective";
+
+    _amount = [2, 4] call BIS_fnc_randomInt;
+    _ambushLocs = selectBestPlaces [_defPos, 300, "meadow + forest", 95, _amount];
+
+    private _mgGrps = []; 
+    {
+        [_x#0, _dir, true, true, selectRandom dyn_standart_statics_atgm] call dyn_spawn_static_weapon;
+
+        // //debug
+        // _m = createMarker [str (random 1), _x#0];
+        // _m setMarkerType "mil_dot";
+
+        _grp = createGroup [east, true];
+        _grp setVariable ["pl_not_recon_able", true];
+        _mgGrps pushBack _grp;
+        for "_i" from 0 to 2 do {
+            _mgPos = (_x#0) getPos [8 * _i, _dir + 90];
+            _mg = _grp createUnit [dyn_standart_mg, _mgPos, [], 0, "NONE"];
+            doStop _mg;
+            _mg disableAI "PATH"; 
+            _mg setUnitPos "Middle";
+            _mg setDir _dir;
+            _mg enableDynamicSimulation true;
+            _bush = (selectRandom dyn_bushes) createVehicle _mgPos;
+        };
+    } forEach _ambushLocs;
+
+    _playerVicsCount = count (vehicles select {side _x == playerSide and alive _X});
+
+    [_atkTrg, _locPos, _dir, _mgGrps, _playerVicsCount, _townTrg] spawn {
+        params ["_atkTrg", "_locPos", "_dir", "_mgGrps", "_playerVicsCount", "_townTrg"];
+        _rearPos = _locPos getPos [1800, _dir - 180];
+
+        waitUntil{sleep 1; triggerActivated _atkTrg or (count (vehicles select {side _x == playerSide and alive _X}) < _playerVicsCount)};
+
+        // [objNull, getPos _atkTrg, getPos _townTrg, [2, 3] call BIS_fnc_randomInt, [2, 3] call BIS_fnc_randomInt, 2] spawn dyn_spawn_counter_attack;
+        [objNull, getPos _atkTrg, getPos _townTrg, [2, 3] call BIS_fnc_randomInt, [1, 2] call BIS_fnc_randomInt] spawn dyn_spawn_atk_simple;
+
+        _fireSupport = selectRandom [2,3,2,2,4,4,4,1,1,5,5,5,6,6];
+
+        switch (_fireSupport) do { 
+            case 1 : {[6, "rocket"] spawn dyn_arty}; 
+            case 2 : {[9, "light"] spawn dyn_arty};
+            case 3 : {[6, "heavy"] spawn dyn_arty};
+            case 4 : {[_locPos, _locPos getDir _atkTrg, objNull, dyn_attack_plane] spawn dyn_air_attack;};
+            case 5 : {[6, "rocketffe"] spawn dyn_arty};
+            case 6 : {[8, "balistic"] spawn dyn_arty};
+            default {}; 
+         }; 
+    };
+};

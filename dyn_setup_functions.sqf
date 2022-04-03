@@ -102,176 +102,77 @@ dyn_add_all_groups = {
     } forEach (allGroups select {side (leader _x) == playerSide});
 };
 
+dyn_draw_phase_lines = {
+    params ["_campaignDir", "_endPos"];
 
-dyn_create_markers = {
-    params ["_pos", "_dir", "_trg", "_campaignDir", "_playerPos", "_comp"];
+    private _centerPositionsLeft = [];
+    private _centerPositionsRight = [];
+    private _locations = [player] + dyn_locations;
+    private _lastPos = getpos (leader artGrp_1);
+    {
+        _locPos = getPos _x;
 
-    _pos = [250 * (sin 0), 250 * (cos 0), 0] vectorAdd _pos;
+        // _dir = _lastPos getdir _locPos;
+        _centerPositionsLeft pushBack (_locPos getpos [3000, _campaignDir + 90]);
+        _centerPositionsRight pushBack (_locPos getpos [3000, _campaignDir - 90]);
 
-    _marker1 = createMarker [str _pos, _pos];
-    _marker1 setMarkerColor "colorOPFOR";
-    _marker1 setMarkerType (_comp#0);
-    _marker1 setMarkerText (_comp#1);
-    _marker1 setMarkerSize [1.2, 1.2];
+        _lastPos = _locPos;
 
-    _strengthPos = _pos getPos [20, 0];
-    _marker2 = createMarker [format ["btl%1", _pos], _strengthPos];
-    _marker2 setMarkerType "group_5";
-    _marker2 setMarkerSize [1.2, 1.2];
-
-
-    _leftPos = [1800 * (sin (_dir - 90)), 1800 * (cos (_dir - 90)), 0] vectorAdd _pos;
-    _rightPos = [1800 * (sin (_dir + 90)), 1800 * (cos (_dir + 90)), 0] vectorAdd _pos;
-
-    _marker3 = createMarker [format ["left%1", _pos], _leftPos];
-    _marker3 setMarkerShape "RECTANGLE";
-    _marker3 setMarkerSize [8, 2100];
-    _marker3 setMarkerDir _dir;
-    _marker3 setMarkerBrush "SolidFull";
-    _marker3 setMarkerColor "colorBLACK";
-
-    _marker4 = createMarker [format ["right%1", _pos], _rightPos];
-    _marker4 setMarkerShape "RECTANGLE";
-    _marker4 setMarkerSize [8, 2100];
-    _marker4 setMarkerDir _dir;
-    _marker4 setMarkerBrush "SolidFull";
-    _marker4 setMarkerColor "colorBLACK";
-
-    // _clRightPos = [8000 * (sin (_campaignDir + 90)), 8000 * (cos (_campaignDir + 90)), 0] vectorAdd _pos;
-    // _marker5 = createMarker [format ["clright%1", _pos], _clRightPos];
-    // _marker5 setMarkerShape "RECTANGLE";
-    // _marker5 setMarkerSize [40, 5500];
-    // _marker5 setMarkerDir _campaignDir + 90;
-    // _marker5 setMarkerBrush "Horizontal";
-    // _marker5 setMarkerColor "colorOPFOR";
-
-    // _clLeftPos = [8000 * (sin (_campaignDir - 90)), 8000 * (cos (_campaignDir - 90)), 0] vectorAdd _pos;
-    // _marker6 = createMarker [format ["clLeft%1", _pos], _clLeftPos];
-    // _marker6 setMarkerShape "RECTANGLE";
-    // _marker6 setMarkerSize [40, 5500];
-    // _marker6 setMarkerDir _campaignDir - 90;
-    // _marker6 setMarkerBrush "Horizontal";
-    // _marker6 setMarkerColor "colorOPFOR";
-
-    _marker7 = createMarker [format ["player%1", _pos], _playerPos];
-    _marker7 setMarkerType "flag_usa";
-
-    _arrowPos = [(_playerPos distance2d _pos) / 2 * (sin (_playerPos getDir _pos)), (_playerPos distance2d _pos) / 2 * (cos (_playerPos getDir _pos)), 0] vectorAdd _playerPos;
-    _marker8 = createMarker [format ["arrow%1", _pos], _arrowPos];
-    _marker8 setMarkerType "marker_std_atk";
-    _marker8 setMarkerSize [1.5, 1.5];
-    _marker8 setMarkerColor "colorBLUFOR";
-    _marker8 setMarkerDir (_playerPos getDir _pos);
-    _marker8 setMarkerAlpha 0;
-
-    _teamPos = [2200 * (sin _dir), 2200 * (cos _dir), 0] vectorAdd _rightPos;
-    _marker9 = createMarker [format ["team%1", _pos], _teamPos];
-    _marker9 setMarkerType "b_armor";
-    _marker9 setMarkerSize [0.5, 0.5];
-    // _marker9 setMarkerDir _dir;
-    _marker9 setMarkerText "Team Yankee";
-
-    _marker10 = createMarker [format ["teamsize%1", _pos], _teamPos];
-    _marker10 setMarkerType "group_4";
-    _marker10 setMarkerSize [0.5, 0.5];
-
-    _unitLeftPos = [100 * (sin (_dir - 90)), 100 * (cos (_dir - 90)), 0] vectorAdd _leftPos;
-    _type = selectRandom ["group_5", "group_7", "group_6"];
-    _marker11 = createMarker [format ["leftUnit%1", _pos], _unitLeftPos];
-    _marker11 setMarkerType _type;
-    _marker11 setMarkerSize [1.5, 1.5];
-    _marker11 setMarkerDir _dir + 90;
-
-    _unitRightPos = [100 * (sin (_dir - 90)), 100 * (cos (_dir - 90)), 0] vectorAdd _RightPos;
-    _type = selectRandom ["group_5", "group_7", "group_6"];
-    _marker12 = createMarker [format ["rightUnit%1", _pos], _unitRightPos];
-    _marker12 setMarkerType _type;
-    _marker12 setMarkerSize [1.5, 1.5];
-    _marker12 setMarkerDir _dir + 90;
-
-    sleep 1;
-
-    waitUntil {!(dyn_defense_active)};
-
-    _marker8 setMarkerAlpha 1;
-
-    waitUntil {sleep 1; triggerActivated _trg};
-
-    deleteMarker _marker1;
-    deleteMarker _marker2;
-    deleteMarker _marker3;
-    deleteMarker _marker4;
-    // deleteMarker _marker5;
-    // deleteMarker _marker6;
-    deleteMarker _marker7;
-    deleteMarker _marker8;
-    deleteMarker _marker9;
-    deleteMarker _marker10;
-    deleteMarker _marker11;
-    deleteMarker _marker12;
-};
+    } forEach _locations;
 
 
-dyn_msr_markers = [];
+    for "_i" from 0 to (count _centerPositionsRight) - 2 step 1 do {
+        _currentPosRight = _centerPositionsRight#_i;
+        _nextPosRight = _centerPositionsRight#(_i+1);
+        _dirRight = _currentPosRight getDir _nextPosRight;
+        _distanceRight = _currentPosRight distance2d _nextPosRight;
 
-dyn_define_msr = {
-    params ["_start", "_goal"];
-    private _dummyGroup = createGroup sideLogic;
-    private _closedSet = [];
-    private _openSet = [_start];
-    private _current = _start;
-    private _nodeCount = 0;
-    private _allRoads = [];
-    while {!(_openSet isEqualTo [])} do {
-        private _closest = objNull;
-        {
-            if (_goal distance _x < _goal distance _closest) then {
-                _closest = _x;
-            };
-            nil
-        } count _openSet;
-        _current = _closest;
-        _nodeCount = _nodeCount + 1;
-        if (_current == _goal) exitWith {
-            private _parent = _dummyGroup getVariable ("NF_neighborParent_" + str _current);
-            while {!(isNil "_parent")} do {
-                _allRoads pushBack _parent;
-                dyn_msr_markers pushBack (getPos _parent);
+        _midPointRight = _currentPosRight getPos [_distanceRight / 2, _dirRight];
 
-                // private _marker = createMarker [str _parent, getPos _parent];
-                // _marker setMarkerShape "ICON";
-                // _marker setMarkerColor "colorBLUFOR";
-                // _marker setMarkerType "MIL_DOT";
-                // _marker setMarkerSize [0.3, 0.3];
+        _lineMarkerRight = createMarker [format ["Right%1", random 3], _midPointRight];
+        _lineMarkerRight setMarkerShape "RECTANGLE";
+        _lineMarkerRight setMarkerSize [20, _distanceRight / 2];
+        _lineMarkerRight setMarkerDir _dirRight;
+        _lineMarkerRight setMarkerBrush "SolidFull";
+        _lineMarkerRight setMarkerColor "colorBlack";
 
-                _parent = _dummyGroup getVariable ("NF_neighborParent_" + str _parent);
-            };
+        _currentPosLeft = _centerPositionsLeft#_i;
+        _nextPosLeft = _centerPositionsLeft#(_i+1);
+        _dirLeft = _currentPosLeft getDir _nextPosLeft;
+        _distance = _currentPosLeft distance2d _nextPosLeft;
+
+        _midPointLeft = _currentPosLeft getPos [_distance / 2, _dirLeft];
+        _lineMarker = createMarker [format ["left%1", random 3], _midPointLeft];
+        _lineMarker setMarkerShape "RECTANGLE";
+        _lineMarker setMarkerSize [20, _distance / 2];
+        _lineMarker setMarkerDir _dirLeft;
+        _lineMarker setMarkerBrush "SolidFull";
+        _lineMarker setMarkerColor "colorBlack";
+
+        if (_i > 0 ) then {
+
+            _plNameMarker = createMarker [format ["left%1", random 3], _midPointLeft];
+            _plNameMarker setMarkerType "mil_dot";
+            _plNameMarker setMarkerSize [0,0];
+            _plNameMarker setMarkerDir _dirLeft;
+            _name = (selectRandom dyn_phase_names);
+            _plNameMarker setMarkerText _name;
+            dyn_phase_names deleteAt (dyn_phase_names find _name);
+
+            _phaseMidDistance = _midPointLeft distance2d _midPointRight;
+            _phaseMidDir = _midPointLeft getDir _midPointRight;
+            _phaseMidPoint = _midPointLeft getPos [_phaseMidDistance / 2, _phaseMidDir];
+
+            _lineMarkerPhase = createMarker [format ["Right%1", random 3], _phaseMidPoint];
+            _lineMarkerPhase setMarkerShape "RECTANGLE";
+            _lineMarkerPhase setMarkerSize [8, _phaseMidDistance / 2];
+            _lineMarkerPhase setMarkerDir _phaseMidDir;
+            _lineMarkerPhase setMarkerBrush "SolidFull";
+            _lineMarkerPhase setMarkerColor "colorBlack";
         };
-        _openSet = _openSet - [_current];
-        _closedSet pushBack _current;
-        private _neighbors = (getPos _current) nearRoads 15; // This includes current
-        _neighbors append (roadsConnectedTo _current);
-        {
-            if (!(_x in _closedSet)) then {
-                private _currentG = _dummyGroup getVariable ["NF_neighborG_" + str _current, 0];
-                private _gScore = _currentG + 1;
-                private _gScoreIsBest = false;
-                if (!(_x in _openSet)) then {
-                    _gScoreIsBest = true;
-                    _openSet pushBack _x;
-                } else {
-                    private _neighborG = _dummyGroup getVariable ("NF_neighborG_" + str _x);
-                    _gScoreIsBest = _gScore < _neighborG;
-                };
-                if (_gScoreIsBest) then {
-                    _dummyGroup setVariable ["NF_neighborParent_" + str _x, _current];
-                    _dummyGroup setVariable ["NF_neighborG_" + str _x, _gScore];
-                };
-            };
-        } forEach _neighbors;
     };
-    // count _allRoads
 };
+
 
 dyn_place_player = {
     params ["_pos", "_dest"];
@@ -294,13 +195,19 @@ dyn_place_player = {
     // reverse _vehicles;
 
     _roadsPos = [];
+    _roadBlackList = [];
     for "_i" from 0 to (count _vehicles) - 1 step 1 do {
         _road = ((roadsConnectedTo _road) - [_road]) select 0;
-        _roadPos = getPos _road;
-        _near = roadsConnectedTo _road;
-        _near = [_near, [], {(getPos _x) distance2D _dest}, "DESCEND"] call BIS_fnc_sortBy;
-        _dir = (getPos (_near#0)) getDir (getPos _road);
-        _roadsPos pushBack [_roadPos, _dir];
+        if !(_road in _roadBlackList) then {
+            _roadBlackList pushBack _road;
+            _roadPos = getPos _road;
+            _near = roadsConnectedTo _road;
+            _near = [_near, [], {(getPos _x) distance2D _dest}, "DESCEND"] call BIS_fnc_sortBy;
+            _dir = (getPos (_near#0)) getDir (getPos _road);
+            _roadsPos pushBack [_roadPos, _dir];
+        } else {
+
+        };
     };
 
     _roadsPos = [_roadsPos, [], {(_x#0) distance2D _dest}, "ASCEND"] call BIS_fnc_sortBy;
@@ -308,25 +215,6 @@ dyn_place_player = {
     for "_i" from 0 to (count _vehicles) - 1 step 1 do {
         (_vehicles#_i) setPos ((_roadsPos#_i)#0);
         (_vehicles#_i) setdir ((_roadsPos#_i)#1);
-    };
-
-    
-
-    private _vicId = 0;
-    private _oDir = 90;
-    for "_i" from 0 to (count _infGroups) - 1 step 1 do {
-        if (_vicId > ((count _infGroups) - 1)) then {
-            _vicId = 0;
-            _oDir = -90;
-        };
-        _vic = (_vehicles#_vicId);
-        _vDir = getDir _vic;
-        _iPos = [35 * (sin (_vDir + _oDir)), 35 * (cos (_vDir + _oDir)), 0] vectorAdd getPos _vic;
-        _iPos = [_iPos, 0, 20, 1, 0, 0, 0, [], [_iPos]] call BIS_fnc_findSafePos;
-        {
-            _x setPos _iPos;
-        } forEach (units (_infGroups#_i));
-        _vicId = _vicId + 1;
     };
 };
 
@@ -342,60 +230,8 @@ dyn_customice_playerside = {
 
 [] call dyn_customice_playerside;
 
-dyn_place_support_deployed = {
-    params ["_startPos", "_dest"];
-
-    _spawnPos = getMarkerPos "support_spawn";
-    deleteMarker "support_spawn";
-
-    _vehicles = nearestObjects [_spawnPos,["LandVehicle"], 100];
-
-    _road = [_startPos, 300] call BIS_fnc_nearestRoad;
-    _usedRoads = [];
-    // reverse _vehicles;
-
-    _roadsPos = [];
-    for "_i" from 0 to (count _vehicles) - 1 step 1 do {
-        _road = ((roadsConnectedTo _road) - [_road]) select 0;
-        _roadPos = getPos _road;
-        _near = roadsConnectedTo _road;
-        _near = [_near, [], {(getPos _x) distance2D _dest}, "DESCEND"] call BIS_fnc_sortBy;
-        _dir = (getPos (_near#0)) getDir (getPos _road);
-        _roadsPos pushBack [_roadPos, _dir];
-    };
-
-    _roadsPos = [_roadsPos, [], {(_x#0) distance2D _dest}, "ASCEND"] call BIS_fnc_sortBy;
-
-    for "_i" from 0 to (count _vehicles) - 1 step 1 do {
-        (_vehicles#_i) setPos ((_roadsPos#_i)#0);
-        (_vehicles#_i) setdir ((_roadsPos#_i)#1);
-        group (driver (_vehicles#_i)) addWaypoint [(_roadsPos#_i)#0, 0];
-    };
-};
-
-dyn_place_player_deployed = {
-    params ["_startPos", "_startDir", "_placePos", "_dest", "_supportPos"];
-    _vehicles = nearestObjects [_startPos,["LandVehicle"], 300];
-    {
-        _dis = _startPos distance2D _x;
-        _dir = _startPos getDir _x;
-        _x setVariable ["dyn_rel_data", [_dis, _dir]];
-    } forEach _vehicles;
-
-    {
-        _relData = _x getVariable "dyn_rel_data";
-        _setPos = _placePos getPos [_relData#0, _startDir - (_relData#1)];
-        _x setPos _setPos;
-        _x setDir _startDir;
-        group (driver _x) addWaypoint [_setPos, 0];
-    } forEach _vehicles;
-
-    [_supportPos, _dest] call dyn_place_support_deployed;
-};
-
-
-
 dyn_place_arty = {
+    params ["_rearDir"];
 
     artGrp_1 setVariable ["pl_not_addalbe", true];
 
@@ -407,7 +243,7 @@ dyn_place_arty = {
         _x setVariable ["dyn_rel_pos", _relPos];
     } forEach ((units artGrp_1) - [_artyLeader]);
 
-    _batteryPos = (getPos player) getPos [2000, (getDir (vehicle player) + 190)];
+    _batteryPos = (getPos player) getPos [2000, _rearDir];
     _batteryPos = ((selectBestPlaces [_batteryPos, 500, "2*meadow", 95, 1])#0)#0;
     // _batteryPos = _batteryPos findEmptyPosition [0, 500, typeOf (vehicle _artyLeader)];
 
@@ -435,6 +271,7 @@ dyn_place_arty = {
 };
 
 dyn_opfor_arty = [];
+dyn_opfor_grps = [];
 
 dyn_place_opfor_arty = {
     params ["_artyPos", "_dir"];
@@ -456,6 +293,7 @@ dyn_place_opfor_arty = {
         _arty setdir _dir;
         _grp = createVehicleCrew _arty;
         dyn_opfor_arty pushBack _arty;
+        dyn_opfor_grps pushBack _grp;
     };
 };
 
@@ -481,6 +319,7 @@ dyn_place_opfor_rocket_arty = {
         _arty setdir _dir;
         _grp = createVehicleCrew _arty;
         dyn_opfor_rocket_arty pushBack _arty;
+        dyn_opfor_grps pushBack _grp;
     };
 };
 
@@ -504,6 +343,7 @@ dyn_palace_opfor_balistic_arty = {
     _arty setdir _dir;
     _grp = createVehicleCrew _arty;
     dyn_opfor_balistic_arty pushBack _arty;
+    dyn_opfor_grps pushBack _grp;
 };
 
 dyn_opfor_light_arty = [];
@@ -534,6 +374,7 @@ dyn_place_opfor_light_arty = {
         _grp setVariable ["pl_not_recon_able", true];
         [units _grp] joinSilent _lightArtyGrp;
         dyn_opfor_light_arty pushBack _arty;
+        dyn_opfor_grps pushBack _grp;
 
         _sPos = (getPos _arty) getPos [1, _dir];
         _sandBag = createVehicle ["land_gm_sandbags_01_round_01", _sPos, [], 0, "CAN_COLLIDE"];
@@ -543,134 +384,117 @@ dyn_place_opfor_light_arty = {
             _gGrp = [_guardPos, 0] call dyn_spawn_dimounted_inf;
             _gGrp setVariable ["pl_not_recon_able", true];
             [units _gGrp] joinSilent _lightArtyGrp;
+            dyn_opfor_grps pushBack _gGrp;
         };
     };
 };
 
 
-
-// dyn_start_markers = [["start_0", "obj_0"], ["start_1", "obj_1"], ["start_2", "obj_2"], ["start_3", "obj_3"], ["start_4", "obj_4"], ["start_5", "obj_5"], ["start_6", "obj_6"], ["start_7", "obj_7"], ["start_8", "obj_8"], ["start_9", "obj_9"], ["start_10", "obj_10"], ["start_11", "obj_11"], ["start_12", "obj_12"], ["start_13", "obj_13"], ["start_14", "obj_14"], ["start_15", "obj_15"]];
-
-
-
 dyn_main_setup = {
+    private ["_startPos", "_startRoad", "_campaignDir", "_endPos"];
 
-    dyn_start_markers = [];
-
-    for "_i" from 0 to 15 do {
-        _m1 = format ["start_%1", _i];
-        _m2 = format ["obj_%1", _i];
-        _m3 = format ["support_%1", _i];
-
-        dyn_start_markers pushBack [_m1, _m2, _m3];        
-    };
 
     dyn_locations = [];
 
-    ///-------------------Version 1 ------------------------
-    // dyn_map_center = [worldSize / 2, worldsize / 2, 0];
-    // _locations = nearestLocations [dyn_map_center, ["NameVillage", "NameCity"], worldSize * 0.3];
-    // _startLoc = selectRandom _locations;
-    // _startPos = getPos _startLoc;
-    // private _campaignDir = ((getPos _startLoc) getDir dyn_map_center) - 180;
-    // _playerStart = [3600 * (sin _campaignDir), 3600 * (cos _campaignDir), 0] vectorAdd _startPos;
-    // dyn_locations pushBack _startLoc;
+    private _dummygrp = createGroup [civilian, true];
 
-    ////---------------------Version 2------------------------------
-    dyn_map_center = [worldSize / 2, worldsize / 2, 0];
-    
-    _startPair = selectRandom dyn_start_markers;
+    while {(count dyn_locations) < 4} do {
 
-    // debug override
-    // _startPair = ["start_14", "obj_14", "support_14"];
-    _playerStartDir = markerDir (_startPair#0);
+        _startPair = selectRandom [["dyn_start_zone_1", "dyn_start_zone_2"], ["dyn_start_zone_2", "dyn_start_zone_1"], ["dyn_start_zone_4", "dyn_start_zone_3"], ["dyn_start_zone_3", "dyn_start_zone_4"], ["dyn_start_zone_5", "dyn_start_zone_6"], ["dyn_start_zone_6", "dyn_start_zone_5"], ["dyn_start_zone_8", "dyn_start_zone_7"], ["dyn_start_zone_7", "dyn_start_zone_8"]];
 
-    _playerStart = getMarkerPos (_startPair#0);
-    _startLoc = nearestLocation [getMarkerPos (_startPair#1), ""];
-    _startPos = getPos _startLoc;
-    _supportPos = getMarkerPos (_startPair#2);
-    dyn_locations pushBack _startLoc;
-    private _campaignDir = ((getPos _startLoc) getDir dyn_map_center) - 180;
+        _startPos = [[_startPair#0], ["water"]] call BIS_fnc_randomPos;
 
-    if (dyn_debug) then {
-        _pm = createMarker [str (random 1), _playerStart];
-        _pm setMarkerType "mil_marker";
-        _lm = createMarker [str (random 1), _startPos];
-        _lm setMarkerType "mil_circle";
+        _startRoad = [_startPos, 1000, ["TRAIL", "TRACK", "HIDE"]] call dyn_nearestRoad;
+        if (isNull _startRoad) then {
+            _startRoad = [_startPos, 2000] call dyn_nearestRoad;
+        };
+
+
+        _endPos = [[_startPair#1], ["water"]] call BIS_fnc_randomPos;
+
+        // _m = createMarker [format ["team%1", random 1], _endPos];
+        // _m setMarkerType "mil_marker";
+        // _m setMarkerText "End";
+
+
+        _intervals = ((getpos _startRoad) distance2d _endPos) / 8;
+        _campaignDir = _endPos getDir (getpos _startRoad);
+
+        _dummy = _dummygrp createUnit ["C_man_polo_1_F", (getPos _startRoad) getPos [600, _campaignDir - 180], [], 0, "NONE"];
+        _dummy hideObjectGlobal true;
+        dyn_locations = [_dummy];
+
+        _offsetPos = [1500 * (sin (_campaignDir - 180)), 1500 * (cos (_campaignDir - 180)), 0] vectorAdd (getpos _startRoad);
+
+        for "_i" from 0 to 8 do {
+            _pos = [(_intervals * _i) * (sin (_campaignDir - 180)), (_intervals * _i) * (cos (_campaignDir - 180)), 0] vectorAdd _offsetPos;
+            _loc = nearestLocation [_pos, "NameVillage"];
+            if ((_pos distance2D (getPos _loc)) < 2500) then {
+                _valid = {
+                    if (((getPos _x) distance2D (getPos _loc)) < 3000) exitWith {false};
+                    true 
+                } forEach dyn_locations;
+                if (_valid) then {dyn_locations pushBackUnique _loc};
+            };
+            _loc = nearestLocation [_pos, "NameCity"];
+            if ((_pos distance2D (getPos _loc)) < 2500) then {
+                _valid = {
+                    if (((getPos _x) distance2D (getPos _loc)) < 3000) exitWith {false};
+                    true 
+                } forEach dyn_locations;
+                if (_valid) then {dyn_locations pushBackUnique _loc};
+            };
+            _loc = nearestLocation [_pos, "NameCityCapital"];
+            if ((_pos distance2D (getPos _loc)) < 2500) then {
+                _valid = {
+                    if (((getPos _x) distance2D (getPos _loc)) < 3000) exitWith {false};
+                    true 
+                } forEach dyn_locations;
+                if (_valid) then {dyn_locations pushBackUnique _loc};
+            };
+            // debug
+            // _m = createMarker [str (random 1), _pos];
+            // _m setMarkerText str _i;
+            // _m setMarkerType "mil_dot";
+        };
+
+        dyn_locations deleteAt 0;
+        deleteVehicle _dummy;
     };
 
-    if !(dyn_debug) then {
-        {
-            deleteMarker (_x#0);
-            deleteMarker (_x#1);
-            deleteMarker (_x#2);
-        } forEach dyn_start_markers;
-
-        deleteMarker "test_m_1";
-        deleteMarker "test_m_2";
-        
-    };
-
-
-    _intervals = 2000;
-    _campaignDir = _campaignDir + ([-20, 20] call BIS_fnc_randomInt);
-    _offsetPos = [1500 * (sin (_campaignDir - 180)), 1500 * (cos (_campaignDir - 180)), 0] vectorAdd _startPos;
-    for "_i" from 0 to 8 do {
-        _pos = [(_intervals * _i) * (sin (_campaignDir - 180)), (_intervals * _i) * (cos (_campaignDir - 180)), 0] vectorAdd _offsetPos;
-        _loc = nearestLocation [_pos, "NameVillage"];
-        if ((_pos distance2D (getPos _loc)) < 3000) then {
-            _valid = {
-                if (((getPos _x) distance2D (getPos _loc)) < 2500) exitWith {false};
-                true 
-            } forEach dyn_locations;
-            if (_valid) then {dyn_locations pushBackUnique _loc};
-        };
-        _loc = nearestLocation [_pos, "NameCity"];
-        if ((_pos distance2D (getPos _loc)) < 3000) then {
-            _valid = {
-                if (((getPos _x) distance2D (getPos _loc)) < 2500) exitWith {false};
-                true 
-            } forEach dyn_locations;
-            if (_valid) then {dyn_locations pushBackUnique _loc};
-        };
-        _loc = nearestLocation [_pos, "NameCityCapital"];
-        if ((_pos distance2D (getPos _loc)) < 3000) then {
-            _valid = {
-                if (((getPos _x) distance2D (getPos _loc)) < 2500) exitWith {false};
-                true 
-            } forEach dyn_locations;
-            if (_valid) then {dyn_locations pushBackUnique _loc};
-        };
         // debug
-        if (dyn_debug) then {
-            _m = createMarker [str (random 1), _pos];
-            _m setMarkerText str _i;
-            _m setMarkerType "mil_dot";
-        };
+        // if (dyn_debug) then {
+        // };
+    [getPos _startRoad, (getPos _startRoad) getPos [1000, _campaignDir - 180]] call dyn_place_player;
+
+    // _i = 0;
+    // {
+    //     _m = createMarker [str (random 1), getPos _x];
+    //     _m setMarkerText str _i;
+    //     _m setMarkerType "mil_circle";
+    //     _i = _i + 1;
+    // } forEach dyn_locations;
+
+
+    for "_i" from 0 to 15 do {
+        deleteMarker (format ["start_%1", _i]);
+        deleteMarker (format ["obj_%1", _i]);
+        deleteMarker (format ["support_%1", _i]);   
     };
 
-    if (dyn_debug) then {
-        _i = 0;
+    {
         {
-            _m = createMarker [str (random 1), getPos _x];
-            _m setMarkerText str _i;
-            _m setMarkerType "mil_circle";
-            _i = _i + 1;
-        } forEach dyn_locations;
-    };
+            deleteMarker _x;
+        } forEach _x;
+    } forEach [["dyn_start_zone_1", "dyn_start_zone_2"], ["dyn_start_zone_2", "dyn_start_zone_1"], ["dyn_start_zone_4", "dyn_start_zone_3"], ["dyn_start_zone_3", "dyn_start_zone_4"], ["dyn_start_zone_5", "dyn_start_zone_6"], ["dyn_start_zone_6", "dyn_start_zone_5"], ["dyn_start_zone_8", "dyn_start_zone_7"], ["dyn_start_zone_7", "dyn_start_zone_8"]];
 
-    _aoStart = [_playerStart, 2500, ["TRAIL", "TRACK"]] call BIS_fnc_nearestRoad;
-
-    [getPos _aoStart, _startPos] call dyn_place_player;
-
-    [_supportPos, _aoStart] call dyn_place_support_deployed;
-
-    // [getMarkerPos "spawn_start", _playerStartDir, getPos _aoStart, _startPos, _supportPos] call dyn_place_player_deployed;
     deleteMarker "spawn_start";
 
-    [] call dyn_place_arty;
+    [(getpos (dyn_locations#0)) getdir player] call dyn_place_arty;
 
-    [dyn_locations, _playerStart, _campaignDir] spawn {
+    [_campaignDir, _endPos] call dyn_draw_phase_lines;
+
+    [dyn_locations, getpos _startRoad, _campaignDir] spawn {
         params ["_locations", "_playerStart", "_campaignDir"];
         private ["_midPoint"];
 
@@ -691,7 +515,7 @@ dyn_main_setup = {
                 };
 
                 // between town Defenses
-                if (((getPos _loc) distance2D _pos) > 3500) then {
+                if (((getPos _loc) distance2D _pos) > 4500) then {
                     _midDistance = ((getPos _loc) distance2D _pos) / 2;
                     _midPoint = [_midDistance * (sin (_dir - 180)), _midDistance * (cos (_dir - 180)), 0] vectorAdd _pos;
                     _midDefenses = true;
@@ -742,28 +566,28 @@ dyn_main_setup = {
                 _artyPos4 = getPos (_locations#(_i + 2)) getPos [1000, _campaignDir - 180];
                 [_artyPos4, _campaignDir] call dyn_palace_opfor_balistic_arty;
             };
-                        
-            dyn_defense_active = false;
-
-            _dyn_defense_atkPos = getPos player;
-            if (_i > 0) then {_dyn_defense_atkPos = getPos (_locations#(_i - 1))};
-
-            _startDefense = false;
             
-            if (((random 1) > 0.6 and (_dyn_defense_atkPos distance2D (getPos _loc)) > 3000 and _i > 0) or _startDefense) then {
-                _waitTime = 180;
-                if (_startDefense) then {_waitTime = 10};
+            _defenseAllowed = true;
+            if (_defenseAllowed) then {       
+                dyn_defense_active = false;
+
+                _dyn_defense_atkPos = getPos player;
+                _waitTime = 120;
+                if (_i > 0) then {
+                    _waitTime = 240;
+                    _dyn_defense_atkPos = getPos (_locations#(_i - 1))
+                };
+                // _startDefense = true;
+                
+                // if (((random 1) > 0.6 and (_dyn_defense_atkPos distance2D (getPos _loc)) > 2000 and _i > 0) or _startDefense) then {
+
                 if (dyn_debug) then {_waitTime = 5};
                 [_dyn_defense_atkPos, getPos _loc, _waitTime] spawn dyn_defense;
                 sleep 5;
-                _defDir = _dyn_defense_atkPos getDir (getPos _loc);
-                _linePos = [300 * (sin _defDir), 300 * (cos _defDir), 0] vectorAdd _dyn_defense_atkPos;
-                [west, format ["defTask_%1", _i], ["Deffensive", "Defend against Counter Attack", ""], _linePos, "ASSIGNED", 1, true, "defend", false] call BIS_fnc_taskCreate;
 
                 waitUntil {!(dyn_defense_active)};
 
-                [format ["defTask_%1", _i], "SUCCEEDED", true] call BIS_fnc_taskSetState;
-                sleep 10;
+                sleep 5;
             };
 
             private _aoArea = 400;
@@ -781,7 +605,6 @@ dyn_main_setup = {
             
 
             if (_i > 0) then {
-                [getPos _loc, _dir, _endTrg, _campaignDir, getPos (_locations#(_i - 1)), dyn_en_comp] spawn dyn_create_markers;
                 _dyn_defense_atkPos = getPos (_locations#(_i - 1));
 
                 // Supply Reinforcements
@@ -801,11 +624,6 @@ dyn_main_setup = {
                     dyn_repair_group setGroupId [format ["GSITrp %1", 3 +_i]];
                     player hcSetGroup [dyn_repair_group];
                 };
-            }
-            else
-            {
-                [getPos _loc, _dir, _endTrg, _campaignDir, getPos player, dyn_en_comp] spawn dyn_create_markers;
-                // if ((random 1) > 0.35) then {_startDefense = true};
             };
             
             // [getPos _loc, _dir, _endTrg] spawn dyn_ambiance_execute;
@@ -827,14 +645,10 @@ dyn_main_setup = {
                 // _defenseType = "ambush";
 
                 switch (_defenseType) do { 
-                    case "line" : {[_midPoint, _trg, _dir, true] spawn dyn_defense_line}; 
-                    case "point" : {[_midPoint, _trg, _dir, true] spawn dyn_strong_point_defence};
                     case "mobileTank" : {[_midPoint, _trg, _dir, true] spawn dyn_mobile_armor_defense};
-                    case "roadem" : {[_midPoint, _trg, _dir] spawn dyn_road_emplacemnets};
                     case "recon" : {[_midPoint, _trg, _dir] spawn dyn_recon_convoy};
-                    case "ambush" : {[_midPoint, _trg, _dir] spawn dyn_ambush};
                     case "minefield" : {[_midPoint, 2500, _dir, true] spawn dyn_spawn_mine_field};
-                    default {[_midPoint, _trg, _dir, true] spawn dyn_defense_line}; 
+                    default {}; 
                 };
 
                 [_midPoint, 2000, [2, 3] call BIS_fnc_randomInt, _trg, _dir] spawn dyn_spawn_forest_patrol;
@@ -855,21 +669,18 @@ dyn_main_setup = {
 
             if (_outerDefenses) then {
 
-                _defenseType = selectRandom ["mobileTank", "recon", "ambush", "minefield"];
+                _defenseType = selectRandom ["mobileTank", "recon", "minefield"];
 
                 // debug
-                // _defenseType = "recon";
+                _defenseType = "forest";
 
                 switch (_defenseType) do { 
-                    case "line" : {[getPos _loc, _trg, _dir] spawn dyn_defense_line}; 
-                    case "point" : {[getPos _loc, _trg, _dir] spawn dyn_strong_point_defence};
                     case "mobileTank" : {[getPos _loc, _trg, _dir] spawn dyn_mobile_armor_defense};
-                    // case "roadem" : {[getPos _loc, _trg, _dir] spawn dyn_road_emplacemnets};
                     case "recon" : {[getPos _loc, _trg, _dir] spawn dyn_recon_convoy};
-                    case "ambush" : {[getPos _loc, _trg, _dir] spawn dyn_ambush};
+                    case "forest" : {[getPos _loc, _trg, _dir] spawn dyn_forest_defence_edge};
                     case "minefield" : {[(getPos _loc) getPos [[1300, 1700] call BIS_fnc_randomInt, _dir], 2000, _dir, true] spawn dyn_spawn_mine_field};
                     case "empty" : {};
-                    default {[getPos _loc, _trg, _dir] spawn dyn_defense_line}; 
+                    default {}; 
                 };
             };
 
@@ -940,6 +751,4 @@ dyn_main_setup = {
 };
 
 [] call dyn_main_setup;
-
-
 

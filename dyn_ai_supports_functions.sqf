@@ -257,8 +257,8 @@ dyn_continous_counterattack = {
 
 
     if !(isNull _activationTrg) then {
-        _m = createMarker [str (random 1), getPos _activationTrg];
-        _m setMarkerType "mil_marker"; 
+        // _m = createMarker [str (random 1), getPos _activationTrg];
+        // _m setMarkerType "mil_marker"; 
         waitUntil{sleep 1; triggerActivated _activationTrg};
         sleep ([20, 80] call BIS_fnc_randomInt);
     };
@@ -274,22 +274,22 @@ dyn_continous_counterattack = {
 
         switch (_atkType) do {
             case 0 : {
-                [8] spawn dyn_arty;
+                [objNull, _atkPos, _rearPos, 2, 2] spawn dyn_spawn_atk_simple;
             };  
             case 1 : {
-                _rearPos = (getPos dyn_next_location) getPos [800, (getpos dyn_next_location) getDir (getpos dyn_current_location)];
+                _rearPos = (getPos _endTrg) getPos [1000, _dir + (selectRandom [90, -90])];
                 // [objNull, _atkPos, _rearPos, 2, 3, 0, false, dyn_standart_light_amored_vics, 0, [false, 100], true, false] spawn dyn_spawn_counter_attack;
-                [getPos player, _rearPos, 2, 1, false, [dyn_standart_light_amored_vic]] spawn dyn_spawn_atk_complex;
+                [_atkPos, _rearPos, 2, 1, false, [dyn_standart_light_amored_vic]] spawn dyn_spawn_atk_complex;
             }; 
             case 2 : {
-                _rearPos = (getPos dyn_next_location) getPos [600, (getpos dyn_next_location) getDir (getpos dyn_current_location)];
+                _rearPos = (getPos _endTrg) getPos [1000, _dir + (selectRandom [90, -90])];
                 // [objNull, _atkPos, _rearPos, 2, 2, 0, false, dyn_standart_combat_vehicles , 0, [false, 100], true, false] spawn dyn_spawn_counter_attack;
-                [getPos player, _rearPos, 2, 1, false] spawn dyn_spawn_atk_complex;
+                [_atkPos, _rearPos, 2, 1, false] spawn dyn_spawn_atk_complex;
             };
             case 3 : {
-                _rearPos = (getPos dyn_next_location) getPos [400, (getpos dyn_next_location) getDir (getpos dyn_current_location)];
+                _rearPos = (getPos _endTrg) getPos [1000, _dir + (selectRandom [90, -90])];
                 // [objNull, _atkPos, _rearPos, 2, 2, 0, true, [dyn_standart_MBT], 0, [false, 100], true, false] spawn dyn_spawn_counter_attack
-                [getPos player, _rearPos, 2, 2, false] spawn dyn_spawn_atk_complex;
+                [_atkPos, _rearPos, 2, 2, false] spawn dyn_spawn_atk_complex;
             };
             default {}; 
          }; 
