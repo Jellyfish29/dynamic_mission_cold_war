@@ -109,32 +109,34 @@ dyn_draw_phase_lines = {
     private _centerPositionsRight = [];
     private _locations = [player] + dyn_locations;
     private _lastPos = getpos (leader artGrp_1);
+    private _lastDir = -1;
     {
         _locPos = getPos _x;
 
         // _dir = _lastPos getdir _locPos;
-        _centerPositionsLeft pushBack (_locPos getpos [3000, _campaignDir + 90]);
-        _centerPositionsRight pushBack (_locPos getpos [3000, _campaignDir - 90]);
+        _centerPositionsLeft pushBack (_locPos getpos [3500, _campaignDir + 90]);
+        _centerPositionsRight pushBack (_locPos getpos [3500, _campaignDir - 90]);
 
         _lastPos = _locPos;
 
     } forEach _locations;
 
-
+    private _posIdx = 1;
     for "_i" from 0 to (count _centerPositionsRight) - 2 step 1 do {
         _currentPosRight = _centerPositionsRight#_i;
-        _nextPosRight = _centerPositionsRight#(_i+1);
-        _dirRight = _currentPosRight getDir _nextPosRight;
+        private _nextPosRight = _centerPositionsRight#(_i+1);
+        private _dirRight = _currentPosRight getDir _nextPosRight;
+
         _distanceRight = _currentPosRight distance2d _nextPosRight;
 
         _midPointRight = _currentPosRight getPos [_distanceRight / 2, _dirRight];
 
         _lineMarkerRight = createMarker [format ["Right%1", random 3], _midPointRight];
         _lineMarkerRight setMarkerShape "RECTANGLE";
-        _lineMarkerRight setMarkerSize [20, _distanceRight / 2];
+        _lineMarkerRight setMarkerSize [8, _distanceRight / 2];
         _lineMarkerRight setMarkerDir _dirRight;
         _lineMarkerRight setMarkerBrush "SolidFull";
-        _lineMarkerRight setMarkerColor "colorBlack";
+        _lineMarkerRight setMarkerColor "colorBLACK";
 
         _currentPosLeft = _centerPositionsLeft#_i;
         _nextPosLeft = _centerPositionsLeft#(_i+1);
@@ -144,10 +146,10 @@ dyn_draw_phase_lines = {
         _midPointLeft = _currentPosLeft getPos [_distance / 2, _dirLeft];
         _lineMarker = createMarker [format ["left%1", random 3], _midPointLeft];
         _lineMarker setMarkerShape "RECTANGLE";
-        _lineMarker setMarkerSize [20, _distance / 2];
+        _lineMarker setMarkerSize [8, _distance / 2];
         _lineMarker setMarkerDir _dirLeft;
         _lineMarker setMarkerBrush "SolidFull";
-        _lineMarker setMarkerColor "colorBlack";
+        _lineMarker setMarkerColor "colorBLACK";
 
         if (_i > 0 ) then {
 
@@ -165,10 +167,10 @@ dyn_draw_phase_lines = {
 
             _lineMarkerPhase = createMarker [format ["Right%1", random 3], _phaseMidPoint];
             _lineMarkerPhase setMarkerShape "RECTANGLE";
-            _lineMarkerPhase setMarkerSize [8, _phaseMidDistance / 2];
+            _lineMarkerPhase setMarkerSize [4, _phaseMidDistance / 2];
             _lineMarkerPhase setMarkerDir _phaseMidDir;
             _lineMarkerPhase setMarkerBrush "SolidFull";
-            _lineMarkerPhase setMarkerColor "colorBlack";
+            _lineMarkerPhase setMarkerColor "colorBLACK";
         };
     };
 };
@@ -404,7 +406,7 @@ dyn_main_setup = {
 
         _startPos = [[_startPair#0], ["water"]] call BIS_fnc_randomPos;
 
-        _startRoad = [_startPos, 1000, ["TRAIL", "TRACK", "HIDE"]] call dyn_nearestRoad;
+        _startRoad = [_startPos, 500, ["TRAIL", "TRACK", "HIDE"]] call dyn_nearestRoad;
         if (isNull _startRoad) then {
             _startRoad = [_startPos, 2000] call dyn_nearestRoad;
         };
@@ -431,7 +433,7 @@ dyn_main_setup = {
             _loc = nearestLocation [_pos, "NameVillage"];
             if ((_pos distance2D (getPos _loc)) < 2500) then {
                 _valid = {
-                    if (((getPos _x) distance2D (getPos _loc)) < 3000) exitWith {false};
+                    if (((getPos _x) distance2D (getPos _loc)) < 4000) exitWith {false};
                     true 
                 } forEach dyn_locations;
                 if (_valid) then {dyn_locations pushBackUnique _loc};
@@ -439,7 +441,7 @@ dyn_main_setup = {
             _loc = nearestLocation [_pos, "NameCity"];
             if ((_pos distance2D (getPos _loc)) < 2500) then {
                 _valid = {
-                    if (((getPos _x) distance2D (getPos _loc)) < 3000) exitWith {false};
+                    if (((getPos _x) distance2D (getPos _loc)) < 4000) exitWith {false};
                     true 
                 } forEach dyn_locations;
                 if (_valid) then {dyn_locations pushBackUnique _loc};
@@ -447,7 +449,7 @@ dyn_main_setup = {
             _loc = nearestLocation [_pos, "NameCityCapital"];
             if ((_pos distance2D (getPos _loc)) < 2500) then {
                 _valid = {
-                    if (((getPos _x) distance2D (getPos _loc)) < 3000) exitWith {false};
+                    if (((getPos _x) distance2D (getPos _loc)) < 4000) exitWith {false};
                     true 
                 } forEach dyn_locations;
                 if (_valid) then {dyn_locations pushBackUnique _loc};
@@ -492,7 +494,7 @@ dyn_main_setup = {
 
     [(getpos (dyn_locations#0)) getdir player] call dyn_place_arty;
 
-    [_campaignDir, _endPos] call dyn_draw_phase_lines;
+    [_campaignDir, _endPos] spawn dyn_draw_phase_lines;
 
     [dyn_locations, getpos _startRoad, _campaignDir] spawn {
         params ["_locations", "_playerStart", "_campaignDir"];
@@ -572,16 +574,11 @@ dyn_main_setup = {
                 dyn_defense_active = false;
 
                 _dyn_defense_atkPos = getPos player;
-                _waitTime = 120;
+                private _waitTime = 180;
                 if (_i > 0) then {
                     _waitTime = 240;
                     _dyn_defense_atkPos = getPos (_locations#(_i - 1))
                 };
-                // _startDefense = true;
-                
-                // if (((random 1) > 0.6 and (_dyn_defense_atkPos distance2D (getPos _loc)) > 2000 and _i > 0) or _startDefense) then {
-
-                if (dyn_debug) then {_waitTime = 5};
                 [_dyn_defense_atkPos, getPos _loc, _waitTime] spawn dyn_defense;
                 sleep 5;
 
@@ -639,7 +636,7 @@ dyn_main_setup = {
 
             if (_midDefenses) then {
 
-                _defenseType = selectRandom ["ambush", "minefield"];
+                _defenseType = selectRandom ["minefield", "recon"];
 
                 // debug
                 // _defenseType = "ambush";
@@ -672,12 +669,11 @@ dyn_main_setup = {
                 _defenseType = selectRandom ["mobileTank", "recon", "minefield"];
 
                 // debug
-                _defenseType = "forest";
+                // _defenseType = "forest";
 
                 switch (_defenseType) do { 
                     case "mobileTank" : {[getPos _loc, _trg, _dir] spawn dyn_mobile_armor_defense};
                     case "recon" : {[getPos _loc, _trg, _dir] spawn dyn_recon_convoy};
-                    case "forest" : {[getPos _loc, _trg, _dir] spawn dyn_forest_defence_edge};
                     case "minefield" : {[(getPos _loc) getPos [[1300, 1700] call BIS_fnc_randomInt, _dir], 2000, _dir, true] spawn dyn_spawn_mine_field};
                     case "empty" : {};
                     default {}; 

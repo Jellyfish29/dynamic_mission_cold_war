@@ -1232,6 +1232,7 @@ dyn_spawn_intel_markers = {
     };
 
     dyn_intel_markers pushBack _intelMarker;
+    _intelMarker
 };
 
 
@@ -1249,4 +1250,5 @@ dyn_spawn_intel_markers_area = {
     _intelMarker setMarkerSize [_size, _size * _sizeYoff];
 
     dyn_intel_markers pushBack _intelMarker;
+    _intelMarker
 };

@@ -63,6 +63,35 @@ dyn_garbage_clear = {
     } forEach (allMissionObjects "StaticWeapon");
 };
 
+dyn_clear_obstacles = {
+    params ["_pos", "_radius"];
+    
+    {
+        if (!(canMove _x) or ({alive _x} count (crew _x)) <= 0) then {
+            deleteVehicle _x;
+        };
+    } forEach (vehicles select {(_x distance2D _pos) < _radius});
+
+    {
+         deleteVehicle _x;
+    } forEach (allDead select {(_x distance2D _pos) < _radius});
+    // remove Fences
+    {
+        deleteVehicle _x;
+    } forEach ((_pos nearObjects _radius) select {["fence", typeOf _x] call BIS_fnc_inString or ["barrier", typeOf _x] call BIS_fnc_inString or ["wall", typeOf _x] call BIS_fnc_inString or ["sand", typeOf _x] call BIS_fnc_inString});
+    // remove Bunkers
+    {
+        deleteVehicle _x;;
+    } forEach ((_pos nearObjects _radius) select {["bunker", typeOf _x] call BIS_fnc_inString});
+    // remove wire
+    {
+        deleteVehicle _x;
+    } forEach ((_pos nearObjects _radius) select {["wire", typeOf _x] call BIS_fnc_inString});
+    // kill trees
+    {
+        _x setDamage 1;
+    } forEach (nearestTerrainObjects [_pos, ["TREE", "SMALL TREE", "BUSH"], _radius, false, true]);
+};
 
 dyn_forget_targets = {
     params ["_units"];

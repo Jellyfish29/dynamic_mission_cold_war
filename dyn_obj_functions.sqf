@@ -14,7 +14,7 @@ dyn_mobile_armor_defense = {
     private _terrain = [_stagingPos getPos [500, _dir], _dir, 1500, 2000, _accuracy] call dyn_terrain_scan;
 
     // forest
-    if ((_terrain#0) > (_accuracy * _accuracy) * 0.25) exitWith {["_locPos", "_townTrg", "_dir"] spawn dyn_forest_defence};
+    if ((_terrain#0) > (_accuracy * _accuracy) * 0.25) exitWith {[_locPos, _townTrg, _dir] spawn dyn_recon_convoy};
     // town
     if ((_terrain#1) > (_accuracy * _accuracy) * 0.07) exitWith {};
     // water
@@ -117,8 +117,7 @@ dyn_recon_convoy = {
 };
 
 dyn_forest_defence_edge = {
-    params ["_locPos", "_endTrg", "_dir"];
-
+    params ["_locPos", "_dir", ["_amount", 2]];
 
     private _lineCenter = _locPos getPos [1000, _dir];
     private _watchPos = _locPos getPos [4000, _dir];
@@ -169,18 +168,18 @@ dyn_forest_defence_edge = {
         _offset = _offset + _offsetStep;
     };
 
-    if (count _forestPosEdge < 2) exitWith {
-        if (count _forestPosCenter > 3) then {
-            [_locPos, _endTrg, _dir, _forestPosCenter, _watchPos] spawn dyn_forest_defence_center;
-        } else {
-            [_locPos getPos [[1300, 1700] call BIS_fnc_randomInt, _dir], 2000, _dir, true] spawn dyn_spawn_mine_field;
-        };
+    if (count _forestPosEdge <= 0) exitWith {
+        // if (count _forestPosCenter > 3) then {
+            // [_locPos, _endTrg, _dir, _forestPosCenter, _watchPos] spawn dyn_forest_defence_center;
+        // } else {
+            // [_locPos getPos [[1300, 1700] call BIS_fnc_randomInt, _dir], 2000, _dir, true] spawn dyn_spawn_mine_field;
+        // };
     };
 
 
     _forestPosEdge = [_forestPosEdge, [], {(_x#0) distance2D ((_terrainGrid#50)#50)#0}, "ASCEND"] call BIS_fnc_sortBy;
 
-    if ((count _forestPosEdge) > 4) then {_forestPosEdge resize 4};
+    if ((count _forestPosEdge) > _amount) then {_forestPosEdge resize _amount};
 
     for "_j" from 0 to ([1, (count _forestPosEdge) - 1] call BIS_fnc_randomInt) do {
 
@@ -192,30 +191,11 @@ dyn_forest_defence_edge = {
         (leader _grp) setDir _dir;
         _grp enableDynamicSimulation true;
 
-        [_spawnPos getPos [30, _dir + 90], _dir, true, true, selectRandom dyn_standart_statics_atgm] call dyn_spawn_static_weapon;
+        if ((random 1) > 0.5) then {
+            [_spawnPos getPos [30, _dir + 90], _dir, true, true, selectRandom dyn_standart_statics_atgm] call dyn_spawn_static_weapon;
+        };
     };
-
 };
-
-dyn_forest_defence_center = {
-    params ["_locPos", "_endTrg", "_dir", "_forestPosCenter", "_watchPos"];
-
-    _forestPosCenter = [_forestPosCenter, [], {(_x#0) distance2D _watchPos}, "ASCEND"] call BIS_fnc_sortBy;
-
-    for "_j" from 0 to ([2, 3] call BIS_fnc_randomInt) do {
-
-        _spawnPos = (_forestPosCenter#_j)#0;
-        _spawnPos = _spawnPos getpos [30, _dir - 180];
-
-        _grp = [_spawnPos, east, dyn_standart_squad] call BIS_fnc_spawnGroup;
-        _grp setFormDir _dir;
-        (leader _grp) setDir _dir;
-        _grp enableDynamicSimulation true;
-
-        // [_spawnPos getPos [30, _dir + 90], _dir, true, true, selectRandom dyn_standart_statics_atgm] call dyn_spawn_static_weapon;
-    };   
-};
-
 
 dyn_town_defense = {
     params ["_aoPos", "_endTrg", "_dir"];
@@ -334,7 +314,7 @@ dyn_town_defense = {
     [getPos _aoPos, 2000, [1,2] call BIS_fnc_randomInt, _aoPos, _dir] spawn dyn_spawn_forest_patrol;
 
     // Forest Position
-    // [getPos _aoPos, 2000, 2, _aoPos, _dir] spawn dyn_spawn_forest_position;
+    [getPos _aoPos, _dir, [1, 2] call BIS_fnc_randomInt] spawn dyn_forest_defence_edge;
 
     // Bridge Defense
     [getPos _aoPos, 1500, 400, _watchPos] spawn dyn_spawn_bridge_defense;
@@ -398,11 +378,11 @@ dyn_defense = {
     // dyn_terrain = _terrain;
 
     // forest
-    if ((_terrain#0) > (_accuracy * _accuracy) * 0.25) exitWith {dyn_defense_active = false; hint "cancel"};
+    if ((_terrain#0) > (_accuracy * _accuracy) * 0.25) exitWith {dyn_defense_active = false};
     // town
-    if ((_terrain#1) > (_accuracy * _accuracy) * 0.07) exitWith {dyn_defense_active = false; hint "cancel"};
+    if ((_terrain#1) > (_accuracy * _accuracy) * 0.07) exitWith {dyn_defense_active = false};
     // water
-    if ((_terrain#2) > (_accuracy * _accuracy) * 0.025) exitWith {dyn_defense_active = false; hint "cancel"};
+    if ((_terrain#2) > (_accuracy * _accuracy) * 0.025) exitWith {dyn_defense_active = false};
 
     [west, format ["defTask%1", _atkPos], ["Deffensive", "Defend against Counter Attack", ""], _atkPos, "ASSIGNED", 1, true, "defend", false] call BIS_fnc_taskCreate;
 
@@ -413,8 +393,8 @@ dyn_defense = {
     _arrowMarker setMarkerColor "colorOPFOR";
     _arrowMarker setMarkerDir (_defPos getDir _atkPos);
 
-    [objNull, _defPos getPos [500, _defPos getdir _atkPos], "o_mech_inf", "Mech Btl.", "colorOPFOR", 0.8] call dyn_spawn_intel_markers;
-    [objNull, _defPos getPos [500, _defPos getdir _atkPos], "colorOpfor", 800] call dyn_spawn_intel_markers_area;
+    private _unitMarker = [objNull, _defPos getPos [500, _defPos getdir _atkPos], "o_mech_inf", "Mech Btl.", "colorOPFOR", 0.8] call dyn_spawn_intel_markers;
+    private _areaMarker = [objNull, _defPos getPos [500, _defPos getdir _atkPos], "colorOpfor", 800] call dyn_spawn_intel_markers_area;
 
     sleep _waitTime;
     // sleep 2;
@@ -424,17 +404,20 @@ dyn_defense = {
 
     sleep 10;
 
-    if (random 1 < 0.5) then {
-        [4, "heavy", true] spawn dyn_arty;
-        // [8, "rocket"] spawn dyn_arty;
-        [1, "rocketffe"] spawn dyn_arty;
-    }
-    else
-    {
-        [4, "heavy", true] spawn dyn_arty;
+    [6, "heavy", true] spawn dyn_arty;
+    [10] spawn dyn_arty;
+
         // [_defPos, _defPos getDir _atkPos] spawn dyn_air_attack;
-        [_defPos, _defPos getDir _atkPos, objNull, dyn_attack_plane] spawn dyn_air_attack;
-    };
+    _fireSupport = selectRandom [1,2,2,2,3,4,5,6];
+    switch (_fireSupport) do { 
+        case 1 : {[10, "rocket"] spawn dyn_arty}; 
+        case 2 : {[10] spawn dyn_arty};
+        case 3 : {[_locPos, _dir] spawn dyn_spawn_heli_attack};
+        case 4 : {[_locPos, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
+        case 5 : {[10, "rocketffe"] spawn dyn_arty};
+        case 6 : {[8, "balistic"] spawn dyn_arty};
+        default {}; 
+     };
 
     [_atkPos, _rearPos, 2, 3] spawn dyn_spawn_atk_complex;
 
@@ -472,4 +455,7 @@ dyn_defense = {
     dyn_defense_active = false;
 
     [format ["defTask%1", _atkPos], "SUCCEEDED", true] call BIS_fnc_taskSetState;
+
+    deleteMarker _unitMarker;
+    deleteMarker _areaMarker;
 };

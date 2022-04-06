@@ -260,7 +260,7 @@ dyn_continous_counterattack = {
         // _m = createMarker [str (random 1), getPos _activationTrg];
         // _m setMarkerType "mil_marker"; 
         waitUntil{sleep 1; triggerActivated _activationTrg};
-        sleep ([20, 80] call BIS_fnc_randomInt);
+        // sleep ([20, 80] call BIS_fnc_randomInt);
     };
 
 
@@ -269,27 +269,46 @@ dyn_continous_counterattack = {
         _westUnits = allUnits select {side _x == west};
         _westUnits = [_westUnits, [], {_x distance2D (getPos _endTrg)}, "ASCEND"] call BIS_fnc_sortBy;
         _atkPos = getPos (_westUnits#0);
+        private _rearDir = (getpos dyn_current_location) getdir (getPos dyn_next_location);
+        private _rearPos = (getPos _endTrg) getPos [2500, _rearDir + (selectRandom [10, -10])];
 
-        _atkType = selectRandom [0,0,1,1,1,2,2,3,3];
-
+        _atkType = selectRandom [-1,-1,0,0,0,1,1,1,2,2,3,3,4];
+        _atkType = 4;
         switch (_atkType) do {
+            case -1 : {}; 
             case 0 : {
-                [objNull, _atkPos, _rearPos, 2, 2] spawn dyn_spawn_atk_simple;
+                _fireSupport = selectRandom [1,1,1,2,2,3,3,4,4,5,6];
+                switch (_fireSupport) do { 
+                    case 1 : {[8, "rocket"] spawn dyn_arty}; 
+                    case 2 : {[8] spawn dyn_arty};
+                    case 3 : {[_locPos, _dir] spawn dyn_spawn_heli_attack};
+                    case 4 : {[_locPos, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
+                    case 5 : {[8, "rocketffe"] spawn dyn_arty};
+                    case 6 : {[8, "balistic"] spawn dyn_arty};
+                    default {}; 
+                 }; 
             };  
             case 1 : {
-                _rearPos = (getPos _endTrg) getPos [1000, _dir + (selectRandom [90, -90])];
-                // [objNull, _atkPos, _rearPos, 2, 3, 0, false, dyn_standart_light_amored_vics, 0, [false, 100], true, false] spawn dyn_spawn_counter_attack;
-                [_atkPos, _rearPos, 2, 1, false, [dyn_standart_light_amored_vic]] spawn dyn_spawn_atk_complex;
+                if (((getPos dyn_current_location) distance2D (getPos dyn_next_location)) < 3500) then {
+                    _rearPos = (getPos dyn_next_location) getPos [500, (_rearDir + (selectRandom [20, -20])) - 180];
+                };
+                [_atkPos, _rearPos, 2, 0, false, [dyn_standart_light_amored_vic]] spawn dyn_spawn_atk_complex;
             }; 
             case 2 : {
-                _rearPos = (getPos _endTrg) getPos [1000, _dir + (selectRandom [90, -90])];
-                // [objNull, _atkPos, _rearPos, 2, 2, 0, false, dyn_standart_combat_vehicles , 0, [false, 100], true, false] spawn dyn_spawn_counter_attack;
+                if (((getPos dyn_current_location) distance2D (getPos dyn_next_location)) < 3500) then {
+                    _rearPos = (getPos dyn_next_location) getPos [500, (_rearDir + (selectRandom [20, -20])) - 180];
+                };
                 [_atkPos, _rearPos, 2, 1, false] spawn dyn_spawn_atk_complex;
             };
             case 3 : {
-                _rearPos = (getPos _endTrg) getPos [1000, _dir + (selectRandom [90, -90])];
-                // [objNull, _atkPos, _rearPos, 2, 2, 0, true, [dyn_standart_MBT], 0, [false, 100], true, false] spawn dyn_spawn_counter_attack
+                if (((getPos dyn_current_location) distance2D (getPos dyn_next_location)) < 3500) then {
+                    _rearPos = (getPos dyn_next_location) getPos [500, (_rearDir + (selectRandom [20, -20])) - 180];
+                };
                 [_atkPos, _rearPos, 2, 2, false] spawn dyn_spawn_atk_complex;
+            };
+            case 4 : {
+                _rearPos = (getPos _endTrg) getPos [1500, _rearDir + (selectRandom [10, -10])];
+                [objNull, _atkPos, _rearPos, 3, 1, true] spawn dyn_spawn_atk_simple;
             };
             default {}; 
          }; 

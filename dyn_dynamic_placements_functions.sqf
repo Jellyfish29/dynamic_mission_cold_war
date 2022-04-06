@@ -419,6 +419,18 @@ dyn_spawn_atk_simple = {
         };
     };
 
+    [] spawn {
+        sleep 120;
+        _fireSupport = selectRandom [0,0,0,1,1,1,2,2,2,3];
+            switch (_fireSupport) do {
+            case 0 : {[10, "light"] spawn dyn_arty};
+            case 1 : {[8, "rocket"] spawn dyn_arty}; 
+            case 2 : {[10] spawn dyn_arty};
+            case 3 : {[10, "rocketffe"] spawn dyn_arty};
+            default {}; 
+         };
+    };
+
     private _allGrps = _infGrps + _tankGrps;
 
     waitUntil {sleep 1; ({alive (leader _x)} count _allGrps) < (round ((count _allGrps) * 0.33))};
@@ -439,9 +451,9 @@ dyn_spawn_atk_complex = {
     //recon -> artillery -> main attack -> retreat / artillery
 
     private _targetRoad = [_atkPos, 1000] call BIS_fnc_nearestRoad;
-    private _rearRoad = [_startPos, 600, ["TRAIL", "TRACK", "HIDE"]] call dyn_nearestRoad;
+    private _rearRoad = [_rearPos, 600, ["TRAIL", "TRACK", "HIDE"]] call dyn_nearestRoad;
     if (isNull _rearRoad) then {
-        _rearRoad = [_startPos, 2000] call dyn_nearestRoad;
+        _rearRoad = [_rearPos, 4000] call dyn_nearestRoad;
     };
 
     // _m = createMarker [str (random 1), _targetRoad];
@@ -453,7 +465,7 @@ dyn_spawn_atk_complex = {
             private _reconInfGrp = [];
             private _road = _rearRoad;
             for "_i" from 0 to ([_tanks, _inf + _tanks] call BIS_fnc_randomInt) do {
-                _road = ((roadsConnectedTo _road) - [_road]) select 0;
+                _road = ([roadsConnectedTo _road, [], {(getpos _x) distance2D _atkPos}, "DESCEND"] call BIS_fnc_sortBy)#0;
                 _roadPos = getPos _road;
                 _info = getRoadInfo _road;    
                 _endings = [_info#6, _info#7];
@@ -515,7 +527,7 @@ dyn_spawn_atk_complex = {
         private _atkTanks = [];
         private _road = _rearRoad;
         for "_i" from 0 to _tanks do {
-            _road = ((roadsConnectedTo _road) - [_road]) select 0;
+            _road = ([roadsConnectedTo _road, [], {(getpos _x) distance2D _atkPos}, "DESCEND"] call BIS_fnc_sortBy)#0;
             _roadPos = getPos _road;
             _info = getRoadInfo _road;    
             _endings = [_info#6, _info#7];
@@ -532,7 +544,8 @@ dyn_spawn_atk_complex = {
 
         private _atkMech = [];
         for "_i" from 0 to _inf do {
-            _road = ((roadsConnectedTo _road) - [_road]) select 0;
+            // _conRoads = ((roadsConnectedTo _road) - [_road]);
+            _road = ([roadsConnectedTo _road, [], {(getpos _x) distance2D _atkPos}, "DESCEND"] call BIS_fnc_sortBy)#0;
             _roadPos = getPos _road;
             _info = getRoadInfo _road;    
             _endings = [_info#6, _info#7];
@@ -561,7 +574,7 @@ dyn_spawn_atk_complex = {
 
         sleep 10;
 
-        private _atkLeader = leader (([_atkColumn, [], {(leader _x) distance2D _atkPos}, "ASCEND"] call BIS_fnc_sortBy)#0);
+        private _atkLeader = leader (([_atkColumn, [], {(leader _x) distance2D _atkPos}, "DESCEND"] call BIS_fnc_sortBy)#0);
 
         waitUntil {sleep 1; ({alive (leader _x)} count _atkColumn) < (count _atkColumn) or ({(leader _x) distance2D (getpos _targetRoad) < 100} count _atkColumn) > 0};
 

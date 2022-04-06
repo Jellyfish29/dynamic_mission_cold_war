@@ -210,7 +210,7 @@ dyn_convoy = {
             _path = [_r1, _r2] call dyn_convoy_parth_find;
             _x setVariable ["dyn_convoy_path", _path];
         };
-    } forEach _groups; 
+    } forEach _groups;
 
     _groups = ([_groups, [], {count (_x getVariable "dyn_convoy_path")}, "ASCEND"] call BIS_fnc_sortBy);
 
@@ -219,52 +219,83 @@ dyn_convoy = {
     _convoyLeader = vehicle (leader _convoyLeaderGroup);
     _groups = ([_groups, [], {_convoyLeader distance2d (leader _x)}, "ASCEND"] call BIS_fnc_sortBy);
 
-    if ((_convoyLeaderGroup getVariable ["dyn_convoy_path", []]) isEqualTo []) exitWith {hint "oof"};
+    if ((_convoyLeaderGroup getVariable ["dyn_convoy_path", []]) isEqualTo []) exitWith {
+        {
+            _x addWaypoint [_dest, 20];
+            _x setBehaviour "SAFE";
+        } forEach _groups;
+    };
 
+    private _bridges = [];
+    private _destroyedBridges = [];
+
+    {
+        _info = getRoadInfo _x;
+        if (_info#8) then {
+            if ((getDammage _x) < 1) then {
+                _bridges pushBackUnique _x;
+            } else {
+                _destroyedBridges pushBackUnique _x;
+            };
+        };
+    } forEach (_convoyLeaderGroup getVariable "dyn_convoy_path");
+
+    private _ppMarkers = [];
     private _passigPoints = [[0,0,0]];
     _noPPn = 0;
-    for "_p" from  0 to count (_convoyLeaderGroup getVariable "dyn_convoy_path") - 1 do {
+    for "_p" from 0 to count (_convoyLeaderGroup getVariable "dyn_convoy_path") - 1 do {
         private _r = (_convoyLeaderGroup getVariable "dyn_convoy_path")#_p;
-        if (count (roadsConnectedTo _r) > 2) then {
-            _valid = {
-                if (_x distance2D _r < 50) exitWith {false};
-                true
-            } forEach _passigPoints;
-            if (_valid) then {
-                _passigPoints pushBackUnique (getPosATL _r);
-                _noPPn = 0;
-            };
-        } else {
-            if (_p > 0) then {
-                if (((getRoadInfo _r)#0) != (getRoadInfo ((_convoyLeaderGroup getVariable "dyn_convoy_path")#(_p - 1)))#0) then {
-                    _valid = {
-                        if (_x distance2D _r < 50) exitWith {false};
-                        true
-                    } forEach _passigPoints;
-                    if (_valid) then {
-                        _passigPoints pushBackUnique (getPosATL _r);
-                        _noPPn = 0;
-                    };
-                } else {
-                    if (_p > 1 and _p < (count (_convoyLeaderGroup getVariable "dyn_convoy_path") - 2)) then {
-                        _dir1 = ((_convoyLeaderGroup getVariable "dyn_convoy_path")#(_p - 1)) getDir _r;
-                        _dir2 = _r getDir ((_convoyLeaderGroup getVariable "dyn_convoy_path")#(_p + 1));
-                        _dirs = [_dir1, _dir2];
-                        _dirs sort false;
-                        if ((_dirs#0) - (_dirs#1) > 50) then {
-                            _valid = {
-                                if (_x distance2D _r < 80) exitWith {false};
-                                true
-                            } forEach _passigPoints;
-                            if (_valid) then {
-                                _passigPoints pushBackUnique (getPosATL _r);
-                                _noPPn = 0;
-                            };
-                        } else {
-                            _noPPn = _noPPn + 1;
-                            if (_noPPn > 20) then {
-                                _noPPn = 0;
-                                _passigPoints pushBackUnique (getPosATL _r);
+
+        private _nearBridge = false;
+        if !(_bridges isEqualTo []) then {
+            _nearBridge = {
+                if ((_x distance2D _r) < 50) exitWith {true};
+                false
+            } forEach _bridges;
+        };
+
+        if !(_nearBridge) then {
+            if (count (roadsConnectedTo _r) > 2) then {
+                _valid = {
+                    if (_x distance2D _r < 50) exitWith {false};
+                    true
+                } forEach _passigPoints;
+                if (_valid) then {
+                    _passigPoints pushBackUnique (getPosATL _r);
+                    _noPPn = 0;
+                };
+            } else {
+                if (_p > 0) then {
+                    if (((getRoadInfo _r)#0) != (getRoadInfo ((_convoyLeaderGroup getVariable "dyn_convoy_path")#(_p - 1)))#0) then {
+                        _valid = {
+                            if (_x distance2D _r < 50) exitWith {false};
+                            true
+                        } forEach _passigPoints;
+                        if (_valid) then {
+                            _passigPoints pushBackUnique (getPosATL _r);
+                            _noPPn = 0;
+                        };
+                    } else {
+                        if (_p > 1 and _p < (count (_convoyLeaderGroup getVariable "dyn_convoy_path") - 2)) then {
+                            _dir1 = ((_convoyLeaderGroup getVariable "dyn_convoy_path")#(_p - 1)) getDir _r;
+                            _dir2 = _r getDir ((_convoyLeaderGroup getVariable "dyn_convoy_path")#(_p + 1));
+                            _dirs = [_dir1, _dir2];
+                            _dirs sort false;
+                            if ((_dirs#0) - (_dirs#1) > 50) then {
+                                _valid = {
+                                    if (_x distance2D _r < 80) exitWith {false};
+                                    true
+                                } forEach _passigPoints;
+                                if (_valid) then {
+                                    _passigPoints pushBackUnique (getPosATL _r);
+                                    _noPPn = 0;
+                                };
+                            } else {
+                                _noPPn = _noPPn + 1;
+                                if (_noPPn > 20) then {
+                                    _noPPn = 0;
+                                    _passigPoints pushBackUnique (getPosATL _r);
+                                };
                             };
                         };
                     };
@@ -306,6 +337,7 @@ dyn_convoy = {
 
                 // _vic setDriveOnPath (_group getVariable "dyn_convoy_path");
 
+                sleep 2;
                 _ppidx = 0;
                 private _startReset = false;
                 private _forward = vehicle (leader (_groups#(_i - 1)));
@@ -347,7 +379,8 @@ dyn_convoy = {
                     if (_distance > 40 and (speed _vic) < 8) then {
                         _vic limitSpeed 1000;
                     };
-                    if ((speed _vic) <= 3) then {
+                    if ((speed _vic) <= 5) then {
+                        [getPos _vic, 20] call dyn_clear_obstacles;
                         _time = time + 10;
                         if !(_startReset) then {
                             _time = time + 5;
@@ -357,7 +390,6 @@ dyn_convoy = {
                         if (((speed _vic) <= 3) and (_group getVariable ["dyn_in_convoy", true]) and (speed _forward) >= 5 and alive _vic) then {
                             doStop _vic;
                             sleep 0.3;
-                            [getPos _vic, 20] call pl_clear_obstacles;
                             _group setBehaviour "CARELESS";
                             // _vic setVariable ["pl_phasing", true];
                             _r0 = [getpos _vic, 100,[]] call BIS_fnc_nearestRoad;
@@ -384,6 +416,8 @@ dyn_convoy = {
                 params ["_group" , "_vic", "_convoyLeader", "_groups", "_i", "_convoyLeaderGroup", "_r2", "_passigPoints"];
                 private ["_ppidx"];
 
+                sleep 2;
+
                 private _dest = getPos ((_convoyLeaderGroup getVariable "dyn_convoy_path")#((count (_convoyLeaderGroup getVariable "dyn_convoy_path")) - 1));
 
                 while {(_convoyLeaderGroup getVariable ["dyn_in_convoy", false]) and (vehicle (leader _convoyLeaderGroup)) distance2D _dest > 40} do {
@@ -406,7 +440,8 @@ dyn_convoy = {
                         _vic setDestination [(_passigPoints#_ppidx),"VEHICLE PLANNED" , true];
                     };
 
-                    if ((speed _vic) <= 3) then {
+                    if ((speed _vic) <= 5) then {
+                        [getPos _vic, 20] call dyn_clear_obstacles;
                         _time = time + 10;
                         waitUntil {sleep 0.5; speed _vic > 5 or time > _time or !(_group getVariable ["dyn_in_convoy", true])};
                         if ((speed _vic) <= 3 and (_group getVariable ["dyn_in_convoy", true]) and alive _vic) then {
@@ -478,7 +513,7 @@ dyn_convoy_parth_find = {
                 // _returnPath pushback getPos _parent;
                 _allRoads pushBackUnique _parent;
                 _parent = _dummyGroup getVariable ("NF_neighborParent_" + str _parent);
-                // pl_convoy_path_marker pushBack _marker;
+                // dyn_convoy_path_marker pushBack _marker;
             };
         };
         _openSet = _openSet - [_current];
