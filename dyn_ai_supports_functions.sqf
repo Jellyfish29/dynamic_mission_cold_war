@@ -199,6 +199,7 @@ dyn_arty = {
         if !(isNil "_eh") then {
             _x removeEventHandler ["Fired", _eh];
         };
+        _x setVehicleAmmo 1;
     } forEach _gunArray;
 };
 
@@ -229,6 +230,8 @@ dyn_spawn_harresment_arty = {
 dyn_continous_support = {
     params ["_activationTrg", "_endTrg", "_dir"];
 
+    if (isNull dyn_next_location) exitWith {hint "no next loc"};
+
     if !(isNull _activationTrg) then {
         waitUntil{sleep 1; triggerActivated _activationTrg};
         sleep ([10, 40] call BIS_fnc_randomInt);
@@ -240,11 +243,11 @@ dyn_continous_support = {
 
         switch (_fireSupport) do {
             case 0 : {}; 
-            case 1 : {[4, "light"] spawn dyn_arty}; 
-            case 2 : {[3, "heavy"] spawn dyn_arty};
+            case 1 : {[5, "light"] spawn dyn_arty}; 
+            case 2 : {[4, "heavy"] spawn dyn_arty};
             case 3 : {[getPos _endTrg, _dir, objNull] spawn dyn_air_attack};
             case 4 : {[getPos _endTrg, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
-            case 5 : {[2, "rocket"] spawn dyn_arty};
+            case 5 : {[6, "rocket"] spawn dyn_arty};
             default {}; 
          }; 
         sleep ([200, 400] call BIS_fnc_randomInt);
@@ -255,6 +258,7 @@ dyn_continous_support = {
 dyn_continous_counterattack = {
     params ["_activationTrg", "_endTrg", "_dir"];
 
+    if (isNull dyn_next_location) exitWith {hint "no next loc"};
 
     if !(isNull _activationTrg) then {
         // _m = createMarker [str (random 1), getPos _activationTrg];
@@ -318,11 +322,10 @@ dyn_continous_counterattack = {
 };
 
 dyn_spawn_mine_field = {
-    params ["_startPos", "_length", "_dir", ["_isObj", false]];
+    params ["_startPos", "_length", "_dir", ["_isObj", false], ["_mineSpacing", 20]];
 
 
     private _allMines = [];
-    private _mineSpacing = 20;
     for "_j" from 0 to 2 do {
         _startPos = _startPos getPos [20, _dir - 180];
         _minesAmount = round (_length / _mineSpacing);
@@ -342,7 +345,7 @@ dyn_spawn_mine_field = {
             // _m = createMarker [str (random 5), _minePos];
             // _m setMarkerType "mil_dot";
         };
-        _mineSpacing = _mineSpacing - 4;
+        _mineSpacing = _mineSpacing * 0.66;
     };
 
     [_allMines, _startPos, _dir, _length, _isObj] spawn {

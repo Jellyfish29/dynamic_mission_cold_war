@@ -979,3 +979,69 @@ dyn_ambush = {
          }; 
     };
 };
+
+dyn_spawn_observation_post = {
+    params ["_townTrg", "_dir"];
+
+    _opPos = (getPos _townTrg) getPos [[600, 800] call BIS_fnc_randomInt, _dir];
+    _opPos = ((selectBestPlaces [_opPos, 300, "meadow + 2*forest", 100, 1])#0)#0;
+
+    // //debug
+    // _m = createMarker [str (random 1), _opPos];
+    // _m setMarkerType "mil_dot";
+
+    _grp = createGroup [east, true];
+    _grp setVariable ["pl_not_recon_able", true];
+    {    
+        _s = _grp createUnit [_x, _opPos, [], 0, "NONE"];
+        _s disableAI "PATH"; 
+        _s setUnitPos "MIDDLE";
+        _s setDir _dir;
+        _s enableDynamicSimulation true;
+        _bPos = _s getPos [10, _dir];
+        for "_i" from 0 to 1 do {
+            _bush = (selectRandom dyn_bushes) createVehicle _bPos;
+            _bush setDir ([0, 360] call BIS_fnc_randomInt);
+        };
+    } forEach [dyn_standart_mg, dyn_standart_at_soldier];
+
+    [_grp, _dir, 2, false] call dyn_line_form_cover;
+
+    _sPos = _opPos getPos [2, _dir];
+    _sCover =  "land_gm_sandbags_01_wall_01" createVehicle _sPos;
+    _sCover setDir _dir; 
+
+    _tNetPos = _opPos getPos [6, _dir];
+    _tNet = "land_gm_camonet_01_nato" createVehicle _tNetPos;
+    _tNet allowDamage false;
+    _tNet setDir (_dir - 90);
+    _tNet setPos ((getPos _tNet) vectorAdd [0,0,-2.7]);
+
+    _trgPos = (getPos _townTrg) getPos [1300, _dir];
+    private _atkTrg = createTrigger ["EmptyDetector", _trgPos, true];
+    _atkTrg setTriggerActivation ["WEST", "PRESENT", false];
+    _atkTrg setTriggerStatements ["this", " ", " "];
+    _atkTrg setTriggerArea [2500, 65, _dir, true, 30];
+
+    // //debug
+    // _m = createMarker [str (random 1), _trgPos];
+    // _m setMarkerType "mil_dot";
+
+    [_atkTrg, getPos _townTrg, _dir] spawn {
+        params ["_atkTrg", "_locPos", "_dir"];
+        _rearPos = _locPos getPos [1800, _dir - 180];
+
+        waitUntil{sleep 1; triggerActivated _atkTrg};
+
+        _fireSupport = selectRandom [1,2,2,3,3,3,4,4,4,4];
+        // _fireSupport = 2;
+
+        switch (_fireSupport) do {
+            case 1 : {[_locPos, _locPos getDir _atkTrg, objNull, dyn_attack_plane] spawn dyn_air_attack;};
+            case 2 : {[4] spawn dyn_arty};
+            case 3 : {[2] spawn dyn_arty};
+            case 4 : {};
+            default {}; 
+         }; 
+    };
+};

@@ -710,4 +710,135 @@ dyn_attack_nearest_enemy = {
     } forEach _grps;
 };
 
+dyn_opfor_reset = {
+    params ["_grp"];
 
+    _grp setvariable ["pl_opf_in_pos", false];
+    {
+        _unit = _x;
+        // if ((currentCommand _unit) isEqualTo "SUPPORT") then {
+        //     [_unit] spawn pl_hard_reset;
+        // };
+        if !(_grp getVariable ["pl_on_hold", false]) then {_unit enableAI "PATH"};
+        _unit enableAI "AUTOCOMBAT";
+        _unit enableAI "AUTOTARGET";
+        _unit enableAI "TARGET";
+        _unit enableAI "SUPPRESSION";
+        _unit enableAI "COVER";
+        _unit enableAI "ANIM";
+        _unit enableAI "FSM";
+        _unit enableAI "AIMINGERROR";
+        _unit enableAI "WEAPONAIM";
+        _unit setUnitPos "AUTO";
+        _unit setUnitTrait ["camouflageCoef", 1, true];
+        _unit setVariable ["pl_damage_reduction", false];
+        // sleep 0.5;
+        _unit doWatch objNull;
+        _unit allowDamage true;
+        if (vehicle _unit == _unit) then {
+            _unit doFollow (leader _grp);
+        };
+    } forEach (units _grp);
+
+    _leader = leader _grp;
+    (units _grp) joinSilent _grp;
+    _grp selectLeader _leader;
+
+    [_grp, (currentWaypoint _grp)] setWaypointType "MOVE";
+    [_grp, (currentWaypoint _grp)] setWaypointPosition [getPosASL (leader _grp), -1];
+    sleep 0.1;
+    deleteWaypoint [_grp, (currentWaypoint _grp)];
+    for "_i" from count waypoints _grp - 1 to 0 step -1 do {
+        deleteWaypoint [_grp, _i];
+    };
+};
+
+dyn_opfor_join_grp = {
+    params ["_grp", "_side"];
+
+    private _targets = (((getPos (leader _grp)) nearEntities [["Man"], 300]) select {side _x == _side and ((group _x) getVariable ["pl_opf_task", "advance"]) != "flanking"});
+    _targets = _targets - (units _grp);
+    private _target = ([_targets, [], {(leader _grp) distance2D _x}, "ASCEND"] call BIS_fnc_sortBy)#0;
+    if !(isNil "_target") exitWith {
+        private _targetGrp = group _target;
+        {
+            if (alive _x) then {
+                [_x] joinSilent _targetGrp;
+                _x enableAI "PATH";
+                _x disableAI "AUTOCOMBAT";
+                _x setBehaviour "AWARE";
+                _x setUnitPos "AUTO";
+                _x doFollow (leader _targetGrp);
+            };
+        } forEach (units _grp);
+        true
+    };
+    false
+};
+
+dyn_opfor_pow_pos = getPos player;
+
+dyn_opfor_surrender = {
+    params ["_grp"];
+
+    sleep 5;
+
+    [_grp] spawn dyn_opfor_reset;
+
+    if (vehicle (leader _grp) != leader _grp) then {
+        _grp leaveVehicle (vehicle (leader _grp));
+    };
+
+    _surrenderGrp = createGroup [civilian , true];
+
+    {
+        if (alive _x) then {
+            [_x] joinSilent _surrenderGrp;
+            _x setCaptive true;
+            removeAllWeapons _x;
+            _x disableAI "PATH";
+            _x setUnitPos "DOWN";
+            _x enableDynamicSimulation true;
+            // [_x] spawn {
+            //  sleep 5;
+            //  (_this#0) playActionNow selectRandom ["agonyStart", "surrender"];
+            // };
+        };
+    } forEach (units _grp) ;
+    _surrenderGrp setBehaviour "CARELESS";
+    _surrenderGrp setSpeedMode "LIMITED";
+
+    // sleep 80;
+
+    waitUntil {sleep 5; !((((getPos (leader _surrenderGrp)) nearEntities [["Man", "Tank", "Car"], 120]) select {side _x == playerSide}) isEqualto [])};
+
+    {
+
+        if (alive _x) then {
+            [_x] spawn {
+                (_this#0) setUnitPos "MIDDLE";
+                sleep 3;
+                (_this#0) playActionNow "surrender";
+            };
+            sleep 0.5 + (random 2);
+        };
+    } forEach (units _surrenderGrp) ;
+
+    waitUntil {sleep 5; !((((getPos (leader _surrenderGrp)) nearEntities [["Man", "Tank", "Car"], 10]) select {side _x == playerSide}) isEqualto [])};
+
+    {
+        _x forceSpeed 1;
+        _x enableAI "PATH";
+        _x switchMove "";
+        _x setUnitPos "UP";
+        _x doMove dyn_opfor_pow_pos;
+    } forEach (units _surrenderGrp);
+    _surrenderGrp addWaypoint [dyn_opfor_pow_pos , 100];
+
+    waitUntil {sleep 10; (leader _surrenderGrp) distance2D dyn_opfor_pow_pos < 100 or ({alive _x} count (units _surrenderGrp)) <= 0};
+
+    {
+        deleteVehicle _x;
+    } forEach (units _surrenderGrp);
+    deleteGroup _surrenderGrp;
+};

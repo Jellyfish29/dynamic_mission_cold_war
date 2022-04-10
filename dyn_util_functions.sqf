@@ -20,11 +20,14 @@ dyn_get_turn_vehicle = {
 };
 
 dyn_garbage_clear = {
+    params [["_now", false]];
 
-    sleep 240;
+    if !(_now) then {
+        sleep 240;
+    };
 
     {
-        if (side _x != playerSide and !(_x getVariable ["dyn_dont_delete", false])) then {
+        if ((_x distance2D player) > 500 and side _x != playerSide and !(_x getVariable ["dyn_dont_delete", false])) then {
             deleteVehicle _x;
         };
     } forEach allDeadMen; 
@@ -49,9 +52,11 @@ dyn_garbage_clear = {
     sleep 1;
     _deadVicLimiter = 0;
     {
-        if ((_x distance2D player) > 2000 and _deadVicLimiter <= 10 and !(_x getVariable ["dyn_dont_delete", false])) then {
+        if ((_x distance2D player) > 500 and _deadVicLimiter <= 10 and !(_x getVariable ["dyn_dont_delete", false])) then {
             deleteVehicle _x;
             _deadVicLimiter = _deadVicLimiter + 1;
+        } else {
+            _x enableSimulation false; 
         };
     } forEach (allDead - allDeadMen);
 
@@ -61,6 +66,16 @@ dyn_garbage_clear = {
             deleteVehicle _x;
         };
     } forEach (allMissionObjects "StaticWeapon");
+};
+
+dyn_garbage_loop = {
+  
+   while {true} do {
+
+
+        sleep 900;
+        [true] spawn dyn_garbage_clear;
+   };
 };
 
 dyn_clear_obstacles = {
@@ -199,11 +214,47 @@ dyn_nearestRoad = {
     private ["_return"];
 
     private _roads = _center nearRoads _radius;
-    _validRoads = _roads select {!(((getRoadInfo _x)#0) in _blackList)};
+    _validRoads = _roads select {!(((getRoadInfo _x)#0) in _blackList) and !((getRoadInfo _x)#2)};
     _return = ([_validRoads, [], {(getpos _x) distance2D _center}, "ASCEND"] call BIS_fnc_sortBy)#0;
     if (isNil "_return") then {_return = objNull};
 
     _return
+};
+
+dyn_find_highest_point = {
+    params ["_center", "_radius", ["_uDir", 0]];
+
+    private _scanStart = (_center getPos [_radius / 2, _uDir]) getPos [_radius / 2, _uDir + 90];
+    private _widthOffSet = 0;
+    private _heigthOffset = 0;
+    private _maxZ = 0;
+    private _r = _center;
+    for "_i" from 0 to 100 do {
+        _heigthOffset = 0;
+        _scanPos = _scanStart getPos [_widthOffSet, _uDir - 180];
+        for "_j" from 0 to 100 do {
+            _checkPos = _scanPos getPos [_heigthOffset, _uDir - 90];
+            _checkPos = ATLToASL _checkPos;
+
+            // _m = createMarker [str (random 1), _checkPos];
+   //       _m setMarkerType "mil_dot";
+   //       _m setMarkerSize [0.3, 0.3];
+
+            _z = _checkPos#2;
+            if (_z > _maxZ) then {
+                _r = _checkPos;
+                _maxZ = _z;
+            };
+            _heigthOffset = _heigthOffset + (_radius / 100);
+        };
+        _widthOffSet = _widthOffSet + (_radius / 100);
+    };
+
+    // _m = createMarker [str (random 1), _r];
+    // _m setMarkerColor "colorGreen";
+    // _m setMarkerType "mil_dot";
+    ASLToATL _r;
+    _r
 };
 
 dyn_terrain_scan = {
@@ -265,3 +316,4 @@ dyn_terrain_scan = {
 };
 
 // [getpos player, 0] spawn dyn_terrain_scan;
+

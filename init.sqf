@@ -56,6 +56,6 @@ pl_arty_enabled = false;
 
 pl_cas_Heli_1 = "cwr3_b_ah1f";
 pl_medevac_Heli_1 = "cwr3_b_uh1_mev";
-pl_cas_plane_1 = "cwr3_b_a10";
-pl_cas_plane_2 = "cwr3_b_a10";
-pl_cas_plane_3 = "cwr3_b_a10";
+pl_cas_plane_1 = "RHS_A10";
+pl_cas_plane_2 = "RHS_A10";
+pl_cas_plane_3 = "RHS_A10";

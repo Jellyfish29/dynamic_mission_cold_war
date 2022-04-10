@@ -722,162 +722,7 @@ dyn_spawn_bridge_defense = {
     // _marker3 setMarkerColor "colorYellow";
 };
 
-dyn_defended_side_towns = [];
-dyn_all_side_town_guards = [];
 
-dyn_spawn_side_town_guards = {
-    params ["_endTrg", "_pos", "_area", "_searchPos", ["_limit", 1]];
-    private ["_taskname", "_endTrg"];
-
-    _mainLoc =  nearestLocation [_pos, ""];
-    _locs = nearestLocations [_searchPos, ["NameVillage", "NameCity", "NameCityCapital"], _area];
-    private _validLocs = [];
-    private _allGrps = [];
-    {
-        if !(_x in dyn_locations) then {
-            if (((getpos _x) distance2D player) > 700) then {
-                _validLocs pushBackUnique _x;
-                
-                dyn_defended_side_towns pushBackUnique _x;
-            };
-        };
-    } forEach (_locs - [_mainLoc]);
-
-    _friendlyLocs = nearestLocations [getPos player, ["NameVillage", "NameCity", "NameCityCapital"], 1500];
-    {
-        [objNull, (getPos _x) getPos [150, 0], "n_installation", "CIV", "ColorCivilian", 0.6] call dyn_spawn_intel_markers;
-        [getPos _x, 0, _endTrg, true] spawn dyn_ambiance_execute;
-    } forEach (_friendlyLocs - _validLocs - [_mainLoc]);
-
-    if !(_validLocs isEqualTo []) then {
-
-        _validLocs = [_validLocs, [], {(getPos _x) distance2D _searchPos}, "ASCEND"] call BIS_fnc_sortBy;
-        private _n = 0;
-        {
-            [getPos _x, 0, _endTrg] spawn dyn_ambiance_execute;
-            private _validBuildings = [];
-            private _buildings = nearestObjects [(getPos _x), ["house"], 400];
-            {
-                if (count ([_x] call BIS_fnc_buildingPositions) >= 8) then {
-                    _validBuildings pushBack _x;
-                };
-            } forEach _buildings;
-
-            _validBuildings = [_validBuildings, [], {_x distance2D (getPos player)}, "ASCEND"] call BIS_fnc_sortBy;
-
-            _dir = (getPos _x) getDir player;
-
-            if (_n < _limit) then {
-
-                [objNull, getPos _x, "o_recon", "RecPlt.", "colorOPFOR"] call dyn_spawn_intel_markers;
-
-                private _qrfTrg = createTrigger ["EmptyDetector", getPos _x , true];
-                _qrfTrg setTriggerActivation ["WEST", "PRESENT", false];
-                _qrfTrg setTriggerStatements ["this", " ", " "];
-                _qrfTrg setTriggerArea [300, 300, _dir, true, 30];
-
-                _amount = [0,1] call BIS_fnc_randomInt;
-                if (type _x == "NameCityCapital") then {
-                    _amount = [2, 4] call BIS_fnc_randomInt;
-                };
-                for "_i" from 0 to _amount do {
-                    _grp = [getPos _x, east, dyn_standart_fire_team] call BIS_fnc_spawnGroup;
-                    _grp enableDynamicSimulation true;
-                    dyn_all_side_town_guards pushBack _grp;
-                    _buildingIdx = [0, 7] call BIS_fnc_randomInt;
-                    [_validBuildings#_buildingIdx, _grp, _dir] spawn dyn_garrison_building;
-                    _allGrps pushBack _grp;
-                };
-
-                _buildingIdx = [0,6] call BIS_fnc_randomInt;
-                if ((random 1) > 0.5) then {
-                    _vicGrp = [getPos (_validBuildings#_buildingIdx), 60, true, true] spawn dyn_spawn_dimounted_inf;
-                    dyn_all_side_town_guards pushBack _vicGrp;
-                    _allGrps pushBack _vicGrp;
-                } 
-                else
-                {
-                    _vicGrp = [getPos (_validBuildings#_buildingIdx), 60, false, false] spawn dyn_spawn_dimounted_inf;
-                    dyn_all_side_town_guards pushBack _vicGrp;
-                    _allGrps pushBack _vicGrp;
-                };
-
-                if ((random 1) > 0.5) then {
-                    _grp = [getPos _x, 250, dyn_standart_light_amored_vics] call dyn_spawn_parked_vehicle;
-                };
-
-                if ((random 1) > 0.5) then {
-                    _vPos = [25 * (sin _dir), 25 * (cos _dir), 0] vectorAdd (getPos (_validBuildings#([0, 4] call BIS_fnc_randomInt)));
-                    _grp = [_vPos, selectRandom dyn_standart_light_amored_vics, _dir, true, true] call dyn_spawn_covered_vehicle;
-                };
-
-                if ((random 1) > 0.5) then {
-                    // CrossRoad
-                    [getPos _x, 400, 1] spawn dyn_crossroad_position;
-                };
-
-                if ((random 1) > 0.5) then {
-                    [_qrfTrg, getPos _x, (getPos _x) getpos [800, (getpos _x) getdir (getpos dyn_current_location)], 2, 2] spawn dyn_spawn_atk_simple;
-                };
-
-                [_validBuildings, [2, 3] call BIS_fnc_randomInt, _dir] call dyn_spawn_random_garrison;
-
-                if ((random 1) > 0.5) then {
-
-                    [_qrfTrg, getPos _x, 1000, [2, 3] call BIS_fnc_randomInt] spawn dyn_spawn_qrf;
-                };
-
-                if ((random 1) > 0) then {
-                    [getPos _x, 700, 1, _qrfTrg, _dir] spawn dyn_spawn_forest_patrol;
-                };
-
-                if ((random 1) > 0) then {
-                    [_qrfTrg, getPos (selectRandom _validBuildings)] spawn dyn_spawn_supply_convoy;
-                };
-
-                [getPos _x, _dir, _buildings, _qrfTrg, [0, 2] call BIS_fnc_randomInt] spawn dyn_town_at_defence;
-
-                [getPos _x, 200, _qrfTrg, [0, 1] call BIS_fnc_randomInt] spawn dyn_spawn_qrf_patrol;
-
-                _endTrg = createTrigger ["EmptyDetector", (getPos _x), true];
-                _endTrg setTriggerActivation ["WEST SEIZED", "PRESENT", false];
-                _endTrg setTriggerStatements ["this", " ", " "];
-                _endTrg setTriggerArea [400, 400, _dir, false, 30];
-                _endTrg setTriggerTimeout [30, 60, 120, false];
-                _taskname = format ["task_%1", random 1];
-
-                [west, _taskname, ["Offensive", format ["CLEAR %1", text _x], ""], getPos _x, "CREATED", 1, false, "attack", false] call BIS_fnc_taskCreate;
-            }
-            else
-            {
-                [_validBuildings, [1, 4] call BIS_fnc_randomInt, _dir] call dyn_spawn_random_garrison;
-                if ((random 1) > 0.8) then {
-                    // CrossRoad
-                    [getPos _x, 400, 1] spawn dyn_crossroad_position;
-                };
-                [objNull, (getPos _x) getPos [150, 0], "u_installation", "CIV", "ColorUNKNOWN", 0.6] call dyn_spawn_intel_markers;
-            };
-            _n = _n + 1;
-        } forEach _validLocs;
-
-        waitUntil {sleep 2; triggerActivated _endTrg};
-
-        [_taskname, "SUCCEEDED", true] call BIS_fnc_taskSetState;
-    };
-
-
-
-
-    // debug
-    // _i = 0;
-    // {
-    //     _m = createMarker [str (random 1), getPos _x];
-    //     _m setMarkerText str _i;
-    //     _m setMarkerType "mil_dot";
-    //     _i = _i + 1;
-    // } forEach _validLocs;
-
-};
 
 dyn_spawn_raod_block = {
     params ["_pos"];
@@ -990,72 +835,6 @@ dyn_spawn_random_garrison = {
     _rGrp setVariable ["pl_not_recon_able", true];
 };
 
-
-dyn_spawn_observation_post = {
-    params ["_townTrg", "_dir"];
-
-    _opPos = (getPos _townTrg) getPos [[600, 800] call BIS_fnc_randomInt, _dir];
-    _opPos = ((selectBestPlaces [_opPos, 300, "meadow + 2*forest", 100, 1])#0)#0;
-
-    // //debug
-    // _m = createMarker [str (random 1), _opPos];
-    // _m setMarkerType "mil_dot";
-
-    _grp = createGroup [east, true];
-    _grp setVariable ["pl_not_recon_able", true];
-    {    
-        _s = _grp createUnit [_x, _opPos, [], 0, "NONE"];
-        _s disableAI "PATH"; 
-        _s setUnitPos "MIDDLE";
-        _s setDir _dir;
-        _s enableDynamicSimulation true;
-        _bPos = _s getPos [10, _dir];
-        for "_i" from 0 to 1 do {
-            _bush = (selectRandom dyn_bushes) createVehicle _bPos;
-            _bush setDir ([0, 360] call BIS_fnc_randomInt);
-        };
-    } forEach [dyn_standart_mg, dyn_standart_at_soldier];
-
-    [_grp, _dir, 2, false] call dyn_line_form_cover;
-
-    _sPos = _opPos getPos [2, _dir];
-    _sCover =  "land_gm_sandbags_01_wall_01" createVehicle _sPos;
-    _sCover setDir _dir; 
-
-    _tNetPos = _opPos getPos [6, _dir];
-    _tNet = "land_gm_camonet_01_nato" createVehicle _tNetPos;
-    _tNet allowDamage false;
-    _tNet setDir (_dir - 90);
-    _tNet setPos ((getPos _tNet) vectorAdd [0,0,-2.7]);
-
-    _trgPos = (getPos _townTrg) getPos [1300, _dir];
-    private _atkTrg = createTrigger ["EmptyDetector", _trgPos, true];
-    _atkTrg setTriggerActivation ["WEST", "PRESENT", false];
-    _atkTrg setTriggerStatements ["this", " ", " "];
-    _atkTrg setTriggerArea [2500, 65, _dir, true, 30];
-
-    // //debug
-    // _m = createMarker [str (random 1), _trgPos];
-    // _m setMarkerType "mil_dot";
-
-    [_atkTrg, getPos _townTrg, _dir] spawn {
-        params ["_atkTrg", "_locPos", "_dir"];
-        _rearPos = _locPos getPos [1800, _dir - 180];
-
-        waitUntil{sleep 1; triggerActivated _atkTrg};
-
-        _fireSupport = selectRandom [1,2,2,3,3,3,4,4,4,4];
-        // _fireSupport = 2;
-
-        switch (_fireSupport) do {
-            case 1 : {[_locPos, _locPos getDir _atkTrg, objNull, dyn_attack_plane] spawn dyn_air_attack;};
-            case 2 : {[4] spawn dyn_arty};
-            case 3 : {[2] spawn dyn_arty};
-            case 4 : {};
-            default {}; 
-         }; 
-    };
-};
 
 dyn_crossroad_position = {
     params ["_pos", "_area", ["_limit", 4]];
@@ -1214,11 +993,81 @@ dyn_town_at_defence = {
 
 };
 
+dyn_forest_defence_edge = {
+    params ["_lineCenter", "_dir", ["_amount", 2], ["_lineWidth", 2000], ["_lineHeight", 1500], ["_accuracy", 100]];
+
+    private _watchPos = _lineCenter getPos [3000, _dir];
+    private _terrain = [_lineCenter, _dir, _lineWidth,_lineHeight, _accuracy] call dyn_terrain_scan;
+    
+    dyn_terrain = _terrain;
+    // forest
+    // if ((_terrain#0) < (_accuracy * _accuracy) * 0.15) exitWith {hint "cancel"};
+
+    private _lineStartPos = _lineCenter getPos [_lineWidth / 2, _dir - 90];
+    private _positionAmount = round (_accuracy * 0.2);
+    private _offsetStep = round (_accuracy / _positionAmount);
+    private _offset = 0;
+
+    private _terrainGrid = _terrain#3; 
+
+    private _forestPosEdge = [];
+    private _forestPosCenter = [];
+    private _ii = 0;
+    for "_i" from 1 to _positionAmount do {
+        _checkGridLine = _terrainGrid#_offset;
+
+        if (((_checkGridLine#0)#1) != "forest") then {
+            _ii = 0;
+            while {_ii < _accuracy - 1} do {
+
+                _checkPos = _checkGridLine#_ii;
+                if ((_checkPos#1) == "forest") exitWith {
+
+                    // _m = createMarker [str (random 4), _checkPos#0];
+                    // _m setMarkerType "mil_marker";
+                    // _m setMarkerColor "colorRed";
+
+                    _forestPosEdge pushBack [_checkPos#0, "edge"];
+                };
+                _ii = _ii + 1;
+            };
+        } else {
+            // _m = createMarker [str (random 4), (_checkGridLine#0)#0];
+            // _m setMarkerType "mil_marker";
+            // _m setMarkerColor "colorBlue";
+            _forestPosCenter pushBack [(_checkGridLine#0)#0, "center"];
+        };
+        _offset = _offset + _offsetStep;
+    };
+
+    if (count _forestPosEdge <= 0 or _amount <= 0) exitWith {};
+
+
+    _forestPosEdge = [_forestPosEdge, [], {(_x#0) distance2D ((_terrainGrid#(round (_accuracy / 2)))#(round (_accuracy / 2)))#0}, "ASCEND"] call BIS_fnc_sortBy;
+
+    if ((count _forestPosEdge) > _amount) then {_forestPosEdge resize _amount};
+
+    for "_j" from 0 to (count _forestPosEdge) - 1 do {
+
+        _spawnPos = (_forestPosEdge#_j)#0;
+        _spawnPos = _spawnPos getpos [30, _dir - 180];
+
+        _grp = [_spawnPos, east, dyn_standart_squad] call BIS_fnc_spawnGroup;
+        _grp setFormDir _dir;
+        (leader _grp) setDir _dir;
+        _grp enableDynamicSimulation true;
+
+        if ((random 1) > 0.5) then {
+            [_spawnPos getPos [30, _dir + 90], _dir, true, true, selectRandom dyn_standart_statics_atgm] call dyn_spawn_static_weapon;
+        };
+    };
+};
+
 
 dyn_intel_markers = [];
 
 dyn_spawn_intel_markers = {
-    params ["_trg", "_pos", "_type", "_text", ["_color", ""], ["_size", 0.7]];
+    params ["_trg", "_pos", "_type", "_text", ["_color", ""], ["_size", 0.7], ["_alpha", 1]];
 
     if !(isNull _trg) then { waitUntil {sleep 1; triggerActivated _trg}};
 
@@ -1227,6 +1076,7 @@ dyn_spawn_intel_markers = {
     _intelMarker setMarkerType _type;
     _intelMarker setMarkerSize [_size, _size];
     _intelMarker setMarkerText _text;
+    _intelMarker setMarkerAlpha _alpha;
     if !(_color isEqualTo "") then {
         _intelMarker setMarkerColor _color;
     };
