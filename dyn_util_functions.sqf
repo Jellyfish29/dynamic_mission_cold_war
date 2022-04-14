@@ -27,8 +27,12 @@ dyn_garbage_clear = {
     };
 
     {
-        if ((_x distance2D player) > 500 and side _x != playerSide and !(_x getVariable ["dyn_dont_delete", false])) then {
-            deleteVehicle _x;
+        if (side _x != playerSide and !(_x getVariable ["dyn_dont_delete", false])) then {
+            if ((_x distance2D player) > 500) then {
+                deleteVehicle _x;
+            } else {
+                _x enableSimulation false;
+            };
         };
     } forEach allDeadMen; 
 
@@ -71,8 +75,6 @@ dyn_garbage_clear = {
 dyn_garbage_loop = {
   
    while {true} do {
-
-
         sleep 900;
         [true] spawn dyn_garbage_clear;
    };

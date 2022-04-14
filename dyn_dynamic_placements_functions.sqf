@@ -95,9 +95,6 @@ dyn_retreat = {
 };
 
 
-
-
-
 dyn_spawn_delay_action = {
     params ["_defPos", "_allGrps", ["_trg", objNull], ["_distance", 400]];
 
@@ -383,6 +380,7 @@ dyn_spawn_atk_simple = {
                     deleteVehicle _x;
                 };
             } forEach (units _infGrp);
+            [_infGrp] call dyn_opfor_change_uniform_grp;
             private _step = (_vic distance2D _atkPos) / 3;
             _wpPos = getPos _vic;
             for "_j" from 1 to 3 do {
@@ -594,6 +592,7 @@ dyn_spawn_atk_complex = {
                     deleteVehicle _x;
                 };
             } forEach (units _infGrp);
+            [_infGrp] call dyn_opfor_change_uniform_grp;
         };
         [_atkColumn, getpos _targetRoad] spawn dyn_convoy;
 

@@ -424,6 +424,8 @@ dyn_main_setup = {
 
     dyn_locations = [];
 
+    [] spawn dyn_garbage_loop;
+
     private _dummygrp = createGroup [civilian, true];
 
     while {(count dyn_locations) < 3} do {
@@ -744,7 +746,7 @@ dyn_main_setup = {
                 deleteMarker _x;
             } forEach dyn_intel_markers;
 
-            [] spawn dyn_garbage_clear;
+            // [] spawn dyn_garbage_clear;
 
             [format ["task_%1", _i], "SUCCEEDED", true] call BIS_fnc_taskSetState;
 

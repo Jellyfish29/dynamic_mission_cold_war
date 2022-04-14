@@ -596,13 +596,13 @@ dyn_defense = {
 
     [_atkPos, _rearPos, [1, 2] call BIS_fnc_randomInt, [1, 2] call BIS_fnc_randomInt] spawn dyn_spawn_atk_complex;
 
-    _waves = [2, 4] call BIS_fnc_randomInt;
+    _waves = [3, 5] call BIS_fnc_randomInt;
     [objNull, _atkPos, _rearPos, [1, 2] call BIS_fnc_randomInt, [1, 2] call BIS_fnc_randomInt, true, [dyn_standart_light_amored_vic], dyn_standart_light_amored_vics - [dyn_standart_light_amored_vic]] spawn dyn_spawn_atk_simple;
 
     for "_i" from 1 to _waves do {
 
-        sleep 300;
-        [objNull, _atkPos, _rearPos, 0 + _i, 0 + _i, true] spawn dyn_spawn_atk_simple;
+        sleep 240;
+        [objNull, _atkPos, _rearPos, 1 + _i, 1 + _i, true] spawn dyn_spawn_atk_simple;
 
         _fireSupport = selectRandom [1,1,1,2,2,2,2,2,3,3];
         switch (_fireSupport) do { 
@@ -627,7 +627,7 @@ dyn_defense = {
 
     sleep 60;
 
-    [] spawn dyn_garbage_clear;
+    // [] spawn dyn_garbage_clear;
 
     dyn_defense_active = false;
 
