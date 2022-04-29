@@ -212,11 +212,37 @@ dyn_is_indoor = {
 };
 
 dyn_nearestRoad = {
-    params ["_center", "_radius", ["_blackList", []]];
+    params ["_center", "_radius", ["_blackList", []], ["_bridgeDistance", 25]];
     private ["_return"];
 
     private _roads = _center nearRoads _radius;
-    _validRoads = _roads select {!(((getRoadInfo _x)#0) in _blackList) and !((getRoadInfo _x)#2)};
+    private _bridges = [];
+    private _validRoads = [];
+
+    {
+        _info = getRoadInfo _x;
+        if (_info#8) then {
+            _bridges pushBackUnique _x;
+        };
+    } forEach _roads;
+
+    {
+        _road = _x;
+        _info = getRoadInfo _road;
+        if (!((_info#0) in _blackList) and !(_info#2)) then {
+            if (_bridges isEqualTo []) then {
+                _validRoads pushBack _road;
+            } else {
+                {
+                    if (((getpos _road) distance2D (getpos _x)) > _bridgeDistance) then {
+                        _validRoads pushBack _road;
+                    };
+                } forEach _bridges;
+            };
+        };
+    } forEach _roads;
+
+    // _validRoads = _roads select {!(((getRoadInfo _x)#0) in _blackList) and !((getRoadInfo _x)#2) and !(_x#8)};
     _return = ([_validRoads, [], {(getpos _x) distance2D _center}, "ASCEND"] call BIS_fnc_sortBy)#0;
     if (isNil "_return") then {_return = objNull};
 

@@ -9,51 +9,6 @@ dyn_spawn_smoke = {
     _smoke setVariable ["type", "SmokeShell"]
 };
 
-// dyn_spawn_heli_attack = {
-//     params ["_locPos", "_dir", ["_trg", objNull]];
-
-//     // if (true) exitWith {};
-
-//     if !(isNull _trg) then {
-//         waitUntil { sleep 1; triggerActivated _trg };
-//     };
-
-//     _rearPos = [3000 * (sin (_dir - 180)), 3000 * (cos (_dir - 180)), 0] vectorAdd _locPos;
-//     _units = allUnits+vehicles select {side _x == west};
-//     _targetPos = getPos (_units#0);
-
-//     // _frontPos = [3000 * (sin _dir), 3000 * (cos _dir), 0] vectorAdd _targetPos;
-
-//     // for "_i" from 0 to 1 do {
-
-//         [_rearPos, _targetPos, _dir] spawn {
-//             params ["_rearPos", "_targetPos", "_dir"];
-
-//             _casGroup = createGroup east;
-//             _p = [_rearPos, _dir, dyn_attack_heli, _casGroup] call BIS_fnc_spawnVehicle;
-//             _plane = _p#0;
-//             [_plane, 40] call BIS_fnc_setHeight;
-//             // _plane forceSpeed 140;
-//             _plane flyInHeight 40;
-//             _wp = _casGroup addWaypoint [_targetPos, 0];
-//             _time = time + 300;
-
-//             waitUntil {(_plane distance2D (waypointPosition _wp)) <= 200 or time >= _time};
-
-//             _wp = _casGroup addWaypoint [_rearPos, 0];
-//             _time = time + 300;
-//             _casGroup setBehaviourStrong "CARELESS";
-
-//             waitUntil {(_plane distance2D (waypointPosition _wp)) <= 200 or time >= _time};
-
-//             {
-//                 deleteVehicle _x;
-//             } forEach (units _casGroup);
-//             deleteVehicle _plane;
-//         };
-//         // sleep 10;
-//     // };
-// };
 
 dyn_air_attack = {
     params ["_locPos", "_dir", ["_trg", objNull], ["_type", dyn_attack_heli]];     
@@ -64,24 +19,27 @@ dyn_air_attack = {
         waitUntil { sleep 1; triggerActivated _trg };
     };
 
-    _rearPos = [3000 * (sin (_dir - 180)), 3000 * (cos (_dir - 180)), 0] vectorAdd _locPos;
+    private _rearPos = [3000 * (sin (_dir - 180)), 3000 * (cos (_dir - 180)), 0] vectorAdd _locPos;
     _units = allUnits+vehicles select {side _x == playerSide};
     _units = [_units, [], {_x distance2D _rearPos}, "ASCEND"] call BIS_fnc_sortBy;
     _targetPos = getPos (_units#0);
+    _target = _units#0;
 
+
+    // [getpos player, 0, objNull, dyn_attack_plane] spawn dyn_air_attack
 
     // _frontPos = [3000 * (sin _dir), 3000 * (cos _dir), 0] vectorAdd _targetPos;
 
     // for "_i" from 0 to dyn_attack_heli do {
 
-        [_rearPos, _targetPos, _dir, _type] spawn {
-            params ["_rearPos", "_targetPos", "_dir", "_type"];
+        [_rearPos, _targetPos, _dir, _type, _target] spawn {
+            params ["_rearPos", "_targetPos", "_dir", "_type", "_target"];
             private ["_spawnHeight", "_fligthHeight"];
 
             switch (_type) do { 
                 case dyn_attack_heli : {_spawnHeight = 60; _fligthHeight = 40}; 
-                case dyn_attack_plane : {_spawnHeight = 500; _fligthHeight = 100}; 
-                default {_spawnHeight = 500; _fligthHeight = 100}; 
+                case dyn_attack_plane : {_spawnHeight = 500; _fligthHeight = 60}; 
+                default {_spawnHeight = 500; _fligthHeight = 60}; 
             };
 
             _casGroup = createGroup east;
@@ -91,13 +49,24 @@ dyn_air_attack = {
             _plane forceSpeed 1000;
             _plane flyInHeight _fligthHeight;
             _wp = _casGroup addWaypoint [_targetPos, 0];
+            // _wp setWaypointType "SAD";
             _time = time + 300;
 
-            waitUntil {(_plane distance2D (waypointPosition _wp)) <= 200 or time >= _time};
+            _casGroup reveal _target;
+            _plane doTarget _target;
+            _plane selectWeapon "rhs_weap_fab500";
 
+            waitUntil {(_plane distance2D (waypointPosition _wp)) <= 800 or time >= _time};
+
+            _plane fireAtTarget [_target, "rhs_weap_fab250"];
+            sleep 1;
+            _plane fireAtTarget [_target, "rhs_weap_fab250"];
+
+            sleep 10;
+
+            _casGroup setBehaviourStrong "CARELESS";
             _wp = _casGroup addWaypoint [_rearPos, 0];
             _time = time + 300;
-            _casGroup setBehaviourStrong "CARELESS";
 
             waitUntil {(_plane distance2D (waypointPosition _wp)) <= 200 or time >= _time};
 
@@ -109,6 +78,8 @@ dyn_air_attack = {
         // sleep 10;
     // };
 };
+
+// [O Bravo 1-3:1 (Clemens) (bis_o1),"rhs_weap_fab250","rhs_weap_fab250","rhs_weap_fab250","rhs_ammo_fab250","rhs_mag_fab250",1890033: rhs_m_fab250.p3d,bis_o1]
 
 dyn_spawn_rocket_arty = {
     params ["_pos", "_trg"];

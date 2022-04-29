@@ -11,6 +11,28 @@
 // dyn_standart_statics_low = ["cwr3_o_nsv_low", "cwr3_o_ags30", "cwr3_o_spg9"];
 // dyn_attack_heli = "cwr3_o_mi24d";
 
+dyn_spawn_random_garrison = {
+    params ["_buildings", "_amount", "_dir"];
+
+    _rBuildings = +_buildings;
+    // _rGrp = createGroup [east, true];
+    for "_i" from 0 to _amount - 1 do {
+        _grp = createGroup [east, true];
+        _b = selectRandom _rBuildings;
+        _rBuildings deleteAt (_rBuildings find _b);
+        for "_j" from 0 to 2 do {
+            _soldier = _grp createUnit [selectRandom [dyn_standart_soldier, dyn_standart_soldier, dyn_standart_mg, dyn_standart_at_soldier], [0,0,0], [], 0, "NONE"];
+            _soldier setDir _dir;
+        };
+        [_b, _grp, _dir] call dyn_garrison_building;
+        // (units _grp) joinSilent _rGrp;
+        // deleteGroup _grp;
+        _grp enableDynamicSimulation true;
+    };
+    // _rGrp enableDynamicSimulation true;
+    // _rGrp setVariable ["pl_not_recon_able", true];
+};
+
 dyn_spawn_barriers = {
     params ["_pos", "_dir"];
 
@@ -663,6 +685,8 @@ dyn_all_bridge_guards = [];
 dyn_spawn_bridge_defense = {
     params ["_pos", "_area", "_blkList", "_searchPos"];
 
+    sleep (random 2);
+
     private _bridges = [];
 
     _allRoads = _searchPos nearRoads _area;
@@ -813,26 +837,6 @@ dyn_spawn_sandbag_positions = {
         } forEach [_mgSoldier];//, _leSoldier];
     };
     _vGrp enableDynamicSimulation true;
-};
-
-dyn_spawn_random_garrison = {
-    params ["_buildings", "_amount", "_dir"];
-
-    _rBuildings = +_buildings;
-    _rGrp = createGroup [east, true];
-    for "_i" from 0 to _amount - 1 do {
-        _grp = createGroup [east, true];
-        _b = selectRandom _rBuildings;
-        _rBuildings deleteAt (_rBuildings find _b);
-        for "_j" from 0 to 1 do {
-            _soldier = _grp createUnit [dyn_standart_soldier, [0,0,0], [], 0, "NONE"];
-        };
-        [_b, _grp, _dir] call dyn_garrison_building;
-        (units _grp) joinSilent _rGrp;
-        deleteGroup _grp;
-    };
-    _rGrp enableDynamicSimulation true;
-    _rGrp setVariable ["pl_not_recon_able", true];
 };
 
 

@@ -245,11 +245,12 @@ dyn_spawn_supply_convoy = {
         private _infGrps = [];
         private _road = _rearRoad;
         for "_i" from 0 to ([1, 2] call BIS_fnc_randomInt) do {
-            _road = ((roadsConnectedTo _road) - [_road]) select 0;
+            _road = ([roadsConnectedTo _road, [], {(getpos _x) distance2D _hqPos}, "DESCEND"] call BIS_fnc_sortBy)#0;
             _roadPos = getPos _road;
             _info = getRoadInfo _road;    
             _endings = [_info#6, _info#7];
             _endings = [_endings, [], {_x distance2D _hqPos}, "ASCEND"] call BIS_fnc_sortBy;
+
             _dir = (_endings#1) getDir (_endings#0);
             _vic = createVehicle [selectRandom _vicTypes, _roadPos, [], 0, "CAN_COLLIDE"];
             _grp = createVehicleCrew _vic;
@@ -338,7 +339,7 @@ dyn_spawn_qrf_patrol = {
 };
 
 dyn_spawn_atk_simple = {
-    params ["_trg", "_atkPos", "_rearPos", "_inf", "_tank", ["_mech", false], ["_mechVics", dyn_standart_mechs], ["_tankVics", dyn_standart_tanks]];
+    params ["_trg", "_atkPos", "_rearPos", "_inf", "_tank", ["_mech", false], ["_mechVics", dyn_standart_mechs], ["_tankVics", dyn_standart_tanks], ["_static", false], ["_offsetStep", 75]];
     private ["_spawnPos", "_spawnPosFinal"];
 
     if !(isNull _trg) then {
@@ -353,7 +354,6 @@ dyn_spawn_atk_simple = {
     private _infGrps = [];
     private _tankGrps = [];
     private _offset = 0;
-    private _offsetStep = 75;
     for "_i" from 0 to _inf - 1 do {
         if (_i % 2 == 0) then {
             _spawnPos = _rearPos getPos [_offset, _atkDir + 90];
@@ -383,21 +383,27 @@ dyn_spawn_atk_simple = {
             [_infGrp] call dyn_opfor_change_uniform_grp;
             private _step = (_vic distance2D _atkPos) / 3;
             _wpPos = getPos _vic;
-            for "_j" from 1 to 3 do {
-                _wpPos = _wpPos getpos [_step, _atkDir];
-                if (!([_wpPos] call dyn_is_forest) and !([_wpPos] call dyn_is_town) or _j == 3) then {
-                    _gWp = _mechGrp addWaypoint [_wpPos, 0];
-                    if (_j == 3) then {_gWp setWaypointType "SAD"};
+
+            if !(_static) then {
+                for "_j" from 1 to 3 do {
+                    _wpPos = _wpPos getpos [_step, _atkDir];
+                    if (!([_wpPos] call dyn_is_forest) and !([_wpPos] call dyn_is_town) or _j == 3) then {
+                        _gWp = _mechGrp addWaypoint [_wpPos, 0];
+                        if (_j == 3) then {_gWp setWaypointType "SAD"};
+                    };
                 };
             };
         } else {
             _infGrps pushBack _infGrp;
             private _step = ((leader _infGrp) distance2D _atkPos) / 3;
             _wpPos = getPos (leader _infGrp);
-            for "_j" from 1 to 3 do {
-                _wpPos = _wpPos getpos [_step, _atkDir];
-                _gWp = _infGrp addWaypoint [_wpPos, 0];
-                if (_j == 3) then {_gWp setWaypointType "SAD"};
+
+            if !(_static) then {
+                for "_j" from 1 to 3 do {
+                    _wpPos = _wpPos getpos [_step, _atkDir];
+                    _gWp = _infGrp addWaypoint [_wpPos, 0];
+                    if (_j == 3) then {_gWp setWaypointType "SAD"};
+                };
             };
         };
     };
@@ -420,11 +426,14 @@ dyn_spawn_atk_simple = {
 
             private _step = (_vic distance2D _atkPos) / 3;
             _wpPos = getPos _vic;
-            for "_j" from 1 to 3 do {
-                _wpPos = _wpPos getpos [_step, _atkDir];
-                if (!([_wpPos] call dyn_is_forest) and !([_wpPos] call dyn_is_town) or _j == 3) then {
-                    _gWp = _tankGrp addWaypoint [_wpPos, 0];
-                    if (_j == 3) then {_gWp setWaypointType "SAD"};
+
+            if !(_static) then {
+                for "_j" from 1 to 3 do {
+                    _wpPos = _wpPos getpos [_step, _atkDir];
+                    if (!([_wpPos] call dyn_is_forest) and !([_wpPos] call dyn_is_town) or _j == 3) then {
+                        _gWp = _tankGrp addWaypoint [_wpPos, 0];
+                        if (_j == 3) then {_gWp setWaypointType "SAD"};
+                    };
                 };
             };
         };
@@ -461,13 +470,13 @@ dyn_spawn_atk_complex = {
 
     //recon -> artillery -> main attack -> retreat / artillery
 
-    private _targetRoad = [_atkPos, 600, ["TRAIL", "TRACK", "HIDE"]] call dyn_nearestRoad;
+    private _targetRoad = [_atkPos, 600, ["TRAIL", "TRACK", "HIDE"], 200] call dyn_nearestRoad;
     if (isNull _targetRoad) then {
-        _targetRoad = [_atkPos, 4000] call dyn_nearestRoad;
+        _targetRoad = [_atkPos, 4000, [], 200] call dyn_nearestRoad;
     };
-    private _rearRoad = [_rearPos, 600, ["TRAIL", "TRACK", "HIDE"]] call dyn_nearestRoad;
+    private _rearRoad = [_rearPos, 1500, ["TRAIL", "TRACK", "HIDE"], 200] call dyn_nearestRoad;
     if (isNull _rearRoad) then {
-        _rearRoad = [_rearPos, 4000] call dyn_nearestRoad;
+        _rearRoad = [_rearPos, 4000, [], 200] call dyn_nearestRoad;
     };
 
     // _m = createMarker [str (random 1), _targetRoad];
@@ -485,6 +494,7 @@ dyn_spawn_atk_complex = {
                 _endings = [_info#6, _info#7];
                 _endings = [_endings, [], {_x distance2D _atkPos}, "ASCEND"] call BIS_fnc_sortBy;
                 _dir = (_endings#1) getDir (_endings#0);
+
                 _vic = createVehicle [selectRandom _reconVics, _roadPos, [], 0, "CAN_COLLIDE"];
                 _grp = createVehicleCrew _vic;
                 _vic setDir _dir;
@@ -535,8 +545,8 @@ dyn_spawn_atk_complex = {
             switch (_fireSupport) do { 
                 case 1 : {[10, "rocket"] spawn dyn_arty}; 
                 case 2 : {[10] spawn dyn_arty};
-                case 3 : {[_locPos, _dir] spawn dyn_spawn_heli_attack};
-                case 4 : {[_locPos, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
+                case 3 : {[_atkPos, _dir] spawn dyn_air_attack};
+                case 4 : {[_atkPos, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
                 case 5 : {[10, "rocketffe"] spawn dyn_arty};
                 case 6 : {[8, "balistic"] spawn dyn_arty};
                 default {}; 
@@ -640,8 +650,8 @@ dyn_spawn_atk_complex = {
         switch (_fireSupport) do { 
             case 1 : {[8, "rocket"] spawn dyn_arty}; 
             case 2 : {[8] spawn dyn_arty};
-            case 3 : {[_locPos, _dir] spawn dyn_spawn_heli_attack};
-            case 4 : {[_locPos, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
+            case 3 : {[_atkPos, _dir] spawn dyn_air_attack};
+            case 4 : {[_atkPos, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
             case 5 : {[8, "rocketffe"] spawn dyn_arty};
             default {}; 
          }; 

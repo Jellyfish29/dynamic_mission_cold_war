@@ -136,7 +136,7 @@ dyn_draw_phase_lines = {
         _lineMarkerRight setMarkerSize [8, _distanceRight / 2];
         _lineMarkerRight setMarkerDir _dirRight;
         _lineMarkerRight setMarkerBrush "SolidFull";
-        _lineMarkerRight setMarkerColor "colorBLACK";
+        _lineMarkerRight setMarkerColor "colorBLUFOR";
 
         _currentPosLeft = _centerPositionsLeft#_i;
         _nextPosLeft = _centerPositionsLeft#(_i+1);
@@ -149,7 +149,7 @@ dyn_draw_phase_lines = {
         _lineMarker setMarkerSize [8, _distance / 2];
         _lineMarker setMarkerDir _dirLeft;
         _lineMarker setMarkerBrush "SolidFull";
-        _lineMarker setMarkerColor "colorBLACK";
+        _lineMarker setMarkerColor "colorBLUFOR";
 
         if (_i > 0 ) then {
 
@@ -170,7 +170,7 @@ dyn_draw_phase_lines = {
             _lineMarkerPhase setMarkerSize [4, _phaseMidDistance / 2];
             _lineMarkerPhase setMarkerDir _phaseMidDir;
             _lineMarkerPhase setMarkerBrush "SolidFull";
-            _lineMarkerPhase setMarkerColor "colorBLACK";
+            _lineMarkerPhase setMarkerColor "colorBLUFOR";
         };
     };
 };
@@ -428,11 +428,13 @@ dyn_main_setup = {
 
     private _dummygrp = createGroup [civilian, true];
 
-    while {(count dyn_locations) < 3} do {
+    while {(count dyn_locations) < 2} do {
 
         _startPair = selectRandom [["dyn_start_zone_1", "dyn_start_zone_2"], ["dyn_start_zone_2", "dyn_start_zone_1"], ["dyn_start_zone_4", "dyn_start_zone_3"], ["dyn_start_zone_3", "dyn_start_zone_4"]];// ["dyn_start_zone_5", "dyn_start_zone_6"], ["dyn_start_zone_6", "dyn_start_zone_5"], ["dyn_start_zone_8", "dyn_start_zone_7"], ["dyn_start_zone_7", "dyn_start_zone_8"]];
 
-        _startPos = [[_startPair#0], ["water"]] call BIS_fnc_randomPos;
+        // _startPos = [[_startPair#0], ["water"]] call BIS_fnc_randomPos;
+
+        _startPos = [[selectRandom ["dyn_start_zone_1", "dyn_start_zone_2", "dyn_start_zone_3", "dyn_start_zone_4"]], ["water"]] call BIS_fnc_randomPos;
 
         _startRoad = [_startPos, 400, ["TRAIL", "TRACK", "HIDE"]] call dyn_nearestRoad;
         if (isNull _startRoad) then {
@@ -440,7 +442,8 @@ dyn_main_setup = {
         };
 
 
-        _endPos = [[_startPair#1], ["water"]] call BIS_fnc_randomPos;
+        // _endPos = [[_startPair#1], ["water"]] call BIS_fnc_randomPos;
+        _endPos = [[selectRandom ["dyn_start_zone_1", "dyn_start_zone_2", "dyn_start_zone_3", "dyn_start_zone_4"]], ["water"]] call BIS_fnc_randomPos;
 
         // _m = createMarker [format ["team%1", random 1], _endPos];
         // _m setMarkerType "mil_marker";
@@ -456,32 +459,34 @@ dyn_main_setup = {
 
         _offsetPos = (getpos _startRoad) getPos [600, _campaignDir];
 
+        private _distLimit = 4500;
         for "_i" from 0 to 8 do {
             _pos = [(_intervals * _i) * (sin (_campaignDir - 180)), (_intervals * _i) * (cos (_campaignDir - 180)), 0] vectorAdd _offsetPos;
-            _loc = nearestLocation [_pos, "NameVillage"];
-            if ((_pos distance2D (getPos _loc)) < 2500) then {
+            _loc = nearestLocation [_pos, "NameCityCapital"];
+            if ((_pos distance2D (getPos _loc)) < 2000) then {
                 _valid = {
-                    if (((getPos _x) distance2D (getPos _loc)) < 4000) exitWith {false};
+                    if (((getPos _x) distance2D (getPos _loc)) < _distLimit) exitWith {false};
                     true 
                 } forEach dyn_locations;
                 if (_valid) then {dyn_locations pushBackUnique _loc};
             };
             _loc = nearestLocation [_pos, "NameCity"];
-            if ((_pos distance2D (getPos _loc)) < 2500) then {
+            if ((_pos distance2D (getPos _loc)) < 2000) then {
                 _valid = {
-                    if (((getPos _x) distance2D (getPos _loc)) < 4000) exitWith {false};
+                    if (((getPos _x) distance2D (getPos _loc)) < _distLimit) exitWith {false};
                     true 
                 } forEach dyn_locations;
                 if (_valid) then {dyn_locations pushBackUnique _loc};
             };
-            _loc = nearestLocation [_pos, "NameCityCapital"];
-            if ((_pos distance2D (getPos _loc)) < 2500) then {
+            _loc = nearestLocation [_pos, "NameVillage"];
+            if ((_pos distance2D (getPos _loc)) < 2000) then {
                 _valid = {
-                    if (((getPos _x) distance2D (getPos _loc)) < 4000) exitWith {false};
+                    if (((getPos _x) distance2D (getPos _loc)) < _distLimit) exitWith {false};
                     true 
                 } forEach dyn_locations;
                 if (_valid) then {dyn_locations pushBackUnique _loc};
             };
+            _distLimit = 3500;
             // debug
             // _m = createMarker [str (random 1), _pos];
             // _m setMarkerText str _i;
@@ -541,6 +546,7 @@ dyn_main_setup = {
             private _dir = 0;
             private _outerDefenses = false;
             private _midDefenses = false;
+            private _allowDefense = false;
             if (_i > 0) then {
                 _pos = getPos (_locations#(_i - 1));
                 _dir = (getPos _loc) getDir _pos;
@@ -549,10 +555,13 @@ dyn_main_setup = {
                 };
 
                 // between town Defenses
-                if (((getPos _loc) distance2D _pos) > 4500) then {
+                if (((getPos _loc) distance2D _pos) > 6000) then {
                     _midDistance = ((getPos _loc) distance2D _pos) / 2;
                     _midPoint = [_midDistance * (sin (_dir - 180)), _midDistance * (cos (_dir - 180)), 0] vectorAdd _pos;
                     _midDefenses = true;
+                };
+                if (((getPos _loc) distance2D _pos) >= 4000) then {
+                    _allowDefense = true;
                 };
             }
             else
@@ -562,7 +571,15 @@ dyn_main_setup = {
                     _outerDefenses = true;
                 };
 
+                if (((getPos _loc) distance2D _playerStart) > 6000) then {
+                    _midDistance = ((getPos _loc) distance2D _playerStart) / 2;
+                    _midPoint = [_midDistance * (sin (_dir - 180)), _midDistance * (cos (_dir - 180)), 0] vectorAdd _playerStart;
+                    _midDefenses = true;
+                };
 
+                if (((getPos _loc) distance2D _playerStart) >= 4000) then {
+                    _allowDefense = true;
+                };
             };
 
 
@@ -602,14 +619,14 @@ dyn_main_setup = {
             [_artyPos4, _campaignDir] call dyn_palace_opfor_balistic_arty;
             // };  
             
-            _defenseAllowed = true;
-            if (_defenseAllowed) then {       
+            
+      
+            // if (_allowDefense) then {
                 dyn_defense_active = false;
-
                 _dyn_defense_atkPos = getPos player;
-                private _waitTime = 500;
+                private _waitTime = 400;
                 if (_i > 0) then {
-                    _waitTime = 700;
+                    _waitTime = 600;
                     _dyn_defense_atkPos = getPos (_locations#(_i - 1))
                 };
                 [_dyn_defense_atkPos, getPos _loc, _waitTime] spawn dyn_defense;
@@ -618,7 +635,7 @@ dyn_main_setup = {
                 waitUntil {!(dyn_defense_active)};
 
                 sleep 5;
-            };
+            // };
 
             private _aoArea = 600;
             if(_locationName == "" or _locationName == "Weferlingen" or _locationName == "Grasleben" or _locationName == "Velpke") then {_aoArea = 1000};
@@ -658,7 +675,7 @@ dyn_main_setup = {
             
             // [getPos _loc, _dir, _endTrg] spawn dyn_ambiance_execute;
 
-            [west, format ["task_%1", _i], ["Offensive", format ["Capture %1", _locationName], ""], getPos _loc, "ASSIGNED", 1, true, "attack", false] call BIS_fnc_taskCreate;
+            [west, format ["task_%1", _i], ["Offensive", format ["Capture %1", _locationName], ""], getPos _loc, "ASSIGNED", 1, true, "default", false] call BIS_fnc_taskCreate;
 
             if (_i > 0 and !dyn_debug) then {
                 sleep 120;
@@ -672,25 +689,26 @@ dyn_main_setup = {
                 _defenseType = selectRandom ["minefield", "recon", "road"];
 
                 // debug
-                // _defenseType = "ambush";
+                // _defenseType = "deployed";
 
                 switch (_defenseType) do {
-                    case "road" : {[getPos _loc, _trg, _dir] spawn dyn_road_blocK};
+                    case "road" : {[_midPoint, _trg, _dir, true] spawn dyn_road_blocK};
                     case "mobileTank" : {[_midPoint, _trg, _dir, true] spawn dyn_mobile_armor_defense};
-                    case "recon" : {[_midPoint, _trg, _dir] spawn dyn_recon_convoy};
+                    case "recon" : {[_midPoint getpos [1000, _dir - 180], _trg, _dir] spawn dyn_recon_convoy};
+                    case "deployed" : {[_midPoint, _trg, _dir, true] spawn dyn_attack_deployed};
                     case "minefield" : {[_midPoint, 2500, _dir, true] spawn dyn_spawn_mine_field};
                     default {}; 
                 };
 
-                [_midPoint, 2000, [2, 4] call BIS_fnc_randomInt, _trg, _dir] spawn dyn_spawn_forest_patrol;
+                [_midPoint, 2000, [1, 2] call BIS_fnc_randomInt, _trg, _dir] spawn dyn_spawn_forest_patrol;
 
                 [_midPoint, 2000, 400, _midPoint] spawn dyn_spawn_bridge_defense;
 
                 [_endTrg, _midPoint, 1500, _midPoint] spawn dyn_spawn_side_town_guards;
 
-                [_midPoint, _dir, [1, 3] call BIS_fnc_randomInt] spawn dyn_forest_defence_edge;
+                [_midPoint, _dir, [1, 2] call BIS_fnc_randomInt] spawn dyn_forest_defence_edge;
 
-                [objNull, _midPoint getPos [[100, 300] call BIS_fnc_randomInt, [0, 359] call BIS_fnc_randomInt], "o_mech_inf", "MechInfCoy.", "colorOPFOR", 0.8] call dyn_spawn_intel_markers;
+                // [objNull, _midPoint getPos [[100, 300] call BIS_fnc_randomInt, [0, 359] call BIS_fnc_randomInt], "o_mech_inf", "MechInfCoy.", "colorOPFOR", 0.8] call dyn_spawn_intel_markers;
 
                 if (dyn_debug) then {
                     _m = createMarker [str (random 1), _midPoint];
@@ -703,9 +721,10 @@ dyn_main_setup = {
                 _defenseType = selectRandom ["mobileTank", "recon", "recon", "minefield", "road"];
 
                 // debug
-                // _defenseType = "road";
+                // _defenseType = "deployed";
 
                 switch (_defenseType) do { 
+                    case "deployed" : {[getPos _loc, _trg, _dir] spawn dyn_attack_deployed};
                     case "road" : {[getPos _loc, _trg, _dir] spawn dyn_road_blocK};
                     case "mobileTank" : {[getPos _loc, _trg, _dir] spawn dyn_mobile_armor_defense};
                     case "recon" : {[getPos _loc, _trg, _dir] spawn dyn_recon_convoy};
@@ -753,8 +772,16 @@ dyn_main_setup = {
             sleep 5;
 
             [west, format ["task_clear_%1", _i], ["Deffensive", format ["Secure %1 and wait for tasking", _locationName], ""], getPos _loc, "ASSIGNED", 1, true, "wait", false] call BIS_fnc_taskCreate;
+
+            _secureTrg = createTrigger ["EmptyDetector", (getPos _loc), true];
+            _secureTrg setTriggerActivation ["EAST", "NOT PRESENT", false];
+            _secureTrg setTriggerStatements ["this", " ", " "];
+            _secureTrg setTriggerArea [400, 400, _dir, false, 30];
+            _secureTrg setTriggerTimeout [30, 60, 120, false];
+
+            waitUntil {sleep 2; triggerActivated _secureTrg};
             
-            if !(dyn_debug) then {sleep 240};
+            // if !(dyn_debug) then {sleep 240};
 
             [format ["task_clear_%1", _i], "SUCCEEDED", true] call BIS_fnc_taskSetState;
         };
