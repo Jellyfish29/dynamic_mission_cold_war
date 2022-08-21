@@ -624,9 +624,9 @@ dyn_main_setup = {
             // if (_allowDefense) then {
                 dyn_defense_active = false;
                 _dyn_defense_atkPos = getPos player;
-                private _waitTime = 400;
+                private _waitTime = 700;
                 if (_i > 0) then {
-                    _waitTime = 600;
+                    _waitTime = 800;
                     _dyn_defense_atkPos = getPos (_locations#(_i - 1))
                 };
                 [_dyn_defense_atkPos, getPos _loc, _waitTime] spawn dyn_defense;
