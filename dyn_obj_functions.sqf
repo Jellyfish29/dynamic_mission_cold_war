@@ -1,154 +1,110 @@
-dyn_mobile_armor_defense = {
-    params ["_locPos", "_townTrg", "_dir", ["_exactPos", false]];
-    private ["_stagingPos"];
+dyn_ambush = {
+    params ["_pos", "_endTrg", "_dir"];
 
-    if (_exactPos) then {
-        _stagingPos = _locPos;
-    }
-    else
-    {
-        _stagingPos = [550 * (sin _dir), 550 * (cos _dir), 0] vectorAdd _locPos;
-    };
+    _ambushPos = _pos getPos [[1000, 1500] call BIS_fnc_randomInt, _dir];
 
-    _accuracy = 100;
-    private _terrain = [_stagingPos getPos [500, _dir], _dir, 1500, 2000, _accuracy] call dyn_terrain_scan;
+    if (isNil "_ambushPos") exitWith {};
 
-    // forest
-    if ((_terrain#0) > (_accuracy * _accuracy) * 0.25) exitWith {[_locPos, _townTrg, _dir] spawn dyn_recon_convoy};
-    // town
-    if ((_terrain#1) > (_accuracy * _accuracy) * 0.07) exitWith {};
-    // water
-    if ((_terrain#2) > (_accuracy * _accuracy) * 0.025) exitWith {};
+    private _ambushTrg = createTrigger ["EmptyDetector", _ambushPos getpos [500, _dir], true];
+    _ambushTrg setTriggerActivation ["WEST", "PRESENT", false];
+    _ambushTrg setTriggerStatements ["this", " ", " "];
+    _ambushTrg setTriggerArea [4000, 30, _dir, true, 10];
 
-    _trgPos = [2000 * (sin _dir), 2000 * (cos _dir), 0] vectorAdd _locPos;
-    private _atkTrg = createTrigger ["EmptyDetector", _trgPos, true];
-    _atkTrg setTriggerActivation ["WEST", "PRESENT", false];
-    _atkTrg setTriggerStatements ["this", " ", " "];
-    _atkTrg setTriggerArea [2500, 65, _dir, true, 30];
-    // _atkTrg setTriggerTimeout [30, 45, 70, false];
-
-    private _allTankGrps = [];
-
-    // _m = createMarker [str (random 1), _trgPos];
+    // _m  = createMarker [str (random 1), getPos _ambushTrg];
     // _m setMarkerType "mil_dot";
 
-    for "_i" from 0 to ([5, 7] call BIS_fnc_randomInt) do {
-        _vPos = [(70 * _i) * (sin (_dir + 90)), (70 * _i) * (cos (_dir + 90)), 0] vectorAdd _stagingPos;
-        _isForest = [_vPos] call dyn_is_forest;
-        if !(_isForest) then {
-            _grp = [_vPos, 0, [dyn_standart_MBT], _dir] call dyn_spawn_parked_vehicle;
-            (vehicle (leader _grp)) limitSpeed 30;
-            _allTankGrps pushBack _grp;
-        }
-        else
-        {
-            _grp = [_vPos, _dir, true, true, true, true] call dyn_spawn_covered_inf;
-        };
-    };
+    _amount = [4, 6] call BIS_fnc_randomInt;
+    private _allGrps = [];
+    private _patrollPos = [];
 
-    [_atkTrg, _allTankGrps, getPos _townTrg] spawn {
-        params ["_atkTrg", "_allTankGrps", "_defPos"];
-        _trgPos = getPos _atkTrg;
+    for "_i" from 0 to _amount do {
+        _spawnPos = _ambushPos getpos [150 * _i, _dir + (selectRandom [90, -90])];
 
-        waitUntil {sleep 1, triggerActivated _atkTrg};
-        
-        _leader = _allTankGrps#0;
-        _units = allUnits+vehicles select {side _x == west};
-        _units = [_units, [], {_x distance2D (leader _leader)}, "ASCEND"] call BIS_fnc_sortBy;
-        _atkPos = getPos (_units#0);
-        _atkDistance = _atkPos distance2D (getPos (leader _leader));
-        _wpIntervall = _atkDistance / 6;
-        _atkDir = (getPos (leader _leader)) getDir _atkPos;
+        _trees = nearestTerrainObjects [_spawnPos, ["TREE", "FOREST BORDER", "FOREST TRIANGLE", "FOREST SQUARE", "FOREST"], 80, true, true];
 
-        _leaders = [];
-        {
-            _leaders pushBack (leader _x);
-            _x setBehaviour "COMBAT";
-        } forEach _allTankGrps;
+        if ((count _trees) > 0) then {
+            _spawnPos = getPos (_trees#0);
+           _grp = [_spawnPos, _dir, true, false, false, true, false, dyn_standart_at_team] call dyn_spawn_covered_inf;
+           _grp setVariable ["pl_not_recon_able", true];
+           _allGrps pushBack _grp;
 
-        private _syncWps = [];
-        for "_i" from 1 to 6 do {
-            _syncWps = [];
-            _lPos = [(_wpIntervall * _i) * (sin _atkDir), (_wpIntervall * _i) * (cos _atkDir), 0] vectorAdd (getPos (leader _leader));
-            _isForest = [_lPos] call dyn_is_forest;
-            if !(_isForest) then {
-                _lWp = _leader addWaypoint [_lPos, 0];
-                _syncWps pushBack _lWp;
+           [_spawnPos getPos [200, _dir], 100, _dir + ([-10, 10] call BIS_fnc_randomInt), false, 10, 2, false] call dyn_spawn_mine_field;
+        } else {
+            if ((random 1) > 0.25) then {
+                _spawnPos getPos [[-50, 50] call BIS_fnc_randomInt, _dir];
+                _grp = [_spawnPos, _dir, false, true, selectRandom (dyn_standart_statics_atgm + dyn_standart_statics_atgun), false] call dyn_spawn_static_weapon;
+                _grp setVariable ["pl_not_recon_able", true];
+                _allGrps pushBack _grp;
+
+                [_spawnPos getPos [200, _dir], 100, _dir + ([-10, 10] call BIS_fnc_randomInt), false, 10, 2, false] call dyn_spawn_mine_field;
             };
-            {
-                _wPos = [(_wpIntervall * _i) * (sin _atkDir), (_wpIntervall * _i) * (cos _atkDir), 0] vectorAdd (getPos (leader _x));
-                _isForest = [_wPos] call dyn_is_forest;
-                if !(_isForest) then {
-                    _gWp = _x addWaypoint [_wPos, 0];
-                    _gWp synchronizeWaypoint _syncWps;
-                    _syncWps pushBack _gWp;
-                };
-            } forEach _allTankGrps - [_leader];
         };
 
-        waitUntil {sleep 1; ({alive _x} count _leaders) <= 3};
-
-        // [objNull, _defPos, _allTankGrps, false] spawn dyn_retreat;
-        [_defPos, _allTankGrps] spawn dyn_spawn_delay_action;
+        _patrollPos pushBack _spawnPos;
     };
 
-};
+    [_ambushPos, _dir, 1, 800, 200, 100] spawn dyn_forest_defence_edge;
 
-dyn_recon_convoy = {
-    params ["_locPos", "_townTrg", "_dir", ["_exactPos", false]];
-    private ["_allGrps", "_validRoads", "_iGrps"];
+    _allGrps pushBack ([_patrollPos, _patrollPos#0] call dyn_spawn_patrol);
 
-    _trgPos =_locPos getPos [2700, _dir];
-    private _atkTrg = createTrigger ["EmptyDetector", _trgPos, true];
-    _atkTrg setTriggerActivation ["WEST", "PRESENT", false];
-    _atkTrg setTriggerStatements ["this", " ", " "];
-    _atkTrg setTriggerArea [3000, 65, _dir, true, 30];
-    // _atkTrg setTriggerTimeout [30, 45, 70, false];
+    // [_ambushPos, 800, 1, _endTrg, _dir] spawn dyn_spawn_forest_patrol;
 
-    // // debug
-    // _m = createMarker [str (random 1), _trgPos];
-    // _m setMarkerType "mil_dot";
+    [_allGrps, east, "inf"] spawn dyn_spawn_unit_intel_markers;
 
+    [_allGrps, _ambushPos, _dir] spawn {
+        params ["_allGrps", "_pos", "_dir"];
 
-    waitUntil { sleep 1; triggerActivated _atkTrg };
+        waitUntil {sleep 5; ({(groupId _x) in pl_marta_dic} count _allGrps) > 0};
 
-    _rearPos = _locPos getPos [600, _dir];
-    [getPos player, _rearPos, 3, 3] spawn dyn_spawn_atk_complex;
-};
+        [_pos, _dir] call dyn_draw_mil_symbol_screen;
+    };
 
-dyn_attack_deployed = {
-    params ["_locPos", "_townTrg", "_dir", ["_exactPos", false]];
+    waitUntil {sleep 2; triggerActivated _ambushTrg};
 
-    private _rearPos = _locPos getPos [[500, 1000] call BIS_fnc_randomInt, _dir];
-    if (_exactPos) then {_rearPos = _locPos};
-    private _atkPos = _rearPos getpos [100, _dir];
+    {
+        _grp = _x;
+        {
+            (leader _grp) reveal [(leader _x), 3];
+        } forEach (allGroups select {(side _x) == playerSide});
+    } forEach _allGrps;
 
-    [objNull, _atkPos, _rearPos, 3, 3, true, dyn_standart_mechs, dyn_standart_tanks, true, 150] spawn dyn_spawn_atk_simple
+    _fireSupport = selectRandom [2,2,2,2,3,3,3,4,4,4,4,4,4,4,4,4,4,5];
+    // _fireSupport = 3;
+    switch (_fireSupport) do { 
+        case 1 : {[8, "rocket"] spawn dyn_arty}; 
+        case 2 : {[8] spawn dyn_arty};
+        case 3 : {[_ambushPos, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack; [_ambushPos getPos [100, 0], _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
+        case 4 : {[_ambushPos, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
+        case 5 : {[8, "rocketffe"] spawn dyn_arty};
+        default {}; 
+     };
+
+    waitUntil {sleep 2; ((_allGrps select {({alive _x} count (units _x)) > 0}) isNotEqualTo _allGrps) or triggerActivated _endTrg};
+
+    _fireSupport = selectRandom [2,2,2,2,3,3,3,4,4,4,4,4,4,4,4,4,4,5];
+    // _fireSupport = 3;
+    switch (_fireSupport) do { 
+        case 1 : {[8, "rocket"] spawn dyn_arty}; 
+        case 2 : {[8] spawn dyn_arty};
+        case 3 : {[_ambushPos, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack; [_ambushPos getPos [100, 0], _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
+        case 4 : {[_ambushPos, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
+        case 5 : {[8, "rocketffe"] spawn dyn_arty};
+        default {}; 
+     };
+
+    sleep ([180, 500] call BIS_fnc_randomInt);
+
+    [objNull, _pos, _allGrps, false] spawn dyn_retreat; 
 };
 
 
 dyn_road_blocK = {
     params ["_aoPos", "_endTrg", "_dir", ["_exactPos", false]];
+    // MSR
+    _msr = [[getPos player, 200] call dyn_nearestRoad, [_aoPos, 200] call dyn_nearestRoad] call dyn_convoy_parth_find;
+    private _road = _msr select (count _msr * 0.75);
 
-    private _searchPos = _aoPos getPos [800, _dir];
-    _searchPos = [_searchPos, 300, _dir] call dyn_find_highest_point;
-
-    if (_exactPos) then {_searchPos = _aoPos};
-    private _roads = [];
-
-    for "_i" from 1 to 4 do {
-
-        private _dirOffset = 90;
-        if (_i % 2 == 0) then {_dirOffset = -90};
-        _p = _searchPos getPos [300 * _i, _dir + _dirOffset];
-        _road = [_p, 300, ["TRAIL", "TRACK"]] call dyn_nearestRoad;
-        if !(isNull _road) then {_roads pushBack _road};
-    };
-
-    if (_roads isEqualTo []) exitWith {hint "cancel"};
-
-
-    _road = ([_roads, [], {(getpos _x) distance2D _searchPos}, "ASCEND"] call BIS_fnc_sortBy)#0;
+    if (isNil "_road") exitWith {};
 
     // _m = createMarker [str (random 3), getPos _road];
     // _m setMarkerType "mil_marker";
@@ -162,23 +118,36 @@ dyn_road_blocK = {
 
     [_rPos getPos [100, _roadDir] , _roadWidth * 2, _roadDir, false, 4] spawn dyn_spawn_mine_field;
 
-    [_road] spawn dyn_spawn_razor_road_block;
+    if !((_info#0) in ["TRACK", "TRAIL", "HIDE"]) then {
+        [_road] spawn dyn_spawn_heavy_roadblock;
+    } else {
+        [_road] spawn dyn_spawn_razor_road_block;
+    };
 
-    _accuracy = 40;
-    private _terrain = [_rPos getPos [300, _roadDir], _roadDir, 500, 500, _accuracy] call dyn_terrain_scan;
-
-    // forest
-    if ((_terrain#0) > (_accuracy * _accuracy) * 0.5) exitWith {};
-
-    [_rPos getPos [200, _roadDir - 180], _roadDir, 2, 400, 200, 30] spawn dyn_forest_defence_edge;
-
-    _rightPos = _rPos getPos [_roadWidth * 2 + ([0, 20] call BIS_fnc_randomInt), _roadDir + 90];
-    _leftPos = _rPos getPos [_roadWidth * 2 + ([0, 20] call BIS_fnc_randomInt), _roadDir - 90];
+    _rightPos = _rPos getPos [_roadWidth * 2 + ([10, 50] call BIS_fnc_randomInt), _roadDir + 90];
+    _leftPos = _rPos getPos [_roadWidth * 2 + ([10, 50] call BIS_fnc_randomInt), _roadDir - 90];
 
     private _allGrps = [];
 
     _allGrps pushBack ([_rightPos, dyn_standart_MBT, _roadDir, true, true] call dyn_spawn_covered_vehicle);
     _allGrps pushBack ([_leftPos, dyn_standart_MBT, _roadDir, true, true] call dyn_spawn_covered_vehicle);
+
+    if ((random 1) > 0.25) then {
+        _allGrps pushBack ([_rightPos getPos [50, _roadDir + 90], _roadDir + ([-10, 10] call BIS_fnc_randomInt), false, false, false, true, true] call dyn_spawn_covered_inf);
+    };
+    if ((random 1) > 0.25) then {
+        _allGrps pushBack ([_leftPos getPos [50, _roadDir - 90], _roadDir + ([-10, 10] call BIS_fnc_randomInt), false, false, false, true, true] call dyn_spawn_covered_inf);
+    };
+
+    [(_rightPos getPos [100, _roadDir]) getPos [300, _roadDir + 90] , 450, _roadDir, false, 20] spawn dyn_spawn_mine_field;
+    [(_leftPos getPos [100, _roadDir]) getPos [300, _roadDir - 90] , 450, _roadDir, false, 20] spawn dyn_spawn_mine_field;
+
+    _wireStart = _rightPos getPos [50, _roadDir];
+    for "_i" from 0 to 7 do {
+        _wrPos = _wireStart getPos [30 * _i, _roadDir - 90];
+        [_wrPos, _roadDir + ([-20, 20] call BIS_fnc_randomInt)] call dyn_spawn_barriers;
+    };
+
 
     private _validBuildings = [];
     private _buildings = nearestObjects [_rPos, ["house"], 300];
@@ -190,25 +159,42 @@ dyn_road_blocK = {
 
     {
         _x enableDynamicSimulation true;
-        _x setVariable ["pl_not_recon_able", true];
+        // _x setVariable ["pl_not_recon_able", true];
     } forEach _allGrps;
 
     if !(_validBuildings isEqualTo []) then {
         _validBuildings = [_validBuildings, [], {_x distance2D _rPos}, "ASCEND"] call BIS_fnc_sortBy;
-        [objNull, _validBuildings#0, _roadDir, _endTrg] spawn dyn_spawn_strongpoint;
+        // [objNull, _validBuildings#0, _roadDir, _endTrg] spawn dyn_spawn_strongpoint;
+        [_validBuildings, 1, _roadDir] spawn dyn_spawn_random_garrison;
     };
 
-    private _revealTrg = createTrigger ["EmptyDetector", _rPos getPos [1000, _dir] , true];
+    // [_rPos, _roadDir] call dyn_draw_mil_symbol_block;
+
+    [_allGrps, east, "armor"] spawn dyn_spawn_unit_intel_markers;
+
+    private _revealTrg = createTrigger ["EmptyDetector", _rPos getPos [400, _dir] , true];
     _revealTrg setTriggerActivation ["WEST", "PRESENT", false];
     _revealTrg setTriggerStatements ["this", " ", " "];
-    _revealTrg setTriggerArea [4000, 4000, _dir, true, 30];
+    _revealTrg setTriggerArea [4000, 100, _dir, true, 30];
+
+    [getPos _revealTrg , 400, _dir, false, 20] spawn dyn_spawn_mine_field;
+
+    [_rPos, _roadDir] spawn dyn_spawn_screen;
 
     // _m = createMarker [str (random 3), getPos _revealTrg];
     // _m setMarkerType "mil_marker";
 
+    [_allGrps, getPos _road, _roadDir] spawn {
+        params ["_allGrps", "_rPos", "_roadDir"];
+
+        waitUntil {sleep 5; ({(groupId _x) in pl_marta_dic} count _allGrps) > 0};
+
+        [_rPos, 400, _roadDir, 20] call dyn_draw_mil_symbol_fortification_line;
+    };
+
     waitUntil {sleep 1; triggerActivated _revealTrg};
 
-    _fireSupport = selectRandom [0,0,0,1,1,2,2,2,3,4,5,6];
+    _fireSupport = selectRandom [1,1,2,2,2,2,3,4,4,4,4,4,5,6];
     switch (_fireSupport) do { 
         case 0 : {[5, "light"] spawn dyn_arty};
         case 1 : {[5, "rocket"] spawn dyn_arty}; 
@@ -226,8 +212,172 @@ dyn_road_blocK = {
             (leader _grp) reveal [leader _x, 3];
         } forEach (allGroups select {(hcLeader _x) == player});
     } forEach _allGrps;
-
 };
+
+dyn_forward_recon_element = {
+    params ["_pos", "_endTrg", "_dir"];
+
+    _reconPos = _pos getPos [[600, 900] call BIS_fnc_randomInt, _dir];
+
+    if (isNil "_reconPos") exitWith {};
+
+    private _reconTrg = createTrigger ["EmptyDetector", _reconPos getpos [[500, 700] call BIS_fnc_randomInt, _dir], true];
+    _reconTrg setTriggerActivation ["WEST", "PRESENT", false];
+    _reconTrg setTriggerStatements ["this", " ", " "];
+    _reconTrg setTriggerArea [4000, 30, _dir, true, 10];
+
+    // _m  = createMarker [str (random 1), getPos _reconTrg];
+    // _m setMarkerType "mil_dot";
+
+    _amount = [2, 4] call BIS_fnc_randomInt;
+    private _allGrps = [];
+    _patrollPos = [];
+
+    for "_i" from 0 to _amount do {
+        _spawnPos = _reconPos getpos [100 * _i, _dir + (selectRandom [90, -90])];
+
+
+        _trees = nearestTerrainObjects [_spawnPos, ["TREE", "FOREST BORDER", "FOREST TRIANGLE", "FOREST SQUARE", "FOREST"], 80, true, true];
+
+        if ((count _trees) > 0) then {
+            _spawnPos = getPos (_trees#0);
+            _grp = [_spawnPos getPos [10, _dir - 180], selectRandom dyn_standart_light_amored_vics, _dir, false, true] call dyn_spawn_covered_vehicle;
+            _allGrps pushBack _grp;
+
+            // _m  = createMarker [str (random 1), _spawnPos];
+            // _m setMarkerType "mil_dot";
+        } else {
+            if ((random 1) > 0.5) then {
+                _spawnPos getPos [[-50, 50] call BIS_fnc_randomInt, _dir];
+                _grp = [_spawnPos, dyn_standart_MBT, _dir, false, true] call dyn_spawn_covered_vehicle;
+                _allGrps pushBack _grp;
+
+                // _m  = createMarker [str (random 1), _spawnPos];
+                // _m setMarkerType "mil_dot";
+            };
+        };
+
+        _patrollPos pushBack _spawnPos;
+
+    };
+
+    _allGrps pushBack ([_patrollPos, _patrollPos#0] call dyn_spawn_patrol);
+
+    [_allGrps, east, "inf"] spawn dyn_spawn_unit_intel_markers;
+
+    [_allGrps, _reconPos, _dir] spawn {
+        params ["_allGrps", "_pos", "_dir"];
+
+        waitUntil {sleep 5; ({(groupId _x) in pl_marta_dic} count _allGrps) > 0};
+
+        [_pos, _dir] call dyn_draw_mil_symbol_screen;
+    };
+
+    waitUntil {sleep 2; triggerActivated _reconTrg};
+
+
+    {
+        _grp = _x;
+        {
+            (leader _grp) reveal [(leader _x), 3];
+        } forEach (allGroups select {(side _x) == playerSide});
+    } forEach _allGrps;
+
+    _fireSupport = selectRandom [2,2,2,2,3,3,3,3,3,3,3,5];
+    // _fireSupport = 3;
+    switch (_fireSupport) do { 
+        case 1 : {[8, "rocket"] spawn dyn_arty}; 
+        case 2 : {[8] spawn dyn_arty};
+        case 3 : {[_reconPos, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack; [_reconPos getPos [100, 0], _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
+        case 4 : {[_reconPos, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
+        case 5 : {[8, "rocketffe"] spawn dyn_arty};
+        default {}; 
+     };
+
+    waitUntil {sleep 2; ((_allGrps select {({alive _x} count (units _x)) > 0}) isNotEqualTo _allGrps) or triggerActivated _endTrg};
+
+    _fireSupport = selectRandom [2,2,2,2,3,3,3,3,3,3,3,5];
+    // _fireSupport = 3;
+    switch (_fireSupport) do { 
+        case 1 : {[8, "rocket"] spawn dyn_arty}; 
+        case 2 : {[8] spawn dyn_arty};
+        case 3 : {[_reconPos, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack; [_reconPos getPos [100, 0], _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
+        case 4 : {[_reconPos, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
+        case 5 : {[8, "rocketffe"] spawn dyn_arty};
+        default {}; 
+     };
+
+    sleep ([20, 60] call BIS_fnc_randomInt);
+
+    [objNull, _pos, _allGrps, false] spawn dyn_retreat;
+
+    
+};
+
+dyn_trench_line_large = {
+    params ["_pos", "_endTrg", "_dir"];
+
+    private _validBuildings = [];
+    _allBuildings = nearestObjects [_pos, ["house"], 500];
+    _watchPos = _pos getPos [1400, _dir];
+
+    // Valid Buildings
+    {
+        if (count ([_x] call BIS_fnc_buildingPositions) >= 8) then {
+            _validBuildings pushBack _x;
+        };
+    } forEach _allBuildings;
+
+    _validBuildings = [_validBuildings, [], {_x distance2D _watchPos}, "ASCEND"] call BIS_fnc_sortBy;
+
+    private _forwardPos = (getPos (_validBuildings#0)) getPos [[250, 350] call BIS_fnc_randomInt, _dir];
+    private _allGrps = [];
+
+    // trenches
+    private _trAmount = [2, 3] call BIS_fnc_randomInt;
+    for "_i" from 0 to _trAmount do {
+        _tPos = _forwardPos getpos [([80, 120] call BIS_fnc_randomInt) * _i, _dir + (selectRandom [90, -90])];
+        if !([_tPos] call dyn_is_water) then {
+            _allGrps pushBack ([_tPos, _dir + ([-10, 10] call BIS_fnc_randomInt), false, false, false, true, true] call dyn_spawn_covered_inf);
+
+            _vicType = selectRandom dyn_standart_mechs;
+            // if ((random 1) > 0.5) then {
+                _vPos = _tPos getpos [20, _dir -180];
+                _allGrps pushBack ([_vPos, _vicType, _dir, false, false] call dyn_spawn_covered_vehicle);
+            // };
+        };
+    };
+
+    _wireStart = (_forwardPos getPos [20, _dir]) getpos [100, _dir + 90];
+    for "_i" from 0 to 20 do {
+        _rPos = _wireStart getPos [30 * _i, _dir - 90];
+        [_rPos, _dir + ([-20, 20] call BIS_fnc_randomInt)] call dyn_spawn_barriers;
+        [_rPos getPos [25, _dir], 30, _dir + ([-10, 10] call BIS_fnc_randomInt), false, 15, 1] call dyn_spawn_mine_field;
+    };
+
+    [_forwardPos, _dir, false] spawn dyn_spawn_screen;
+
+    [_allGrps, east, "mech"] spawn dyn_spawn_unit_intel_markers;
+
+    // [_forwardPos, 800, _dir, 20] call dyn_draw_mil_symbol_fortification_line;
+
+    [_allGrps, _forwardPos, _dir] spawn {
+        params ["_allGrps", "_pos", "_dir"];
+
+        waitUntil {sleep 5; ({(groupId _x) in pl_marta_dic} count _allGrps) > 0};
+
+        [_pos, 800, _dir, 20] call dyn_draw_mil_symbol_fortification_line;
+    };
+
+    _groupCount = count +_allGrps;
+
+    waitUntil {sleep 5; ({({alive _x} count (units _x)) > 0} count _allGrps) <= (_groupCount - 3)};
+
+    sleep ([20, 60] call BIS_fnc_randomInt);
+
+    [objNull, _pos, _allGrps, false] spawn dyn_retreat;
+};
+
 
 dyn_town_defense = {
     params ["_aoPos", "_endTrg", "_dir"];
@@ -240,12 +390,11 @@ dyn_town_defense = {
     _weferlingen = false;
     if (((triggerArea _aoPos)#0) == 800) then {_weferlingen = true};
 
-    [getPos _aoPos, 0, _endTrg] spawn dyn_ambiance_execute;
-    // private _unitMarker = [objNull, (getpos _aoPos) getPos [[200, 400] call BIS_fnc_randomInt, 0], dyn_en_comp#0, dyn_en_comp#1, "colorOPFOR", 1.3, 0.7] call dyn_spawn_intel_markers;
 
-    // create outer Garrison
+    //////// Define Buildings ////////
     _allBuildings = nearestObjects [(getPos _aoPos), ["house"], (triggerArea _aoPos)#0];
 
+    // Valid Buildings
     {
         if (count ([_x] call BIS_fnc_buildingPositions) >= 8 and ((getPos _x inArea _aoPos))) then {
             _validBuildings pushBack _x;
@@ -254,26 +403,14 @@ dyn_town_defense = {
 
     _validBuildings = [_validBuildings, [], {_x distance2D _watchPos}, "ASCEND"] call BIS_fnc_sortBy;
 
-    // front Garrison
-    [_validBuildings, [2, 4] call BIS_fnc_randomInt, _dir] call dyn_spawn_mg_team_garrisons; //[2, 4] call BIS_fnc_randomInt
-
-    // Random Garrison
-    [_validBuildings, [2, 4] call BIS_fnc_randomInt, _dir] call dyn_spawn_random_garrison;
-    if (_weferlingen) then {
-        [_validBuildings, 2, _dir] call dyn_spawn_random_garrison;
-    };
+    private _forwardPos = (getPos (_validBuildings#0)) getPos [[30, 200] call BIS_fnc_randomInt, _dir];
 
 
-    // create roadblock
-    // _bRoad = [getPos (_validBuildings#0), 80] call BIS_fnc_nearestRoad;
-    // [_bRoad, true] call dyn_spawn_razor_road_block;
+    // [_forwardPos, 1500, _dir] call dyn_draw_mil_symbol_fortification_line;
 
-    // create Razor Wire
-    for "_i" from 0 to 3 do {
-        _rPos = [30 * (sin _dir), 30 * (cos _dir), 0] vectorAdd (getPos (_validBuildings#_i));
-        [_rPos, _dir + ([-20, 20] call BIS_fnc_randomInt)] call dyn_spawn_barriers;
-    };
+    [getpos _aoPos, _validBuildings, selectRandom dyn_phase_names] call dyn_draw_mil_symbol_objectiv;
 
+    // Solitary Buildings
     private _solitaryBuildings = [];
     for "_i" from 0 to (count _validBuildings) - 1 do {
         _b = _validBuildings#_i;
@@ -293,67 +430,23 @@ dyn_town_defense = {
             // _m setMarkerType "mil_dot";
         };
     };
+
+    // for "_i" from 0 to (count _solitaryBuildings) - 1 do {
+    //     _m = createMarker [str (random 2), getPos (_solitaryBuildings#_i)];
+    //     _m setMarkerType "mil_dot";
+    //     _m setMarkerText (str _i);
+    // };
+
     _solitaryBuildings = [_solitaryBuildings, [], {_x distance2D _watchPos}, "ASCEND"] call BIS_fnc_sortBy;
+    private _buildingCount = count _solitaryBuildings;
 
-    // Vehicle in Position
-    _vicAmount = ([0, 1] call BIS_fnc_randomInt) * 2;
-    for "_i" from 0 to _vicAmount step 2 do {
-        _b = _solitaryBuildings#_i;
-        _solitaryBuildings deleteAt _i;
-        _xMax = ((boundingBox _b)#1)#0;
-        _vicType = selectRandom dyn_standart_combat_vehicles;
-        _vPos = [(_xMax + 5) * (sin _dir), (_xMax + 5) * (cos _dir), 0] vectorAdd (getPos _b);
-        _grp = [_vPos, _vicType, _dir, true, true] call dyn_spawn_covered_vehicle;
-    };
+    ////// Reinforcements ////////
 
-    // small Strongpoint
-    for "_i" from 0 to ([0, 1] call BIS_fnc_randomInt) do {
-        _infB = selectRandom _solitaryBuildings;
-        _solitaryBuildings deleteAt (_solitaryBuildings find _infB);
-        _grp = [_infB, _dir] spawn dyn_spawn_small_strong_point;
-    };
-
-    // create Strongpoint
-    _infB = selectRandom _solitaryBuildings;
+    // Continuos Inf Spawn
+    _solCount = count _solitaryBuildings;
+    _infB = _solitaryBuildings#(_solCount - ([1, round (_solCount * 0.25)] call BIS_fnc_randomInt));
     _solitaryBuildings deleteAt (_solitaryBuildings find _infB);
-    [_aoPos, _infB, _dir, _endTrg] spawn dyn_spawn_strongpoint;
-
-    // create Tank/APC
-    private _vGrps = [];
-    for "_i" from 0 to ([0, 1] call BIS_fnc_randomInt) do {
-        _grp = [getPos _aoPos, 250, dyn_standart_combat_vehicles + [dyn_standart_MBT] + [dyn_standart_light_amored_vic]] call dyn_spawn_parked_vehicle;
-        _vGrps pushBack _grp;
-        _allGrps pushBack _grp;
-        if (_weferlingen) then {
-            _grp = [getPos _aoPos, 250, dyn_standart_combat_vehicles + [dyn_standart_MBT] + [dyn_standart_light_amored_vic]] call dyn_spawn_parked_vehicle;
-            _vGrps pushBack _grp;
-            _allGrps pushBack _grp;
-        };
-    };
-
-    // Supply Convoy
-    if ((random 1) > 0.5) then {
-        [_aoPos, getPos (selectRandom _solitaryBuildings)] spawn dyn_spawn_supply_convoy;
-    };
-
-    //AA
-    if ((random 1) > 0.5) then {
-        _grp = [getPos _aoPos, _dir] call dyn_spawn_aa;
-        _allGrps pushBack _grp;
-        [_aoPos, getPos (leader _grp), "o_antiair", "AA"] spawn dyn_spawn_intel_markers;
-    };
-
-    // Forest Patrols
-    [getPos _aoPos, 2000, [1,2] call BIS_fnc_randomInt, _aoPos, _dir] spawn dyn_spawn_forest_patrol;
-
-    // Forest Position
-    [(getPos _aoPos) getPos [1500, _dir], _dir, [1, 2] call BIS_fnc_randomInt] spawn dyn_forest_defence_edge;
-
-    // Bridge Defense
-    [getPos _aoPos, 1500, 400, _watchPos] spawn dyn_spawn_bridge_defense;
-
-    // side Town Guards
-    [_aoPos, getPos _aoPos, 3000, (getPos _aoPos) getPos [1500, _dir]] spawn dyn_spawn_side_town_guards;
+    [_aoPos, _infB, _endTrg] spawn dyn_spawn_def_waves;
 
     //continous ai fire Support
     [_aoPos, _endTrg, _dir] spawn dyn_continous_support;
@@ -365,29 +458,171 @@ dyn_town_defense = {
     _cAtkTrg setTriggerArea [1500, 1500, _dir, false, 30];
     [_cAtkTrg, _endTrg, _dir] spawn dyn_continous_counterattack;
 
-    // QRF Patrol
-    [getPos _aoPos, (triggerArea _aoPos)#0, _aoPos, [0, 1] call BIS_fnc_randomInt] spawn dyn_spawn_qrf_patrol;
+    // Supply Convoy
+    if ((random 1) > 0.75) then {
+        [_aoPos, (getPos _aoPos) getpos [[-500, 1000] call BIS_fnc_randomInt, _dir] , ([1, 2] call BIS_fnc_randomInt), dyn_standart_trasnport_vehicles + [dyn_standart_light_amored_vic] + dyn_hq_vehicles + dyn_standart_supply_vics, [120, 300] call BIS_fnc_randomInt] spawn dyn_spawn_supply_convoy;
+        [_aoPos, (getPos _aoPos) getpos [[-500, 1000] call BIS_fnc_randomInt, _dir] , ([1, 2] call BIS_fnc_randomInt), dyn_standart_light_amored_vics + dyn_standart_trasnport_vehicles, [800, 1500] call BIS_fnc_randomInt] spawn dyn_spawn_supply_convoy;
+    } else {
+        if ((random 1) > 0.5) then {
+            [_aoPos, (getPos _aoPos) getpos [[-500, 1000] call BIS_fnc_randomInt, _dir] , ([1, 2] call BIS_fnc_randomInt), dyn_standart_light_amored_vics + dyn_standart_trasnport_vehicles, [300, 500] call BIS_fnc_randomInt] spawn dyn_spawn_supply_convoy;
+        } 
+    };
 
-    // OP
-    // if ((random 1) > 0.2) then {
-    //     [_aoPos, _dir + ([-20, 20] call BIS_fnc_randomInt)] spawn dyn_spawn_observation_post;
+    ///// In Town Defenses /////
+
+    // [_validBuildings, [1, 2] call BIS_fnc_randomInt, _dir] call dyn_spawn_mg_team_garrisons; //[2, 4] call BIS_fnc_randomInt
+
+    // First Line Position
+    for "_i" from 0 to ([0, 1] call BIS_fnc_randomInt) do {
+        _b = _solitaryBuildings#0;
+        _solitaryBuildings deleteAt 0;
+        // {
+        //     if ((_b distance2d _x) < 100) then {
+        //         _solitaryBuildings deleteAt (_solitaryBuildings find _x);
+
+        //         // _m = createMarker [str (random 1), getPos _x];
+        //         // _m setMarkerType "mil_dot";
+        //         // _m setMarkerColor "colorRed";
+        //     };
+        // } forEach (+_solitaryBuildings);
+        _xMax = ((boundingBox _b)#1)#0;
+        _vicType = selectRandom dyn_standart_combat_vehicles;
+        _vPos = [(_xMax + 5) * (sin _dir), (_xMax + 5) * (cos _dir), 0] vectorAdd (getPos _b);
+        _grp = [_vPos, _vicType, _dir, true, true] call dyn_spawn_covered_vehicle;
+        [[_b], 1, _dir] spawn dyn_spawn_random_garrison;
+    };
+
+    // for "_i" from 0 to ([2,3] call BIS_fnc_randomInt) do {
+    //     _b = _solitaryBuildings#_i;
+    //     _solitaryBuildings deleteAt (_solitaryBuildings find _b);
+    //     [_b, _dir] spawn dyn_spawn_small_strongpoint;
     // };
 
-    //atgms
-    [getpos _aoPos, _dir, _allBuildings, _aoPos, [0, 1] call BIS_fnc_randomInt] spawn dyn_town_at_defence;
+    // create Tank/APC
+    private _vGrps = [];
+    private _vicAmount = (round ((count _solitaryBuildings) / 10) - 1);
+    if (_vicAmount > 2) then {_vicAmount = 2};
+    [getPos _aoPos, 400, _vicAmount] spawn dyn_crossroad_position;
 
-    // CrossRoad
-    [getPos _aoPos, (triggerArea _aoPos)#0, [0, 2] call BIS_fnc_randomInt] spawn dyn_crossroad_position;
+    // Random Log Vehicles
+    private _vicAmount = (round ((count _validBuildings) / 15) - 1);
+    if (_vicAmount > 2) then {_vicAmount = 2};
+    for "_i" from 0 to _vicAmount do {
+        _pPos = [[[getPos _aoPos, 300]], ["water"]] call BIS_fnc_randomPos;
+        _pPos findEmptyPosition [0, 100, "cwr3_o_ural_open"];
 
-    [(getpos _aoPos) nearRoads ((triggerArea _aoPos)#0), [0, 1] call BIS_fnc_randomInt] spawn dyn_spawn_sandbag_positions;
+        0 = [getPos _aoPos, 250, dyn_standart_supply_vics + dyn_standart_trasnport_vehicles, 0, true] call dyn_spawn_parked_vehicle;
+    };
 
-    // Continuos Inf Spawn
-    _solCount = count _solitaryBuildings;
-    _infB = _solitaryBuildings#(_solCount - ([1, round (_solCount * 0.25)] call BIS_fnc_randomInt));
-    _solitaryBuildings deleteAt (_solitaryBuildings find _infB);
-    [_aoPos, _infB, _endTrg] spawn dyn_spawn_def_waves;
+    // Random Garrison
+    private _garAmount = (round ((count _validBuildings) / 10) - 1);
+    if (_garAmount > 3) then {_garAmount = 3};
+    if (_garAmount < 1) then {_garAmount = 1};
+    // [_validBuildings, _garAmount, _dir] call dyn_spawn_random_garrison;
+    for "_i" from 0 to _garAmount do {
+        _b = selectRandom _validBuildings;
+        _validBuildings deleteAt (_solitaryBuildings find _b);
+        [_b, _dir] spawn dyn_spawn_small_strongpoint;
+    };
 
-    _allGrps
+    // Strongpoint
+    private _SPamount = (round (_buildingCount / 10)) - 1;
+    if (_SPamount > 1) then {_SPamount = 1};
+    for "_i" from 0 to _SPamount do {
+        _infB = selectRandom _solitaryBuildings;
+        {
+            if ((_infB distance2d _x) < 100) then {
+                _solitaryBuildings deleteAt (_solitaryBuildings find _x);
+
+                // _m = createMarker [str (random 1), getPos _x];
+                // _m setMarkerType "mil_dot";
+                // _m setMarkerColor "colorRed";
+            };
+        } forEach (+_solitaryBuildings);
+        _solitaryBuildings deleteAt (_solitaryBuildings find _infB);
+        _grp = [_infB, _dir] spawn dyn_spawn_strong_point;
+    };
+
+    //AA
+    if ((random 1) > 0.5) then {
+        _grp = [getPos _aoPos, _dir] call dyn_spawn_aa;
+        _allGrps pushBack _grp;
+        // [_aoPos, getPos (leader _grp), "o_antiair", "AA"] spawn dyn_spawn_intel_markers;
+    };
+
+    ////// Outer Defense ////////
+
+    // checkpoints
+    [getPos _aoPos, ((getpos (_validBuildings#0)) distance2D (getpos _aoPos)) + 75] call dyn_town_entry_checkpoints;
+
+    // trenches
+    if ((random 1) > 0.35) then {
+        private _trAmount = (round (_buildingCount / 15)) - 1;
+        if (_trAmount > 1) then {_trAmount = 1};
+        for "_i" from 0 to _trAmount do {
+            _tPos = _forwardPos getpos [([100, 180] call BIS_fnc_randomInt) * _i, _dir + (selectRandom [90, -90])];
+            if !([_tPos] call dyn_is_water) then {
+                [_tPos, _dir + ([-10, 10] call BIS_fnc_randomInt), false, false, false, true, true] call dyn_spawn_covered_inf;
+            };
+        };
+    };
+
+    // create Razor Wire
+    if (random (1) > 0.5) then {
+        _wireStart = (_forwardPos getPos [20, _dir]) getpos [100, _dir + 90];
+        for "_i" from 0 to 10 do {
+            _rPos = _wireStart getPos [30 * _i, _dir - 90];
+            [_rPos, _dir + ([-20, 20] call BIS_fnc_randomInt)] call dyn_spawn_barriers;
+        };
+    };
+
+    // mines
+    if ((random 1) > 0.5) then {
+
+        _mineStart = (_forwardPos getPos [150, _dir]) getpos [500, _dir + 90];
+        for "_i" from 0 to 20 do {
+            _rPos = _mineStart getPos [(1000 / 20) * _i, _dir - (90 + ([-3, 3] call BIS_fnc_randomInt))];
+
+            if ((random 1) > 0.8 and !([_rPos ] call dyn_is_forest)) then { 
+                [_rPos, (1000 / 20) + 20, _dir + ([-10, 10] call BIS_fnc_randomInt), false, 10, 1] call dyn_spawn_mine_field;
+
+                    // _m = createMarker [str (random 1), _rPos];
+                    // _m setMarkerType "mil_dot";
+                    // _m setMarkerColor "colorRed";
+            };
+        };
+    };
+
+    // Forest Patrols
+    [getPos _aoPos, 2000, [0,2] call BIS_fnc_randomInt, _aoPos, _dir] spawn dyn_spawn_forest_patrol;
+
+    // Forest Position
+    if ((random 1) > 0.5) then {
+        [(getPos _aoPos) getPos [500, _dir], _dir, [1, 2] call BIS_fnc_randomInt] spawn dyn_forest_defence_edge;
+    };
+
+    // side Screens
+    if ((random 1) > 0.5) then {
+        [getPos _aoPos, _dir] spawn dyn_spawn_screen;
+    };
+
+
+    // Unit Symbol
+    [getpos _aoPos] spawn {
+        params ["_pos"];
+
+        sleep 10;
+
+        private _townGrps = [];
+
+        {
+            if (((_pos distance2D (leader _x)) < 500)) then {
+                _townGrps pushBack _x;
+            }
+        } forEach ((allGroups select {(side _x) isEqualTo east}) - dyn_opfor_grps);
+
+        [_townGrps, east, selectRandom ["armor", "mech", "mech", "inf"]] spawn dyn_spawn_unit_intel_markers;
+    };
 };
 
 
@@ -415,17 +650,17 @@ dyn_spawn_side_town_guards = {
     } forEach (_locs - [_mainLoc]);
 
     _friendlyLocs = nearestLocations [getPos player, ["NameVillage", "NameCity", "NameCityCapital"], 1500];
-    {
-        // [objNull, (getPos _x) getPos [150, 0], "n_installation", "CIV", "ColorCivilian", 0.6] call dyn_spawn_intel_markers;
-        [getPos _x, 0, _endTrg, true] spawn dyn_ambiance_execute;
-    } forEach (_friendlyLocs - _validLocs - [_mainLoc]);
+    // {
+    //     // [objNull, (getPos _x) getPos [150, 0], "n_installation", "CIV", "ColorCivilian", 0.6] call dyn_spawn_intel_markers;
+    //     [getPos _x, 0, _endTrg, true] spawn dyn_ambiance_execute;
+    // } forEach (_friendlyLocs - _validLocs - [_mainLoc]);
 
     if !(_validLocs isEqualTo []) then {
 
         _validLocs = [_validLocs, [], {(getPos _x) distance2D _searchPos}, "ASCEND"] call BIS_fnc_sortBy;
         private _n = 0;
         {
-            [getPos _x, 0, _endTrg] spawn dyn_ambiance_execute;
+            // [getPos _x, 0, _endTrg] spawn dyn_ambiance_execute;
             private _validBuildings = [];
             private _buildings = nearestObjects [(getPos _x), ["house"], 400];
             {
@@ -483,32 +718,14 @@ dyn_spawn_side_town_guards = {
                 };
 
                 if ((random 1) > 0.5) then {
-                    // CrossRoad
-                    [getPos _x, 400, 1] spawn dyn_crossroad_position;
-                };
-
-                if ((random 1) > 0.5) then {
                     [_qrfTrg, getPos _x, (getPos _x) getpos [800, (getpos _x) getdir (getpos dyn_current_location)], 2, 1] spawn dyn_spawn_atk_simple;
                 };
 
                 [_validBuildings, [2, 3] call BIS_fnc_randomInt, _dir] call dyn_spawn_random_garrison;
 
                 if ((random 1) > 0.5) then {
-
-                    [_qrfTrg, getPos _x, 1000, [1, 2] call BIS_fnc_randomInt] spawn dyn_spawn_qrf;
-                };
-
-                if ((random 1) > 0.5) then {
-                    [getPos _x, 700, 1, _qrfTrg, _dir] spawn dyn_spawn_forest_patrol;
-                };
-
-                if ((random 1) > 0.5) then {
                     [_qrfTrg, getPos (selectRandom _validBuildings)] spawn dyn_spawn_supply_convoy;
                 };
-
-                [getPos _x, _dir, _buildings, _qrfTrg, [0, 2] call BIS_fnc_randomInt] spawn dyn_town_at_defence;
-
-                [getPos _x, 200, _qrfTrg, [0, 1] call BIS_fnc_randomInt] spawn dyn_spawn_qrf_patrol;
 
                 _endTrg = createTrigger ["EmptyDetector", (getPos _x), true];
                 _endTrg setTriggerActivation ["WEST SEIZED", "PRESENT", false];
@@ -524,7 +741,7 @@ dyn_spawn_side_town_guards = {
                 [_validBuildings, [1, 4] call BIS_fnc_randomInt, _dir] call dyn_spawn_random_garrison;
                 if ((random 1) > 0.8) then {
                     // CrossRoad
-                    [getPos _x, 400, 1] spawn dyn_crossroad_position;
+                    [getPos _x, 400, 1, true] spawn dyn_crossroad_position;
                 };
                 // [objNull, (getPos _x) getPos [150, 0], "u_installation", "CIV", "ColorUNKNOWN", 0.6] call dyn_spawn_intel_markers;
                 // [objNull, (getPos _x) getPos [200, 270], "o_s_t_inf_pl", "", "colorOPFOR", 1.2, 0.6] call dyn_spawn_intel_markers;
@@ -552,6 +769,7 @@ dyn_spawn_side_town_guards = {
 };
 
 
+
 dyn_defense = {
     params ["_atkPos", "_defPos", "_waitTime"];
 
@@ -574,10 +792,10 @@ dyn_defense = {
     private _mainType = "simple";
     // forest
     if ((_terrain#0) > (_accuracy * _accuracy) * 0.3) exitWith {dyn_defense_active = false}; // 23
+    // water
+    // if ((_terrain#2) > (_accuracy * _accuracy) * 0.02) exitWith {dyn_defense_active = false};
     // town
     if ((_terrain#1) > (_accuracy * _accuracy) * 0.07) then {_mainType = "complex"};
-    // water
-    if ((_terrain#2) > (_accuracy * _accuracy) * 0.02) then {_mainType = "complex"};
 
     [west, format ["defTask%1", _atkPos], ["Deffensive", "Defend against Counter Attack", ""], _atkPos, "ASSIGNED", 1, true, "defend", false] call BIS_fnc_taskCreate;
 
@@ -586,10 +804,12 @@ dyn_defense = {
     _arrowMarker setMarkerType "marker_std_atk";
     _arrowMarker setMarkerSize [1.5, 1.5];
     _arrowMarker setMarkerColor "colorOPFOR";
+    _arrowMarker setMarkerText "CATK";
     _arrowMarker setMarkerDir (_defPos getDir _atkPos);
 
-    private _unitMarker = [objNull, _defPos getPos [500, _defPos getdir _atkPos], "o_mech_inf", "Mech Btl.", "colorOPFOR", 0.8] call dyn_spawn_intel_markers;
-    private _areaMarker = [objNull, _defPos getPos [500, _defPos getdir _atkPos], "colorOpfor", 800] call dyn_spawn_intel_markers_area;
+    // private _unitMarker = [objNull, _defPos getPos [500, _defPos getdir _atkPos], "o_b_armor_pl", "Mech Btl.", "colorOPFOR", 0.8] call dyn_spawn_intel_markers;
+    // private _areaMarker = [objNull, _defPos getPos [500, _defPos getdir _atkPos], "colorOpfor", 800] call dyn_spawn_intel_markers_area;
+    [_defPos getPos [500, _defPos getdir _atkPos], 800, "Assembly Area"] call dyn_draw_mil_symbol_objectiv_free;
 
     sleep _waitTime;
     // sleep 2;
@@ -603,7 +823,7 @@ dyn_defense = {
     [10] spawn dyn_arty;
 
         // [_defPos, _defPos getDir _atkPos] spawn dyn_air_attack;
-    _fireSupport = selectRandom [1,1,1,1,2,2,2,3,3,4,4,5,6];
+    _fireSupport = selectRandom [1,1,1,1,2,2,2,4,4,5,6];
     switch (_fireSupport) do { 
         case 1 : {[10, "rocket"] spawn dyn_arty}; 
         case 2 : {[10] spawn dyn_arty};
@@ -621,12 +841,12 @@ dyn_defense = {
 
     [_atkPos, _spawnPos, [1, 2] call BIS_fnc_randomInt, [1, 2] call BIS_fnc_randomInt] spawn dyn_spawn_atk_complex;
 
-    _waves = [2, 3] call BIS_fnc_randomInt;
+    _waves = [1, 2] call BIS_fnc_randomInt;
     [objNull, _atkPos, _spawnPos, [1, 2] call BIS_fnc_randomInt, [1, 2] call BIS_fnc_randomInt, true, [dyn_standart_light_amored_vic], dyn_standart_light_amored_vics - [dyn_standart_light_amored_vic]] spawn dyn_spawn_atk_simple;
 
     for "_i" from 1 to _waves do {
 
-        _time = time + 240 + (30 * _i);
+        _time = time + 60 + (120 * _i);
         waitUntil {sleep 1; time >= _time and (count (allGroups select {(side (leader _x)) isEqualTo east})) <= ((count dyn_opfor_grps) + 15)};
 
         _units = [_units, [], {_x distance2D _rearPos}, "ASCEND"] call BIS_fnc_sortBy;
@@ -635,16 +855,14 @@ dyn_defense = {
 
         switch (_mainType) do { 
             case "simple" : {
-                [objNull, _atkPos, _spawnPos, 1 + _i, 1 + _i, true] spawn dyn_spawn_atk_simple;
-                [_atkPos, _spawnPos, 1, 1, false] spawn dyn_spawn_atk_complex;
+                [objNull, _atkPos, _spawnPos, 2 + _i, 2 + _i, true] spawn dyn_spawn_atk_simple;
+                // [_atkPos, _spawnPos, 1, 1, false] spawn dyn_spawn_atk_complex;
             }; 
             case "complex" : {
-                [objNull, _atkPos, _spawnPos, 1, 1, true] spawn dyn_spawn_atk_simple;
+                [objNull, _atkPos, _spawnPos, 2, 1, true] spawn dyn_spawn_atk_simple;
                 [_atkPos, _spawnPos, 1 + _i, 1 + _i, false] spawn dyn_spawn_atk_complex;}; 
             default {}; 
         };
-
-        
 
         _fireSupport = selectRandom [1,1,1,2,2,2,2,2,3,3];
         switch (_fireSupport) do { 

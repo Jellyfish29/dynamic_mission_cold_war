@@ -72,6 +72,7 @@ dyn_garbage_clear = {
     } forEach (allMissionObjects "StaticWeapon");
 };
 
+
 dyn_garbage_loop = {
   
    while {true} do {
@@ -211,6 +212,7 @@ dyn_is_indoor = {
     false
 };
 
+
 dyn_nearestRoad = {
     params ["_center", "_radius", ["_blackList", []], ["_bridgeDistance", 25]];
     private ["_return"];
@@ -343,5 +345,598 @@ dyn_terrain_scan = {
     [_forestAmount, _townAmount, _waterAmount, _terrain];
 };
 
+dyn_find_centroid_of_groups = {
+    params ["_groups"];
+
+    _groups = _groups select {(({alive _x} count (units _x)) > 0) and !isNull _x};
+    private _sumX = 0;
+    private _sumY = 0;
+    private _len = count _groups;
+
+    {
+        // if (alive (leader _x)) then {
+            _sumX = _sumX + ((getPos (leader _x))#0);
+            _sumY = _sumY + ((getPos (leader _x))#1);
+
+            // _m = createMarker [str (random 2), (getPos (leader _x))];
+            // _m setMarkerType "mil_marker";
+        // };
+
+    } forEach _groups;
+
+    [_sumX / _len, _sumY / _len, 0] 
+};
+
 // [getpos player, 0] spawn dyn_terrain_scan;
 
+dyn_intel_markers = [];
+
+dyn_spawn_intel_markers = {
+    params ["_trg", "_pos", "_type", "_text", ["_color", ""], ["_size", 0.7], ["_alpha", 1], ["_dir", 0], ["_posRandom", true]];
+
+    if !(isNull _trg) then { waitUntil {sleep 1; triggerActivated _trg}};
+
+    if (_posRandom) then {
+        _pos = [[[_pos, 50]], []] call BIS_fnc_randomPos;
+    };
+    _intelMarker = createMarker [format ["im%1", random 2], _pos];
+    _intelMarker setMarkerType _type;
+    _intelMarker setMarkerSize [_size, _size];
+    _intelMarker setMarkerText _text;
+    _intelMarker setMarkerAlpha _alpha;
+    _intelMarker setMarkerDir _dir;
+    if !(_color isEqualTo "") then {
+        _intelMarker setMarkerColor _color;
+    };
+
+    dyn_intel_markers pushBack _intelMarker;
+    _intelMarker
+};
+
+
+dyn_spawn_intel_markers_area = {
+    params ["_trg", "_pos", ["_color", "colorOpfor"], ["_size", 1500], ["_sizeYoff", 0.66], ["_mDir", [0, 359] call BIS_fnc_randomInt], ["_shape", "ELLIPSE"], ["_brush", "BDiagonal"], ["_alpha", 1]];
+
+    if !(isNull _trg) then { waitUntil {sleep 1; triggerActivated _trg}};
+
+    _intelMarker = createMarker [format ["im%1", random 2], _pos];
+    _intelMarker setMarkerColor _color;
+    _intelMarker setMarkerShape _shape;
+    _intelMarker setMarkerBrush _brush;
+    _intelMarker setMarkerAlpha 0.9;
+    _intelMarker setMarkerDir _mDir;
+    _intelMarker setMarkerAlpha _alpha;
+    _intelMarker setMarkerSize [_size, _size * _sizeYoff];
+
+    dyn_intel_markers pushBack _intelMarker;
+    _intelMarker
+};
+
+dyn_spawn_unit_intel_markers = {
+    params ["_grps", "_side", "_type", ["_attack", false]];
+
+    if (_side != playerSide) then {
+        waitUntil {sleep 5; ({(groupId _x) in pl_marta_dic} count _grps) >= 2};
+    };
+
+    _attack = false;
+
+    private _sideStr = "b";
+    private _sizeStr = "c";
+    private _size = 1.8;
+
+    switch (_side) do { 
+        case east : {_sideStr = "o"}; 
+        case west : {_sideStr = "b"}; 
+        default {_sideStr = "b"}; //n
+    };
+
+    private _unitSize = count _grps;
+
+    if (_unitSize < 6) then {_sizeStr = "p", _size = 1.3} else {
+    if (_unitSize > 25) then {_sizeStr = "b", _size = 2 }};
+
+    _markerNameUnit = createMarker [format ["%1unit", random 1], [0,0,0]];
+    _markerNameUnit setMarkerType format ["%1_%2_%3_pl", _sideStr, _sizeStr, _type];
+    _markerNameUnit setMarkerSize [_size,_size];
+
+    _centroid = [_grps] call dyn_find_centroid_of_groups;
+    _markerNameUnit setMarkerPos _centroid;
+
+    private _markerNameAttack = format ["%1Attack", random 1];
+    if (_attack) then {
+        _atkArrowPos = _centroid getpos [100, _centroid getDir player];
+
+        _markerNameAttack = createMarker [_markerNameAttack, _atkArrowPos];
+        _markerNameAttack setMarkerType "marker_std_atk";
+        _markerNameAttack setMarkerSize [1.5, 1.5];
+        _markerNameAttack setMarkerColor "colorOPFOR";
+        _markerNameAttack setMarkerDir (_centroid getDir player);
+    };
+
+    while {sleep 10; (count (_grps select {(({alive _x} count (units _x)) > 0) and !isNull _x})) > 1} do {
+        _centroid = [_grps] call dyn_find_centroid_of_groups;
+        _markerNameUnit setMarkerPos _centroid;
+
+        if (_attack) then {
+            _markerNameAttack setMarkerPos (_centroid getpos [200, _centroid getDir player]);
+            _markerNameAttack setMarkerDir (_centroid getDir player);
+        };
+
+        sleep 10;
+    };
+
+    deleteMarker _markerNameUnit;
+    if (_attack) then {
+        deleteMarker _markerNameAttack;
+    };
+};
+
+dyn_draw_mil_symbol_fortification_line = {
+    params ["_centerPos", "_width", "_dir", ["_spacing", 40]];
+
+    // private _spacing = 40;
+    private _steps = round (_width / _spacing);
+
+    private _path = [];
+    private _pos1Array = [];
+    private _pos2Array = []; 
+
+    private _startPos = _centerPos getPos [_width / 2, _dir + 90];
+    for "_i" from 0 to _steps do {
+        _pos1 = _startPos getPos [_spacing * _i, _dir - 90];
+        _pos2 = _pos1 getPos [_spacing, _dir - 180];
+
+        _pos1Array pushBack _pos1;
+        _pos2Array pushBack _pos2;
+    };
+
+    _pos1Array deleteAt 0;
+
+    for "_i" from 0 to count (_pos2Array) - 2 step 2 do {
+        _path pushBack ((_pos2Array#_i))#0;
+        _path pushBack ((_pos2Array#_i))#1;
+        _path pushBack ((_pos2Array#(_i + 1)))#0;
+        _path pushBack ((_pos2Array#(_i + 1)))#1;
+
+        _path pushBack ((_pos1Array#_i))#0;
+        _path pushBack ((_pos1Array#_i))#1;
+        _path pushBack ((_pos1Array#(_i + 1)))#0;
+        _path pushBack ((_pos1Array#(_i + 1)))#1;
+    };
+
+    _lineMarker = createMarker [str (random 3), [0,0,0]];
+    _lineMarker setMarkerShape "POLYLINE";
+    _lineMarker setMarkerPolyline _path;
+    _lineMarker setMarkerColor "colorOPFOR";
+
+    dyn_intel_markers pushBack _lineMarker;
+};
+
+dyn_draw_mil_symbol_objectiv = {
+    params ["_objPos", "_buildings", "_name"];
+
+    private _path = [];
+
+    {
+        _watchPos = _objPos getpos [1000, _x];
+        _b = ([_buildings, [], {_x distance2D _watchPos}, "ASCEND"] call BIS_fnc_sortBy)#0;
+        _path pushBack ((getPos _b)#0);
+        _path pushBack ((getPos _b)#1);
+        if (_x == 90) then {
+            _textPos = (getPos _b) getPos [50, _x];
+            _m = createMarker [str (random 3), _textPos];
+            _m setMarkerType "mil_dot",
+            _m setMarkerText _name;
+            _m setMarkerSize [0,0];
+            _m setMarkerColor "colorOPFOR";
+
+            dyn_intel_markers pushBack _m;
+
+        };
+    } forEach [0, 90, 180, 270];
+
+    _path pushBack (_path#0);
+    _path pushBack (_path#1);
+
+    _objMarker = createMarker [str (random 3), [0,0,0]];
+    _objMarker setMarkerShape "POLYLINE";
+    _objMarker setMarkerPolyline _path;
+    _objMarker setMarkerColor "colorOPFOR";
+
+    dyn_intel_markers pushBack _objMarker;
+};
+
+dyn_draw_mil_symbol_objectiv_free = {
+    params ["_objPos", "_size", "_name", ["_color", "colorOpfor"]];
+
+    private _path = [];
+
+    {
+        _pos = _objPos getpos [_size, _x + ([-45, 45] call BIS_fnc_randomInt)];
+
+        _path pushBack (_pos#0);
+        _path pushBack (_pos#1);
+        if (_x == 90) then {
+            _textPos = _pos getPos [50, _x];
+            _m = createMarker [str (random 3), _textPos];
+            _m setMarkerType "mil_dot",
+            _m setMarkerText _name;
+            _m setMarkerSize [0,0];
+            _m setMarkerColor _color;
+
+            dyn_intel_markers pushBack _m;
+
+        };
+    } forEach [0, 90, 180, 270];
+
+    _path pushBack (_path#0);
+    _path pushBack (_path#1);
+
+    _objMarker = createMarker [str (random 3), [0,0,0]];
+    _objMarker setMarkerShape "POLYLINE";
+    _objMarker setMarkerPolyline _path;
+    _objMarker setMarkerColor _color;
+
+    dyn_intel_markers pushBack _objMarker;
+};
+
+// [getPos player, 400, "Test"] call dyn_draw_mil_symbol_objectiv_free;
+
+dyn_draw_mil_symbol_block = {
+    params ["_pos", "_dir", ["_size", 200], ["_color", "colorOpfor"]];
+
+    private _path = [_pos#0, _pos#1];
+
+    _pos2 = _pos getPos [_size, _dir];
+    _path pushBack (_pos2#0);
+    _path pushBack (_pos2#1);
+    _pos3 = _pos2 getPos [_size / 2, _dir + 90];
+    _path pushBack (_pos3#0);
+    _path pushBack (_pos3#1);
+    _pos4 = _pos2 getPos [_size / 2, _dir - 90];
+    _path pushBack (_pos4#0);
+    _path pushBack (_pos4#1);
+
+    _blockMarker = createMarker [str (random 3), [0,0,0]];
+    _blockMarker setMarkerShape "POLYLINE";
+    _blockMarker setMarkerPolyline _path;
+    _blockMarker setMarkerColor _color;
+
+    _m = createMarker [str (random 3), _pos getPos [_size / 2, _dir]];
+    _m setMarkerType "mil_dot",
+    _m setMarkerText "B";
+    _m setMarkerSize [0,0];
+    _m setMarkerColor _color;
+
+    dyn_intel_markers pushBack _m;
+    dyn_intel_markers pushBack _blockMarker;
+};
+
+dyn_draw_mil_symbol_screen = {
+    params ["_pos", "_dir", ["_type", "S"], ["_color", "colorOpfor"]];
+
+
+    {
+        private _path = [];
+        _sidePos = _pos getpos [100, _dir + _x];
+        _sidePos3 = _sidePos getpos [300, _dir + _x];
+        _sidePos2 = _sidePos3 getpos [50, _dir];
+        _sidePos4 = _sidePos2 getpos [300, _dir + _x];
+        _sidePos5 = _sidePos3 getpos [260, _dir + _x];
+        _sidePos6 = (_sidePos2 getpos [260, _dir + _x]) getPos [30, _dir];
+
+        _path pushBack (_sidePos#0);
+        _path pushBack (_sidePos#1);
+        _path pushBack (_sidePos2#0);
+        _path pushBack (_sidePos2#1);
+        _path pushBack (_sidePos3#0);
+        _path pushBack (_sidePos3#1);
+        _path pushBack (_sidePos4#0);
+        _path pushBack (_sidePos4#1);
+        _path pushBack (_sidePos5#0);
+        _path pushBack (_sidePos5#1);
+        _path pushBack (_sidePos4#0);
+        _path pushBack (_sidePos4#1);
+        _path pushBack (_sidePos6#0);
+        _path pushBack (_sidePos6#1);
+
+
+        _screenMarker = createMarker [str (random 3), [0,0,0]];
+        _screenMarker setMarkerShape "POLYLINE";
+        _screenMarker setMarkerPolyline _path;
+        _screenMarker setMarkerColor _color;
+
+        dyn_intel_markers pushBack _screenMarker;
+    } forEach [90, -90];
+
+    _m = createMarker [str (random 3), _pos];
+    _m setMarkerType "mil_dot",
+    _m setMarkerText _type;
+    _m setMarkerSize [0,0];
+    _m setMarkerColor _color;
+
+    dyn_intel_markers pushBack _m;
+};
+
+
+dyn_draw_phase_lines = {
+    params ["_campaignDir", "_endPos"];
+
+    private _centerPositionsLeft = [];
+    private _centerPositionsRight = [];
+    private _locations = [player] + dyn_locations;
+    private _lastPos = getpos (leader artGrp_1);
+    private _lastDir = -1;
+    {
+        _locPos = getPos _x;
+
+        // _dir = _lastPos getdir _locPos;
+        _centerPositionsLeft pushBack (_locPos getpos [2000, _campaignDir + 90]);
+        _centerPositionsRight pushBack (_locPos getpos [2000, _campaignDir - 90]);
+
+        _lastPos = _locPos;
+
+    } forEach _locations;
+
+    private _pathLeft = [];
+    private _pathRight = [];
+
+    private _posIdx = 1;
+    for "_i" from 0 to (count _centerPositionsRight) - 2 step 1 do {
+        _currentPosRight = _centerPositionsRight#_i;
+        private _nextPosRight = _centerPositionsRight#(_i+1);
+        private _dirRight = _currentPosRight getDir _nextPosRight;
+
+        _distanceRight = _currentPosRight distance2d _nextPosRight;
+
+        _midPointRight = _currentPosRight getPos [_distanceRight / 2, _dirRight];
+
+        _pathRight pushBack (_midPointRight#0);
+        _pathRight pushBack (_midPointRight#1);
+
+        _currentPosLeft = _centerPositionsLeft#_i;
+        _nextPosLeft = _centerPositionsLeft#(_i+1);
+        _dirLeft = _currentPosLeft getDir _nextPosLeft;
+        _distance = _currentPosLeft distance2d _nextPosLeft;
+
+        _midPointLeft = _currentPosLeft getPos [_distance / 2, _dirLeft];
+
+        _pathLeft pushBack (_midPointLeft#0);
+        _pathLeft pushBack (_midPointLeft#1);
+
+    };
+
+    _lineMarkerRight = createMarker [format ["Right%1", random 3], [0,0,0]];
+    _lineMarkerRight setMarkerShape "POLYLINE";
+    _lineMarkerRight setMarkerPolyline _pathRight;
+    _lineMarkerRight setMarkerColor "colorBLACK";
+
+    _lineMarkerLeft = createMarker [format ["Left%1", random 3], [0,0,0]];
+    _lineMarkerLeft setMarkerShape "POLYLINE";
+    _lineMarkerLeft setMarkerPolyline _pathLeft;
+    _lineMarkerLeft setMarkerColor "colorBLACK";
+};
+
+dyn_frontline_path = [];
+
+dyn_phaseline_path = [];
+
+dyn_draw_frontline = {
+    params ["_objPos", "_campaignDir", ["_start", false], ["_midDistance", 0]];
+
+    private _pathLeft = [];
+    private _pathRight = [];
+
+    _centerPositionsLeft = (_objPos getpos [[1800, 2200] call BIS_fnc_randomInt, _campaignDir + 90]);
+    _centerPositionsRight = (_objPos getpos [[1800, 2200] call BIS_fnc_randomInt, _campaignDir - 90]);
+
+    _xLength = 15000;
+
+    private _spacing = 90;
+    private _steps = round (_xLength / _spacing);
+
+    private _loaLinePath = [];
+
+    // main Frontline
+    {
+        _startPos1 = (_x#0)#0;
+        _startPos2 = (_x#0)#1;
+        _color = _x#1;
+        {
+            private _dirChangeInterval = round (_steps / ([4, 8] call BIS_fnc_randomInt));
+            private _path = [];
+            private _flotPath = [];
+            private _pos1Array = [];
+            private _pos2Array = [];
+            private _startPos = _x#0;
+            private _frontDirFix = _campaignDir + (_x#1);
+            private _frontDir = _campaignDir + (_x#1);
+            private _alliedLineInterval = round (_steps / 2);
+
+            private _n = 0;
+            for "_i" from 0 to _steps do {
+                _pos1 = _startPos getPos [_spacing * _n, _frontDir];
+                _pos2 = _pos1 getPos [_spacing, _frontDir - 90];
+
+                _n = _n + 1;
+
+                if (_i % _dirChangeInterval == 0) then {
+
+                    if (_start) then {
+                        _frontDir = _frontDir + ([-10, 10] call BIS_fnc_randomInt);
+                    } else {
+                        if ((_x#1) < 0 ) then {
+                            _frontDir = _frontDir + ([-12, 5] call BIS_fnc_randomInt);
+                        } else {
+                            _frontDir = _frontDir + ([-5, 12] call BIS_fnc_randomInt);
+                        };
+                    };
+
+                    // if (_frontDir > _frontDirFix + 10) then {
+                    //     _frontDir = _frontDirFix;
+                    // };
+                    // if (_frontDir < _frontDirFix - 10) then {
+                    //     _frontDir = _frontDirFix;
+                    // };
+                    _startPos = _pos1;
+                    _n = 0;
+
+                    _flotPos = _pos2 getPos [1000, _frontDir + (_x#1)];
+                    _flotPath pushBack (_flotPos#0);
+                    _flotPath pushBack (_flotPos#1);
+
+                };
+
+                // Unit diverdier Lines
+                if (_i % _alliedLineInterval == 0) then {
+                    _mFEBA = createMarker [str (random 4), _pos2];
+                    _mFEBA setMarkerType "mil_dot";
+                    _mFEBA setMarkerText "FEBA";
+                    _mFEBA setMarkerSize [0.7, 0.7];
+                    dyn_intel_markers pushBack _mFEBA;
+
+                    _mFLOT = createMarker [str (random 4), _pos2 getPos [1000, _frontDir + (_x#1)]];
+                    _mFLOT setMarkerType "mil_dot";
+                    _mFLOT setMarkerText "FLOT";
+                    _mFLOT setMarkerSize [0.7, 0.7];
+                    dyn_intel_markers pushBack _mFLOT;
+
+                    private _dividerLinePath = [];
+                    _dPos = _pos2;
+                    _intervals = [[1000, 1600] call BIS_fnc_randomInt,[1000, 1600] call BIS_fnc_randomInt,[1000, 1600] call BIS_fnc_randomInt,[1000, 1600] call BIS_fnc_randomInt,[1000, 1600] call BIS_fnc_randomInt,[1000, 1600] call BIS_fnc_randomInt];
+                    if (_i == 0) then {
+
+                        _loaPos = _pos1 getPos [_midDistance + ([1000, 1100] call BIS_fnc_randomInt), _frontDir - (_x#1)];
+
+                        _mLOA = createMarker [str (random 4), _loaPos];
+                        _mLOA setMarkerType "mil_dot";
+                        _mLOA setMarkerText "LOA";
+                        _mLOA setMarkerSize [0.7, 0.7];
+
+                        dyn_intel_markers pushBack _mLOA;
+
+                        _loaLinePath pushBack (_loaPos#0);
+                        _loaLinePath pushBack (_loaPos#1);
+
+                        _dividerLinePath pushBack (_loaPos#0);
+                        _dividerLinePath pushBack (_loaPos#1);
+                    };
+
+                    _dividerLinePath pushBack (_pos2#0);
+                    _dividerLinePath pushBack (_pos2#1); 
+
+                    for "_j" from 0 to 5 do {
+
+                        _dPos = _dPos getPos [_intervals#_j, _frontDir + (_x#1) + ([-5, 5] call BIS_fnc_randomInt)];
+                        _dividerLinePath pushBack (_dPos#0);
+                        _dividerLinePath pushBack (_dPos#1);
+
+
+                        // Btl Markers
+                        if (_j == 2) then {
+
+                            [objNull, _dPos getPos [3500, _frontDir], (dyn_allied_unit_names#(_i / _alliedLineInterval))#0, (dyn_allied_unit_names#(_i / _alliedLineInterval))#1, "", 1] spawn dyn_spawn_intel_markers;
+                            {
+                                _p1p1 = _dPos getPos [_x, _frontDir];
+                                _p1p2 = _p1p1 getpos [120, _frontDir + 90];
+                                _path1 = [_p1p1#0, _p1p1#1, _p1p2#0, _p1p2#1];
+
+                                _p2p1 = _dPos getPos [_x, _frontDir];
+                                _p2p2 = _p2p1 getpos [120, _frontDir + 90];
+                                _path2 = [_p2p1#0, _p2p1#1, _p2p2#0, _p2p2#1];
+
+                                _p3p1 = _dPos getPos [_x, _frontDir - 180];
+                                _p3p2 = _p3p1 getpos [120, _frontDir + 90];
+                                _path3 = [_p3p1#0, _p3p1#1, _p3p2#0, _p3p2#1];
+
+                                _p4p1 = _dPos getPos [_x, _frontDir - 180];
+                                _p4p2 = _p4p1 getpos [120, _frontDir + 90];
+                                _path4 = [_p4p1#0, _p4p1#1, _p4p2#0, _p4p2#1];
+
+                                _pM1 = createMarker [str (random 3), [0,0,0]];
+                                _pM1 setMarkerShape "POLYLINE";
+                                _pM1 setMarkerPolyline _path1;
+
+                                _pM2 = createMarker [str (random 3), [0,0,0]];
+                                _pM2 setMarkerShape "POLYLINE";
+                                _pM2 setMarkerPolyline _path2;
+
+                                _pM3 = createMarker [str (random 3), [0,0,0]];
+                                _pM3 setMarkerShape "POLYLINE";
+                                _pM3 setMarkerPolyline _path3;
+
+                                _pM4 = createMarker [str (random 3), [0,0,0]];
+                                _pM4 setMarkerShape "POLYLINE";
+                                _pM4 setMarkerPolyline _path4;
+
+                                dyn_intel_markers pushBack _pM1;
+                                dyn_intel_markers pushBack _pM2;
+                                dyn_intel_markers pushBack _pM3;
+                                dyn_intel_markers pushBack _pM4;
+
+                            } forEach [150, 240];
+
+                        };
+                    };
+
+                    _dividerLineMarker = createMarker [str (random 3), [0,0,0]];
+                    _dividerLineMarker setMarkerShape "POLYLINE";
+                    _dividerLineMarker setMarkerPolyline _dividerLinePath;
+                    _dividerLineMarker setMarkerColor "colorBLACK";
+                    _dividerLineMarker setMarkerAlpha 0.7;
+
+                    dyn_intel_markers pushBack _dividerLineMarker;
+
+                };
+                _pos1Array pushBack _pos1;
+                _pos2Array pushBack _pos2;
+            };
+
+            _pos1Array deleteAt 0;
+
+            for "_i" from 0 to count (_pos2Array) - 2 step 2 do {
+                _path pushBack ((_pos2Array#_i))#0;
+                _path pushBack ((_pos2Array#_i))#1;
+                _path pushBack ((_pos2Array#(_i + 1)))#0;
+                _path pushBack ((_pos2Array#(_i + 1)))#1;
+
+                _path pushBack ((_pos1Array#_i))#0;
+                _path pushBack ((_pos1Array#_i))#1;
+                _path pushBack ((_pos1Array#(_i + 1)))#0;
+                _path pushBack ((_pos1Array#(_i + 1)))#1;
+            };
+
+            // for "_i" from 0 to count (_pos2Array) - 2 step 2 do {
+            //     _path pushBack ((_pos2Array#(_i + 1)))#0;
+            //     _path pushBack ((_pos2Array#(_i + 1)))#1;
+
+            //     _path pushBack ((_pos1Array#(_i + 1)))#0;
+            //     _path pushBack ((_pos1Array#(_i + 1)))#1;
+            // };
+
+            _lineMarker = createMarker [str (random 3), [0,0,0]];
+            _lineMarker setMarkerShape "POLYLINE";
+            _lineMarker setMarkerPolyline _path;
+            _lineMarker setMarkerColor "colorBLACK";
+            _lineMarker setMarkerAlpha 0.7;
+
+            _flotLineMarker = createMarker [str (random 3), [0,0,0]];
+            _flotLineMarker setMarkerShape "POLYLINE";
+            _flotLineMarker setMarkerPolyline _flotPath;
+            _flotLineMarker setMarkerColor "colorBlack";
+            _flotLineMarker setMarkerAlpha 0.7;
+
+            dyn_intel_markers pushBack _flotLineMarker;
+            dyn_intel_markers pushBack _lineMarker;
+        } forEach [[_startPos1, 90], [_startPos2, -90]];
+    } forEach [[[_centerPositionsLeft, _centerPositionsRight], "colorOPFOR"]];//, [[_bluLineStartLeft, _bluLineStartRight], "colorBLUFOR"]];
+
+    _loaLineMarker = createMarker [str (random 3), [0,0,0]];
+    _loaLineMarker setMarkerShape "POLYLINE";
+    _loaLineMarker setMarkerPolyline _loaLinePath;
+    _loaLineMarker setMarkerColor "colorBLACK";
+    _loaLineMarker setMarkerAlpha 0.5;
+
+    dyn_intel_markers pushBack _loaLineMarker;
+};

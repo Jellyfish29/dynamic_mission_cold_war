@@ -188,6 +188,8 @@ dyn_garrison_building = {
         _unit setUnitPos _unitPos;
         _unit disableAI "PATH";
     };
+
+    [_grp] call dyn_arty_dmg_reduction;
 };
 
 dyn_convoy_speed = 35;
@@ -510,7 +512,7 @@ dyn_convoy_parth_find = {
                 // _marker setMarkerColor "colorBLUFOR";
                 // _marker setMarkerType "MIL_DOT";
                 // _marker setMarkerSize [0.3, 0.3];
-                // _returnPath pushback getPos _parent;
+                _returnPath pushback getPos _parent;
                 _allRoads pushBackUnique _parent;
                 _parent = _dummyGroup getVariable ("NF_neighborParent_" + str _parent);
                 // dyn_convoy_path_marker pushBack _marker;
@@ -519,7 +521,7 @@ dyn_convoy_parth_find = {
         _openSet = _openSet - [_current];
         _closedSet pushBack _current;
         private _neighbors = (getPos _current) nearRoads 20; // This includes current
-        _neighbors append (roadsConnectedTo _current);
+        _neighbors append (roadsConnectedTo [_current, true]);
         {
             if (!(_x in _closedSet)) then {
                 private _currentG = _dummyGroup getVariable ["NF_neighborG_" + str _current, 0];
@@ -768,6 +770,7 @@ dyn_opfor_join_grp = {
                 _x disableAI "AUTOCOMBAT";
                 _x setBehaviour "AWARE";
                 _x setUnitPos "AUTO";
+                _x doMove (getPos (leader _targetGrp));
                 _x doFollow (leader _targetGrp);
             };
         } forEach (units _grp);
@@ -841,4 +844,49 @@ dyn_opfor_surrender = {
         deleteVehicle _x;
     } forEach (units _surrenderGrp);
     deleteGroup _surrenderGrp;
+};
+
+dyn_continous_surrender = {
+
+    sleep 500;
+
+    while {sleep 1; true} do {
+        {
+            _grp = _x;
+            if ((count (units _grp) <= 2 and (vehicle (leader _grp)) == (leader _grp))) then {
+                _joined = [_grp, side _grp] call dyn_opfor_join_grp;
+                if !(_joined) then {
+                    [_grp] spawn dyn_opfor_surrender;
+                };
+            };
+        } forEach (allGroups select {side _x  == east});
+
+        sleep 240;
+    };
+};
+
+[] spawn dyn_continous_surrender;
+
+dyn_arty_dmg_reduction = {
+    params ["_grp"];
+
+    { 
+        _x addEventHandler ['HandleDamage', {
+            params['_unit', '_selName', '_damage', '_source'];
+
+            if ((getNumber (configFile >> "CfgVehicles" >> typeOf _source >> "artilleryScanner")) == 1 and (speed _unit) <= 1) then {
+
+                _damage = _damage * 0.05;
+
+                if (_damage > 0.8) then {
+                    if ((random 1) > 0.15) then {
+                        _unit setUnitPosWeak "DOWN";
+                        _unit setSuppression 1;
+                        _damage = 0;
+                    };
+                };
+            };
+            _damage
+        }];
+    } forEach (units _grp);  
 };
