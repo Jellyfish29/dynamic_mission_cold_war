@@ -136,7 +136,7 @@ dyn_get_retreat_in_def = {
         if (_i % 2 == 0) then {_dirOffset = 90} else {_dirOffset = -90};
 
         _movePos = _pos getpos [_posOffset, _dir + _dirOffset];
-        _posOffset = _posOffset + ([150, 250] call BIS_fnc_randomInt);
+        _posOffset = _posOffset + ([80, 150] call BIS_fnc_randomInt);
         
         [_grp, (currentWaypoint _grp)] setWaypointType "MOVE";
         [_grp, (currentWaypoint _grp)] setWaypointPosition [getPosASL (leader _grp), -1];

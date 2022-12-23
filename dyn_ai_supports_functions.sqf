@@ -210,7 +210,7 @@ dyn_continous_support = {
 
     while {!triggerActivated _endTrg} do {
 
-        _fireSupport = selectRandom [0,0,1,1,1,2,2,2,2,3,4,4,4,5,5];
+        _fireSupport = selectRandom [0,0,1,1,1,2,2,2,2,2,2,2,2,2,4,4,4,4,5,5,5,5,5];
 
         switch (_fireSupport) do {
             case 0 : {}; 

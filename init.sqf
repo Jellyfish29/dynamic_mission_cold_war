@@ -72,7 +72,7 @@ dyn_allied_unit_names = [["b_b_armor_pl", "2nd Btl/4th Armored"], ["b_b_armor_pl
 // dyn_opfor_comp = [["o_mech_inf", "232. MechInfBtl"], ["o_inf", "16. GdsInfBtl"], ["o_motor_inf", "45. MotInfBtl"], ["o_motor_inf", "101. MotInfBtl"], ["o_armor", "3. ArmBtl"]];
 // dyn_uniforms_dic = createHashMapFromArray [["o_mech_inf", "cwr3_o_uniform_kzs_v1"], ["o_inf", "cwr3_o_uniform_m1982"], ["o_motor_inf", "cwr3_o_uniform_kzs_v2"], ["o_armor", "cwr3_o_uniform_kzs_v2"]];
 // dyn_bushes = ["gm_b_crataegus_monogyna_01_summer", "gm_b_crataegus_monogyna_02_summer", "gm_b_corylus_avellana_01_summer", "gm_b_sambucus_nigra_01_summer"];
-// dyn_phase_names = ["PL VICTORY", "PL ABLE", "PL RHINO", "PL BISON", "PL HAMMER", "PL WIDOW", "PL FIONA", "PL IRINE", "PL DAVID", "PL DAWN", "PL APPLE", "PL DIAMOND", "PL GOLD", "PL REAPER", "PL MARY"];
+// dyn_phase_names = ["OBJ VICTORY", "OBJ ABLE", "OBJ RHINO", "OBJ BISON", "OBJ HAMMER", "OBJ WIDOW", "OBJ FIONA", "OBJ IRINE", "OBJ DAVID", "OBJ DAWN", "OBJ APOBJE", "OBJ DIAMOND", "OBJ GOLD", "OBJ REAPER", "OBJ MARY"];
 
 execVM "dyn_util_functions.sqf";
 execVM "dyn_ai_functions.sqf";
@@ -98,6 +98,14 @@ pl_cas_Heli_1 = "cwr3_b_ah1f";
 // pl_cas_Heli_1 = "RHS_AH64D_wd";
 pl_medevac_Heli_1 = "cwr3_b_uh1_mev";
 pl_supply_Heli_1 = "cwr3_b_ch47";
+
+// pl_medevac_Heli_1 = "gm_ge_army_bo105p1m_vbh_swooper";
+// pl_supply_Heli_1 = "gm_ge_army_ch_53g";
+
+// pl_cas_Heli_1 = "BWA3_Tiger_RMK_Heavy";
+// pl_supply_Heli_1 = "BWA3_NH90_TTH_M3M_Fleck";
+// pl_medevac_Heli_1 = "BWA3_NH90_TTH_Fleck";
+
 pl_cas_plane_1 = "RHS_A10";
 pl_cas_plane_2 = "RHS_A10";
 // pl_cas_plane_3 = "RHS_A10";

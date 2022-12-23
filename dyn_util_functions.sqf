@@ -367,6 +367,36 @@ dyn_find_centroid_of_groups = {
     [_sumX / _len, _sumY / _len, 0] 
 };
 
+dyn_hide_fences = {
+    params ["_pos", "_radius"];
+ 
+    _fences = nearestTerrainObjects [_pos, ["FENCE", "WALL"], _radius, false, true];
+
+    for "_i" from 0 to (count _fences) - 1 do {
+        if (_i % 3 == 0) then {
+            hideObject (_fences#_i);
+        };
+    };
+};
+
+dyn_lowerTerrain = {
+    params ["_start", "_a", "_b", "_h"];
+    private _newPositions = [];
+    _startHeight = _start#2;
+
+    for "_xStep" from -(_a / 2) to (_a / 2) do
+    {
+        for "_yStep" from -(_b / 2) to (_b / 2) do
+        {
+            private _newHeight = _start vectorAdd [_xStep, _yStep, 0];
+            _newHeight set [2, _startHeight - _h];
+            _newPositions pushBack _newHeight;
+        };
+    };
+
+    setTerrainHeight [_newPositions, true];
+};
+
 // [getpos player, 0] spawn dyn_terrain_scan;
 
 dyn_intel_markers = [];
@@ -759,6 +789,10 @@ dyn_draw_frontline = {
                 _pos1 = _startPos getPos [_spacing * _n, _frontDir];
                 _pos2 = _pos1 getPos [_spacing, _frontDir - 90];
 
+                _flotPos = _pos1 getPos [1500, _frontDir + (_x#1)];
+                _flotPath pushBack (_flotPos#0);
+                _flotPath pushBack (_flotPos#1);
+
                 _n = _n + 1;
 
                 if (_i % _dirChangeInterval == 0) then {
@@ -782,21 +816,21 @@ dyn_draw_frontline = {
                     _startPos = _pos1;
                     _n = 0;
 
-                    _flotPos = _pos2 getPos [1000, _frontDir + (_x#1)];
-                    _flotPath pushBack (_flotPos#0);
-                    _flotPath pushBack (_flotPos#1);
+                    // _flotPos = _pos2 getPos [1500, _frontDir + (_x#1)];
+                    // _flotPath pushBack (_flotPos#0);
+                    // _flotPath pushBack (_flotPos#1);
 
                 };
 
                 // Unit diverdier Lines
                 if (_i % _alliedLineInterval == 0) then {
                     _mFEBA = createMarker [str (random 4), _pos2];
-                    _mFEBA setMarkerType "mil_dot";
+                    _mFEBA setMarkerType "mil_objective";
                     _mFEBA setMarkerText "FEBA";
-                    _mFEBA setMarkerSize [0.7, 0.7];
+                    _mFEBA setMarkerSize [0.5, 0.5];
                     dyn_intel_markers pushBack _mFEBA;
 
-                    _mFLOT = createMarker [str (random 4), _pos2 getPos [1000, _frontDir + (_x#1)]];
+                    _mFLOT = createMarker [str (random 4), _pos2 getPos [1500, _frontDir + (_x#1)]];
                     _mFLOT setMarkerType "mil_dot";
                     _mFLOT setMarkerText "FLOT";
                     _mFLOT setMarkerSize [0.7, 0.7];
@@ -895,25 +929,22 @@ dyn_draw_frontline = {
 
             _pos1Array deleteAt 0;
 
-            for "_i" from 0 to count (_pos2Array) - 2 step 2 do {
-                _path pushBack ((_pos2Array#_i))#0;
-                _path pushBack ((_pos2Array#_i))#1;
-                _path pushBack ((_pos2Array#(_i + 1)))#0;
-                _path pushBack ((_pos2Array#(_i + 1)))#1;
-
-                _path pushBack ((_pos1Array#_i))#0;
-                _path pushBack ((_pos1Array#_i))#1;
-                _path pushBack ((_pos1Array#(_i + 1)))#0;
-                _path pushBack ((_pos1Array#(_i + 1)))#1;
-            };
-
             // for "_i" from 0 to count (_pos2Array) - 2 step 2 do {
+            //     _path pushBack ((_pos2Array#_i))#0;
+            //     _path pushBack ((_pos2Array#_i))#1;
             //     _path pushBack ((_pos2Array#(_i + 1)))#0;
             //     _path pushBack ((_pos2Array#(_i + 1)))#1;
 
+            //     _path pushBack ((_pos1Array#_i))#0;
+            //     _path pushBack ((_pos1Array#_i))#1;
             //     _path pushBack ((_pos1Array#(_i + 1)))#0;
             //     _path pushBack ((_pos1Array#(_i + 1)))#1;
             // };
+
+            for "_i" from 0 to count (_pos2Array) - 2 step 2 do {
+                _path pushBack (_pos2Array#_i)#0;
+                _path pushBack (_pos2Array#_i)#1;
+            };
 
             _lineMarker = createMarker [str (random 3), [0,0,0]];
             _lineMarker setMarkerShape "POLYLINE";

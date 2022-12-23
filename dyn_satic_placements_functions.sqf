@@ -182,6 +182,10 @@ dyn_spawn_covered_inf = {
             _tPos = [5 * (sin _dir), 5 * (cos _dir), 0] vectorAdd _pos;
             _tPos = [18 * (sin (_dir - 90)), 18 * (cos (_dir - 90)), 0] vectorAdd _tpos;
 
+            // {
+            //     [getPosASL _x, 4, 4, 2] spawn dyn_lowerTerrain;
+            // } forEach (units _grp);
+
             _offset = 0;
             for "_i" from 0 to 3 do {
                 _trenchPos = [_offset * (sin (_dir + 90)), _offset * (cos (_dir + 90)), 0] vectorAdd _tPos;
@@ -191,6 +195,7 @@ dyn_spawn_covered_inf = {
                 _tCover =  _comp createVehicle _trenchPos;
                 _tCover setDir (_dir - 180);
                 _tCover setPos ([0,0, -0.5] vectorAdd (getPos _tCover));
+                // [getPosASL _tCover, 2, 2, 1] spawn dyn_lowerTerrain;
                 _tPosASL = getPosASL _tCover;
                 _offset = _offset + 10;
                 // _wPos = [3 * (sin _dir), 3 * (cos _dir ), 0] vectorAdd _trenchPos;
@@ -198,11 +203,11 @@ dyn_spawn_covered_inf = {
                 // _w = "Land_Razorwire_F" createVehicle _wPos;
                 // _w setDir (_dir - 180);
 
-                _tNetPos = _trenchPos getPos [6, _dir];
-                _tNet = "land_gm_camonet_01_nato" createVehicle _tNetPos;
-                _tNet allowDamage false;
-                _tNet setDir (_dir - 90);
-                _tNet setPos ((getPos _tNet) vectorAdd [0,0,-2.5]);
+                // _tNetPos = _trenchPos getPos [6, _dir];
+                // _tNet = "land_gm_camonet_01_nato" createVehicle _tNetPos;
+                // _tNet allowDamage false;
+                // _tNet setDir (_dir - 90);
+                // _tNet setPos ((getPos _tNet) vectorAdd [0,0,-2.8]);
 
                 if (_bushes) then {
                     for "_j" from 0 to 1 do {
@@ -224,8 +229,11 @@ dyn_spawn_covered_inf = {
                 _tCover =  _comp createVehicle _trenchPos2;
                 _tCover setDir _dir;
                 _tCover setPos ([0,0, -0.5] vectorAdd (getPos _tCover));
+                // [getPosASL _tCover, 2, 2, 1] spawn dyn_lowerTerrain;
                 _offset2 = _offset2 + 9;
             };
+
+
 
             [_grp, _pos, _dir] spawn {
                 params ["_grp", "_pos", "_dir"];
@@ -380,7 +388,8 @@ dyn_spawn_strong_point = {
     _at disableAI "PATH";
     _at setUnitPos "MIDDLE";
 
-    _oGrp = [_infPos, _dir, false, false, false, false, false, dyn_standart_fire_team] call dyn_spawn_covered_inf;
+    _oGrp = grpNull;
+    // _oGrp = [_infPos, _dir, false, false, false, false, false, dyn_standart_fire_team] call dyn_spawn_covered_inf;
 
     // Wire
 
@@ -404,7 +413,7 @@ dyn_spawn_strong_point = {
 
         sleep 20;
 
-        (units _oGrp) joinSilent _gGrp;
+        // (units _oGrp) joinSilent _gGrp;
         (units _mgGrp) joinSilent _gGrp;
         _gGrp enableDynamicSimulation true;
 
@@ -785,14 +794,16 @@ dyn_town_entry_checkpoints = {
 
     private _n = 0;
     {
-        _n = _n + 1;
-        if (_n > _limit) exitWith {};
+        if ((random 1) > 0.5) then {
+            _n = _n + 1;
+            if (_n > _limit) exitWith {};
 
-        [_x#0, _x#1, true, false] call dyn_spawn_heavy_roadblock;
+            [_x#0, _x#1, true, false] call dyn_spawn_heavy_roadblock;
 
-        //debug
-        // _m = createMarker [str (random 1), getpos (_x#0)];
-        // _m setMarkerType "mil_dot";
+            //debug
+            // _m = createMarker [str (random 1), getpos (_x#0)];
+            // _m setMarkerType "mil_dot";
+        };
     } forEach _cpPositions;
 };
 

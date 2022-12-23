@@ -168,7 +168,7 @@ dyn_allied_heli_flyby = {
             _fligthHeight = 50; 
 
             _casGroup = createGroup civilian;
-            _p = [_rearPos, player getDir _targetPos, "cwr3_b_ah1f", _casGroup] call BIS_fnc_spawnVehicle;
+            _p = [_rearPos, player getDir _targetPos, pl_cas_Heli_1, _casGroup] call BIS_fnc_spawnVehicle;
             _plane = _p#0;
             [_plane, _spawnHeight, _rearPos, "ATL"] call BIS_fnc_setHeight;
             _plane forceSpeed 1000;

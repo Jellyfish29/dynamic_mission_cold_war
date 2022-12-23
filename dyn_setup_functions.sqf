@@ -135,7 +135,7 @@ dyn_place_player = {
     _usedRoads = [];
     // reverse _vehicles;
 
-    _fieldElement = 8;
+    _fieldElement = 6;
     private _roadPos = [];
 
     _forwardPos = (getPos _road) getPos [50, _campaignDir];
@@ -166,6 +166,8 @@ dyn_place_player = {
         // _m setMarkerType "mil_dot";
         // _m setMarkerText (str _i);
 
+        private _spawnDir = _dir;
+
         if (_i < _fieldElement) then {
             if (_i % 2 == 0 or _i == 0) then {_leftRight = -90} else {_leftRight = 90};
 
@@ -173,16 +175,14 @@ dyn_place_player = {
 
             if (!([_spawnPos] call dyn_is_town) and !([_spawnPos] call dyn_is_forest) and !([_spawnPos] call dyn_is_water)) then {
                 _roadPos = _spawnPos;
+                _spawnDir = _dir + ((_leftRight / 2) + ([-5, 5] call BIS_fnc_randomInt));
             };
         };
 
         (_vehicles#_i) setVehiclePosition [_roadPos, [], 0, "NONE"];
 
-        if (_i > 1 and _i < _fieldElement) then {
-            (_vehicles#_i) setdir _dir + ((_leftRight / 2) + ([-5, 5] call BIS_fnc_randomInt));
-        } else {
-            (_vehicles#_i) setdir _dir;
-        };
+        (_vehicles#_i) setdir _spawnDir;
+
 
         sleep 0.1;
     };
@@ -233,21 +233,21 @@ dyn_place_arty = {
         (vehicle _x) setPos _setPos;
     } forEach (((units artGrp_1) + (units artGrp_2)) - [_artyLeader]);
 
-    _aaPOs = _batteryPos getPos [050, 90];
+    _aaPOs = _batteryPos getPos [50, 90];
     dyn_aa_vic setPos _aaPOs;
 
 
-    [_batteryPos, 800, "DEU BrgArt", "colorBlufor"] call dyn_draw_mil_symbol_objectiv_free;
+    [_batteryPos] spawn {
+        params ["_batteryPos"];
 
-    [] spawn {
-        
-        sleep 6;
+        sleep 10;
 
+        [objNull, _batteryPos, "b_art", "", "colorBLUFOR", 1] call dyn_spawn_intel_markers;
+        [_batteryPos, 500, "DEU BrgArt", "colorBlack"] call dyn_draw_mil_symbol_objectiv_free;
         [dyn_aa_vic_grp] call pl_hide_group_icon;
         [artGrp_1] call pl_hide_group_icon;
+        [artGrp_2] call pl_hide_group_icon;
     };
-
-    [objNull, getPos (leader artGrp_1), "b_art", "", "colorBLUFOR", 1.5] call dyn_spawn_intel_markers;
     // [objNull, getPos (leader artGrp_1), "colorBLUFOR", 400] call dyn_spawn_intel_markers_area;
 };
 
@@ -390,6 +390,7 @@ dyn_main_setup = {
                 _validLocations pushBack _loc;
             };
         } forEach ["dyn_start_zone_1", "dyn_start_zone_2", "dyn_start_zone_3", "dyn_start_zone_4"];
+        [getPos _loc, 600] spawn dyn_hide_fences;
     } forEach _allLocations;
 
     private _campaignDir = 0;
@@ -593,7 +594,7 @@ dyn_main_setup = {
                     _midDistance = ((getPos _loc) distance2D _playerStart) / 2;
                     _midDefenses = true;
                 };
-                if (((getPos _loc) distance2D _playerStart) >= 3500) then {
+                if (((getPos _loc) distance2D _playerStart) >= 3000) then {
                     _allowDefense = true;
                 };
                 // [_drawLocations#(_i+1), _drawLocations#(_i+2), _drawLocations#_i, _dir - 180, true] call dyn_draw_frontline;
@@ -620,7 +621,6 @@ dyn_main_setup = {
             [_artyPos4, _campaignDir] call dyn_palace_opfor_balistic_arty;
 
             if (_i > 0 and _allowDefense) then {
-
 
                 dyn_defense_active = false;
                 _dyn_defense_atkPos = getPos player;

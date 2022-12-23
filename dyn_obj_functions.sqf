@@ -444,9 +444,9 @@ dyn_town_defense = {
 
     // Continuos Inf Spawn
     _solCount = count _solitaryBuildings;
-    _infB = _solitaryBuildings#(_solCount - ([1, round (_solCount * 0.25)] call BIS_fnc_randomInt));
-    _solitaryBuildings deleteAt (_solitaryBuildings find _infB);
-    [_aoPos, _infB, _endTrg] spawn dyn_spawn_def_waves;
+    // _infB = _solitaryBuildings#(_solCount - ([1, round (_solCount * 0.25)] call BIS_fnc_randomInt));
+    // _solitaryBuildings deleteAt (_solitaryBuildings find _infB);
+    // [_aoPos, _infB, _endTrg] spawn dyn_spawn_def_waves;
 
     //continous ai fire Support
     [_aoPos, _endTrg, _dir] spawn dyn_continous_support;
@@ -460,8 +460,8 @@ dyn_town_defense = {
 
     // Supply Convoy
     if ((random 1) > 0.75) then {
-        [_aoPos, (getPos _aoPos) getpos [[-500, 1000] call BIS_fnc_randomInt, _dir] , ([1, 2] call BIS_fnc_randomInt), dyn_standart_trasnport_vehicles + [dyn_standart_light_amored_vic] + dyn_hq_vehicles + dyn_standart_supply_vics, [120, 300] call BIS_fnc_randomInt] spawn dyn_spawn_supply_convoy;
-        [_aoPos, (getPos _aoPos) getpos [[-500, 1000] call BIS_fnc_randomInt, _dir] , ([1, 2] call BIS_fnc_randomInt), dyn_standart_light_amored_vics + dyn_standart_trasnport_vehicles, [800, 1500] call BIS_fnc_randomInt] spawn dyn_spawn_supply_convoy;
+        [_aoPos, (getPos _aoPos) getpos [[-500, 1000] call BIS_fnc_randomInt, _dir] , 1, dyn_standart_trasnport_vehicles + [dyn_standart_light_amored_vic] + dyn_hq_vehicles + dyn_standart_supply_vics, [120, 300] call BIS_fnc_randomInt] spawn dyn_spawn_supply_convoy;
+        [_aoPos, (getPos _aoPos) getpos [[-500, 1000] call BIS_fnc_randomInt, _dir] , 1, dyn_standart_light_amored_vics + dyn_standart_trasnport_vehicles, [800, 1500] call BIS_fnc_randomInt] spawn dyn_spawn_supply_convoy;
     } else {
         if ((random 1) > 0.5) then {
             [_aoPos, (getPos _aoPos) getpos [[-500, 1000] call BIS_fnc_randomInt, _dir] , ([1, 2] call BIS_fnc_randomInt), dyn_standart_light_amored_vics + dyn_standart_trasnport_vehicles, [300, 500] call BIS_fnc_randomInt] spawn dyn_spawn_supply_convoy;
@@ -501,7 +501,7 @@ dyn_town_defense = {
     // create Tank/APC
     private _vGrps = [];
     private _vicAmount = (round ((count _solitaryBuildings) / 10) - 1);
-    if (_vicAmount > 2) then {_vicAmount = 2};
+    if (_vicAmount > 1) then {_vicAmount = 1};
     [getPos _aoPos, 400, _vicAmount] spawn dyn_crossroad_position;
 
     // Random Log Vehicles
@@ -602,9 +602,9 @@ dyn_town_defense = {
     };
 
     // side Screens
-    if ((random 1) > 0.5) then {
-        [getPos _aoPos, _dir] spawn dyn_spawn_screen;
-    };
+    // if ((random 1) > 0.5) then {
+    //     [getPos _aoPos, _dir] spawn dyn_spawn_screen;
+    // };
 
 
     // Unit Symbol
