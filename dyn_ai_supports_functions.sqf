@@ -19,7 +19,7 @@ dyn_air_attack = {
         waitUntil { sleep 1; triggerActivated _trg };
     };
 
-    private _rearPos = [3000 * (sin (_dir - 180)), 3000 * (cos (_dir - 180)), 0] vectorAdd _locPos;
+    private _rearPos = [3000 * (sin (_dir - 180)), 3000 * (cos (_dir - 180)), 0] vectorAdd (getPos dyn_current_location);
     _units = allUnits+vehicles select {side _x == playerSide};
     _units = [_units, [], {_x distance2D _rearPos}, "ASCEND"] call BIS_fnc_sortBy;
     _targetPos = getPos (_units#0);

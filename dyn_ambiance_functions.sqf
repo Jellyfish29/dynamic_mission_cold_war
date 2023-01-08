@@ -105,20 +105,37 @@ dyn_allied_arty = {
     // deleteMarker _markerName;
 };
 
+dyn_random_neutral_arty = {
+    _artyGroup = createGroup [civilian, true];
+    while {alive player} do {
+
+        sleep ([80, 240] call BIS_fnc_randomInt);
+
+        _cords = [[[getPos player, 1000]],[]] call BIS_fnc_randomPos;
+        _support = _artyGroup createUnit ["ModuleOrdnance_F", _cords, [],0 , ""];
+        _support setVariable ["type", "ModuleOrdnanceHowitzer_F_Ammo"];
+
+    };
+};
+
+[] spawn dyn_random_neutral_arty;
+
 dyn_allied_plane_flyby = {
-    params ["_targetPos"];
+    params ["_targetPos", ["_fireAtTarget", true]];
+
+    _planeType = selectRandom [pl_cas_plane_1, pl_cas_plane_3];
 
     for "_i" from 0 to 1 do {
 
-        [_targetPos] spawn {
-            params ["_targetPos"];
-            _rearPos = _targetPos getpos [(_targetPos distance2D player) + 1500, _targetPos getDir (getPos player)];
+        [_targetPos, _fireAtTarget, _planeType] spawn {
+            params ["_targetPos", "_fireAtTarget", "_planeType"];
+            _rearPos = _targetPos getpos [(_targetPos distance2D player) + 2000, _targetPos getDir (getPos player)];
 
             _spawnHeight = 500;
             _fligthHeight = 40; 
 
             _casGroup = createGroup civilian;
-            _p = [_rearPos, player getDir _targetPos, "RHS_A10", _casGroup] call BIS_fnc_spawnVehicle;
+            _p = [_rearPos, player getDir _targetPos, _planeType, _casGroup] call BIS_fnc_spawnVehicle;
             _plane = _p#0;
             [_plane, _spawnHeight, _rearPos, "ATL"] call BIS_fnc_setHeight;
             _plane forceSpeed 1000;
@@ -128,22 +145,53 @@ dyn_allied_plane_flyby = {
             _time = time + 300;
             _casGroup setBehaviourStrong "CARELESS";
 
-            waitUntil {(_plane distance2D player) <= 400 or time >= _time};
+            private _weapons = [];
+            {
+                if (tolower ((_x call bis_fnc_itemType) select 1) in ["bomblauncher", "missilelauncher", "rocketLauncher"]) then {
+                    _modes = getarray (configfile >> "cfgweapons" >> _x >> "modes");
+                    if (count _modes > 0) then {
+                        _mode = _modes select 0;
+                        if (_mode == "this") then {_mode = _x;};
+                            _weapons set [count _weapons,[_x,_mode]];
+                    };
+                };
+            } foreach ((typeOf _plane) call bis_fnc_weaponsEntityType);
+
+            if (_fireAtTarget) then {
+                waitUntil {sleep 0.25; (_plane distance2D _targetPos) <= 1000 or time >= _time or !alive _plane};
+            } else {
+                waitUntil {sleep 0.25; (_plane distance2D player) <= 400 or time >= _time};
+            };
 
             // _plane fireAtTarget [objNull, "RHS_weap_gau8"];
-            _plane fireAtTarget [objNull, "rhs_weap_agm65d"];
-            sleep 0.5;
-            _plane fireAtTarget [objNull, "rhs_weap_agm65d"];
+            
+            {
+                _plane fireattarget [objNull,(_x select 0)];
+            } foreach _weapons;
+            sleep 1.5;
+            
+            {
+                _plane fireattarget [objNull,(_x select 0)];
+            } foreach _weapons;
 
             sleep 2;
 
             _rearPos = _rearPos getPos [500, _targetPos getdir _rearPos];
+            if (_fireAtTarget) then {
+                [_casGroup, (currentWaypoint _casGroup)] setWaypointType "MOVE";
+                [_casGroup, (currentWaypoint _casGroup)] setWaypointPosition [getPosASL (leader _casGroup), -1];
+                sleep 0.1;
+                deleteWaypoint [_casGroup, (currentWaypoint _casGroup)];
+                for "_i" from count waypoints _casGroup - 1 to 0 step -1 do {
+                    deleteWaypoint [_casGroup, _i];
+                };
+            };
             _wp = _casGroup addWaypoint [_rearPos, 0];
             _time = time + 300;
             // waitUntil {(_plane distance2D (waypointPosition _wp)) <= 800 or time >= _time};
 
 
-            waitUntil {(_plane distance2D (waypointPosition _wp)) <= 200 or time >= _time};
+            waitUntil {sleep 0.25; (_plane distance2D (waypointPosition _wp)) <= 200 or time >= _time};
 
             {
                 deleteVehicle _x;
@@ -154,6 +202,7 @@ dyn_allied_plane_flyby = {
         sleep 1.5;
     };
 };
+
 
 dyn_allied_heli_flyby = {
     params ["_targetPos"];
@@ -204,6 +253,36 @@ dyn_allied_heli_flyby = {
         sleep 6;
     };
 };
+
+
+pl_random_allied_air_support = {
+  
+    while {alive player} do {
+
+        sleep ([800, 1600] call BIS_fnc_randomInt);
+
+        _targetPos = getPos dyn_current_location;
+
+        if !(isNull dyn_next_location) then {
+            _targetPos = (getPos dyn_current_location) getpos [500, (getPos dyn_current_location) getdir (getPos dyn_next_location)]; 
+        };
+
+        if !((count (allGroups select {(hcLeader _x )== player and (leader _x) distance2D _targetPos < 500})) > 0) then {  
+
+            if (pl_enable_beep_sound) then {playSound "radioina"};
+            [playerSide, "HQ"] sideChat "Allied Air Strike in your Sector incoming!";
+
+            if ((random 1) > 0.25) then {
+                [_targetPos] spawn dyn_allied_plane_flyby;
+            } else {
+                [_targetPos] spawn dyn_allied_heli_flyby;
+            }
+        };
+    };
+};
+
+[] spawn pl_random_allied_air_support;
+
 
 dyn_msr_desolation = {
     params ["_locPos", "_trg"];

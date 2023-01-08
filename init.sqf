@@ -108,5 +108,6 @@ pl_supply_Heli_1 = "cwr3_b_ch47";
 
 pl_cas_plane_1 = "RHS_A10";
 pl_cas_plane_2 = "RHS_A10";
+pl_cas_plane_3 = "cwr3_b_f16c";
 // pl_cas_plane_3 = "RHS_A10";
 

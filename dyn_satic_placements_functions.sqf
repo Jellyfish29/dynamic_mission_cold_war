@@ -175,11 +175,15 @@ dyn_spawn_covered_inf = {
         if (_trench) then {
 
             [_grp] call dyn_arty_dmg_reduction;
+            [_grp, _dir, 4, false] call dyn_line_form_cover;
+
+            sleep 1;
 
             _fortPos = getPos (leader _grp);
+            _texture = surfaceTexture _fortPos;
             //////////////////////// CUP Trench ////////////////////////
 
-            _tPos = [5 * (sin _dir), 5 * (cos _dir), 0] vectorAdd _pos;
+            _tPos = [4.5 * (sin _dir), 4.5 * (cos _dir), 0] vectorAdd _fortPos;
             _tPos = [18 * (sin (_dir - 90)), 18 * (cos (_dir - 90)), 0] vectorAdd _tpos;
 
             // {
@@ -187,17 +191,18 @@ dyn_spawn_covered_inf = {
             // } forEach (units _grp);
 
             _offset = 0;
-            for "_i" from 0 to 3 do {
+            for "_i" from 0 to (count (units _grp)) / 2 - 1 do {
                 _trenchPos = [_offset * (sin (_dir + 90)), _offset * (cos (_dir + 90)), 0] vectorAdd _tPos;
 
                 // _tCover = createVehicle ["land_fort_rampart", _trenchPos, [], 0, "CAN_COLLIDE"];
                 _comp = selectRandom ["land_fort_rampart"];
-                _tCover =  _comp createVehicle _trenchPos;
+                // _tCover =  _comp createVehicle _trenchPos;
+                _tCover = createVehicle [_comp, _trenchPos, [], 0, "CAN_COLLIDE"];
                 _tCover setDir (_dir - 180);
                 _tCover setPos ([0,0, -0.5] vectorAdd (getPos _tCover));
                 // [getPosASL _tCover, 2, 2, 1] spawn dyn_lowerTerrain;
                 _tPosASL = getPosASL _tCover;
-                _offset = _offset + 10;
+                _offset = _offset + 9;
                 // _wPos = [3 * (sin _dir), 3 * (cos _dir ), 0] vectorAdd _trenchPos;
                 // // _w = createVehicle ["Land_Razorwire_F", _wPos, [], 0, "CAN_COLLIDE"];
                 // _w = "Land_Razorwire_F" createVehicle _wPos;
@@ -218,15 +223,16 @@ dyn_spawn_covered_inf = {
                 };
             };
 
-            _tPos2 = [5 * (sin (_dir - 180)), 5 * (cos (_dir - 180)), 0] vectorAdd _pos;
+            _tPos2 = [4.5 * (sin (_dir - 180)), 4.5 * (cos (_dir - 180)), 0] vectorAdd _fortPos;
             _tPos2 = [18 * (sin (_dir - 90)), 18 * (cos (_dir - 90)), 0] vectorAdd _tpos2;
 
             _offset2 = 0;
-            for "_i" from 0 to 3 do {
+            for "_i" from 0 to (count (units _grp)) / 2 - 1 do {
                 _trenchPos2 = [_offset2 * (sin (_dir + 90)), _offset2 * (cos (_dir + 90)), 0] vectorAdd _tPos2;
                 // _tCover = createVehicle ["land_fort_rampart", _trenchPos2, [], 0, "CAN_COLLIDE"];
                 _comp = selectRandom ["land_fort_rampart"];
-                _tCover =  _comp createVehicle _trenchPos2;
+                // _tCover =  _comp createVehicle _trenchPos2;
+                _tCover = createVehicle [_comp, _trenchPos2, [], 0, "CAN_COLLIDE"];
                 _tCover setDir _dir;
                 _tCover setPos ([0,0, -0.5] vectorAdd (getPos _tCover));
                 // [getPosASL _tCover, 2, 2, 1] spawn dyn_lowerTerrain;
@@ -235,7 +241,7 @@ dyn_spawn_covered_inf = {
 
 
 
-            [_grp, _pos, _dir] spawn {
+            [_grp, _fortPos, _dir] spawn {
                 params ["_grp", "_pos", "_dir"];
 
                 _callsign = groupId _grp;
@@ -294,12 +300,7 @@ dyn_spawn_covered_inf = {
 
         if !(_trench) then {
             [_grp, _dir, 10, true, _covers, 15, _sandBag] call dyn_line_form_cover;
-        }
-        else
-        {
-            [_grp, _dir, 4, false] call dyn_line_form_cover;
         };
-
     };
     _grp enableDynamicSimulation true;
     _grp
@@ -430,6 +431,19 @@ dyn_spawn_strong_point = {
         [objNull, _pos, "loc_bunker", "", "colorOpfor", 1.5, 1, 0, false] spawn dyn_spawn_intel_markers;
     };
     _gGrp
+};
+
+dyn_spawn_large_building_garrison = {
+    params ["_building", "_dir"];
+
+    _grp = [getPos _building, east, dyn_standart_squad] call BIS_fnc_spawnGroup;
+    [_building, _grp, _dir] call dyn_garrison_building;
+
+    _xMax = ((boundingBox _building)#1)#0;
+    _vicType = selectRandom dyn_standart_combat_vehicles;
+    _vPos = [(_xMax + 5) * (sin _dir), (_xMax + 5) * (cos _dir), 0] vectorAdd (getPos _building);
+    _grp = [_vPos, _vicType, _dir, true, true] call dyn_spawn_covered_vehicle;
+
 };
 
 dyn_spawn_small_strongpoint = {
@@ -622,7 +636,6 @@ dyn_spawn_forest_patrol = {
     // } forEach _patrollPos;
 };
 
-
 dyn_defended_bridges = [];
 dyn_all_bridge_guards = [];
 
@@ -637,7 +650,14 @@ dyn_spawn_bridge_defense = {
     {
         if ((_x distance _pos) > _blkList) then {
             if ((getRoadInfo _x) select 8 and surfaceIsWater (getPos _x)) then {
-                _bridges pushBack _x;
+
+                if (((getRoadInfo _x) select 0) in ["MAIN ROAD", "ROAD"]) then {
+                    _bridges pushBack _x;
+                } else {
+                    _x setDamage 1;
+
+                };
+
             };
         };
     } forEach _allRoads;
@@ -666,9 +686,12 @@ dyn_spawn_bridge_defense = {
                 _bPos = getPos _x;
                 _dir = getDir _x;
                 _facing = selectRandom [0, -180];
-                _distance = [70, 120] call BIS_fnc_randomInt;
-                _iPos = [_distance * (sin (_dir + _facing)), _distance * (cos (_dir + _facing)), 0] vectorAdd _bPos;
-                [[_iPos, 50, []] call dyn_nearestRoad] call dyn_spawn_heavy_roadblock
+                _distance = [50, 80] call BIS_fnc_randomInt;
+                _iPos = ([[_bPos getPos [_distance, _dir], _bPos getPos [_distance, _dir - 180]] , [], {_x distance2D (getPos player)}, "DESCEND"] call BIS_fnc_sortBy)#0;
+                [[_iPos, 50, []] call dyn_nearestRoad] call dyn_spawn_heavy_roadblock;
+                _minePos = ([[_bPos getPos [_distance, _dir], _bPos getPos [_distance, _dir - 180]] , [], {_x distance2D (getPos player)}, "DESCEND"] call BIS_fnc_sortBy)#1;
+                [_minePos, 30, _dir, false, 2, 1, false] spawn dyn_spawn_mine_field;
+
             } forEach _defendedBridges;
         };
     };
@@ -1002,10 +1025,11 @@ dyn_forest_defence_edge = {
         _spawnPos = (_forestPosEdge#_j)#0;
         _spawnPos = _spawnPos getpos [30, _dir - 180];
 
-        _grp = [_spawnPos, east, dyn_standart_squad] call BIS_fnc_spawnGroup;
-        _grp setFormDir _dir;
-        (leader _grp) setDir _dir;
-        _grp enableDynamicSimulation true;
+        // _grp = [_spawnPos, east, dyn_standart_squad] call BIS_fnc_spawnGroup;
+        // _grp setFormDir _dir;
+        // (leader _grp) setDir _dir;
+        _grp = [_spawnPos, _dir + ([-10, 10] call BIS_fnc_randomInt), false, false, false, true, true] call dyn_spawn_covered_inf;
+        // _grp enableDynamicSimulation true;
 
         if ((random 1) > 0.5) then {
             [_spawnPos getPos [30, _dir + 90], _dir, true, true, selectRandom dyn_standart_statics_atgm] call dyn_spawn_static_weapon;

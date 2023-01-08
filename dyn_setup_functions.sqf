@@ -135,7 +135,7 @@ dyn_place_player = {
     _usedRoads = [];
     // reverse _vehicles;
 
-    _fieldElement = 6;
+    _fieldElement = 4;
     private _roadPos = [];
 
     _forwardPos = (getPos _road) getPos [50, _campaignDir];
@@ -342,9 +342,10 @@ dyn_place_opfor_light_arty = {
         } forEach dyn_opfor_light_arty;
     };
     dyn_opfor_light_arty = [];
-    _artyPos = ((selectBestPlaces [_artyPos, 500, "2*meadow", 95, 1])#0)#0;
+    _artyPos = ((selectBestPlaces [_artyPos, 350, "2*meadow", 95, 1])#0)#0;
 
-    _lightArtyGrp = createGroup [east, true];
+    _lightArtyGrp = createGroup [east, false];
+    dyn_opfor_grps pushBack _lightArtyGrp;
     for "_i" from 0 to 2 do {
         _offsetDir = 90;
         if (_i == 1) then {_offsetDir = 70};
@@ -353,9 +354,9 @@ dyn_place_opfor_light_arty = {
         _arty setdir _dir;
         _grp = createVehicleCrew _arty;
         _grp setVariable ["pl_not_recon_able", true];
-        [units _grp] joinSilent _lightArtyGrp;
+        (units _grp) joinSilent _lightArtyGrp;
         dyn_opfor_light_arty pushBack _arty;
-        dyn_opfor_grps pushBack _grp;
+        // dyn_opfor_grps pushBack _grp;
 
         _sPos = (getPos _arty) getPos [1, _dir];
         _sandBag = createVehicle ["land_gm_sandbags_01_round_01", _sPos, [], 0, "CAN_COLLIDE"];
@@ -368,6 +369,8 @@ dyn_place_opfor_light_arty = {
             dyn_opfor_grps pushBack _gGrp;
         };
     };
+
+    _lightArtyGrp deleteGroupWhenEmpty true;
 };
 
 
@@ -620,6 +623,7 @@ dyn_main_setup = {
             _artyPos4 = (_lastPos getpos [5500, _campaignDir - 180]) getPos [1000, _campaignDir - 180];
             [_artyPos4, _campaignDir] call dyn_palace_opfor_balistic_arty;
 
+            // _allowDefense = true;
             if (_i > 0 and _allowDefense) then {
 
                 dyn_defense_active = false;
@@ -633,8 +637,9 @@ dyn_main_setup = {
                 if (dyn_debug) then {
                     _waitTime = 0;
                 };
-                [_dyn_defense_atkPos getPos [800, _dir - 180], _dir, 5000] call dyn_get_retreat_in_def;
+                [_dyn_defense_atkPos getPos [500, _dir - 180], _dir, 2000] call dyn_get_retreat_in_def;
                 [_dyn_defense_atkPos, getPos _loc, _waitTime] spawn dyn_defense;
+                // [getpos player, getPos dyn_current_location, 0] spawn dyn_defense;
                 sleep 5;
 
                 waitUntil {!(dyn_defense_active)};
@@ -649,11 +654,11 @@ dyn_main_setup = {
             sleep 0.1;
 
             if !(_midDefenses) then {
-                if (_i <= 0) then {
+                // if (_i <= 0) then {
                     [getPos _loc, _campaignDir - 180, true] call dyn_draw_frontline;
-                } else {
-                    [getPos _loc, _campaignDir - 180, true] call dyn_draw_frontline;
-                };
+                // } else {
+                //     [getPos _loc, _campaignDir - 180, true] call dyn_draw_frontline;
+                // };
             } else {
                 [_midPoint, _campaignDir - 180, false, (getPos _loc) distance2D _midPoint] call dyn_draw_frontline;
             };
@@ -678,7 +683,7 @@ dyn_main_setup = {
                 // Supply Reinforcements
                 if (({alive _x} count (units dyn_support_group)) <= 0 or !alive dyn_support_vic or isNull dyn_repair_vic) then {
                     dyn_support_vic = createVehicle [dyn_player_support_vic_type, _playerStart, [], 40, "NONE"];
-                    dyn_support_vic setVariable ["pl_set_supply_vic", true];
+                    dyn_support_vic setVariable ["pl_is_supply_vehicle", true];
                     dyn_support_group = createVehicleCrew dyn_support_vic;
                     dyn_support_group setGroupId [format ["TraTrp %1", 2 +_i]];
                     player hcSetGroup [dyn_support_group];
@@ -687,7 +692,7 @@ dyn_main_setup = {
                 sleep 1;
                 if (({alive _x} count (units dyn_repair_group)) <= 0 or !alive dyn_repair_vic or isNull dyn_repair_vic) then {
                     dyn_repair_vic = createVehicle [dyn_player_repair_vic_type, _playerStart, [], 40, "NONE"];
-                    dyn_repair_vic setVariable ["pl_set_repair_vic", true];
+                    dyn_repair_vic setVariable ["pl_is_repair_vehicle", true];
                     dyn_repair_group = createVehicleCrew dyn_repair_vic;
                     dyn_repair_group setGroupId [format ["GSITrp %1", 3 +_i]];
                     player hcSetGroup [dyn_repair_group];
@@ -732,6 +737,9 @@ dyn_main_setup = {
                         case 3:  {[(getPos _loc) getPos [800, _campaignDir]] spawn dyn_allied_heli_flyby;};
                         default {  /*...code...*/ }; 
                     };
+
+                    // [getPos _loc, false] spawn dyn_allied_plane_flyby;
+
 
                     dyn_opfor_pow_pos = getPos player;
                 };
@@ -807,7 +815,7 @@ dyn_main_setup = {
 
                 if (_outerDefenses) then {
 
-                    _defenseType = selectRandom ["minefield", "empty", "catk", "supply", "recon", "road", "road", "recon_convoy", "ambush", "trench", "trench"];
+                    _defenseType = selectRandom ["minefield","minefield", "empty", "catk", "supply", "recon", "road", "road", "recon_convoy", "ambush", "trench", "trench", "trench", "Road"];
 
                     // debug
                     // _defenseType = "trench";

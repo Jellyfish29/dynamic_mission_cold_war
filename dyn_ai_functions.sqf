@@ -68,11 +68,11 @@ dyn_find_cover = {
 };
 
 dyn_line_form_cover = {
-    params ["_grp", "_watchDir", "_lineSpacing", "_findCover", ["_addCovers", []], ["_entropy", 0], ["_sandbags", false]];
+    params ["_grp", "_watchDir", "_lineSpacing", "_findCover", ["_addCovers", []], ["_entropy", 0], ["_sandbags", false], ["_startPos", []]];
     private ["_startPos", "_offSet", "_moveDir", "_setPos"];
 
     _units = units _grp;
-    _startPos = getPos (leader _grp);
+    if (_startPos isEqualTo []) then {_startPos = getPos (leader _grp)};
     _offSet = 0;
     for "_i" from 0 to ((count (units _grp))- 1) do {
         _unit = _units#_i;
@@ -507,15 +507,17 @@ dyn_convoy_parth_find = {
             while {!(isNil "_parent")} do {
                 _allRoads pushBack _parent;
 
-                // private _marker = createMarker [str _parent, getPos _parent];
-                // _marker setMarkerShape "ICON";
-                // _marker setMarkerColor "colorBLUFOR";
-                // _marker setMarkerType "MIL_DOT";
-                // _marker setMarkerSize [0.3, 0.3];
                 _returnPath pushback getPos _parent;
                 _allRoads pushBackUnique _parent;
                 _parent = _dummyGroup getVariable ("NF_neighborParent_" + str _parent);
-                // dyn_convoy_path_marker pushBack _marker;
+                if (dyn_debug) then {
+                    private _marker = createMarker [str _parent, getPos _parent];
+                    _marker setMarkerShape "ICON";
+                    _marker setMarkerColor "colorBLUFOR";
+                    _marker setMarkerType "MIL_DOT";
+                    _marker setMarkerSize [0.3, 0.3];
+                    dyn_convoy_path_marker pushBack _marker;
+                };
             };
         };
         _openSet = _openSet - [_current];
