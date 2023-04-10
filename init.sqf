@@ -6,6 +6,7 @@ dyn_standart_fire_team = configFile >> "CfgGroups" >> "East" >> "CWR3_RUS" >> "I
 dyn_standart_at_team = configFile >> "CfgGroups" >> "East" >> "CWR3_RUS" >> "Infantry" >> "cwr3_o_at_team";
 dyn_standart_recon_team = configFile >> "CfgGroups" >> "East" >> "CWR3_RUS" >> "Infantry" >> "cwr3_o_spetsnaz_team";
 dyn_standart_soldier = "cwr3_o_soldier";
+dyn_standart_sniper = "cwr3_o_soldier_marksman";
 dyn_standart_mg = "cwr3_o_soldier_mg";
 dyn_standart_at_soldier = "cwr3_o_soldier_at_rpg7";
 dyn_standart_trasnport_vehicles = ["cwr3_o_ural_open", "cwr3_o_ural"];
@@ -36,14 +37,18 @@ dyn_uniforms_dic = createHashMapFromArray [["o_mech_inf", "cwr3_o_uniform_kzs_v1
 dyn_bushes = ["gm_b_crataegus_monogyna_01_summer", "gm_b_crataegus_monogyna_02_summer", "gm_b_corylus_avellana_01_summer", "gm_b_sambucus_nigra_01_summer"];
 dyn_phase_names = ["OBJ VICTORY", "OBJ ABLE", "OBJ RHINO", "OBJ BISON", "OBJ HAMMER", "OBJ WIDOW", "OBJ FIONA", "OBJ IRINE", "OBJ DAVID", "OBJ DAWN", "OBJ DIAMOND", "OBJ GOLD", "OBJ REAPER", "OBJ MARY"];
 dyn_allied_vics = ["gm_ge_army_luchsa2", "gm_ge_army_m113a1g_apc", "gm_ge_army_leopard1a5"];
+dyn_allied_soldier = "gm_ge_army_rifleman_g3a3_80_ols";
 dyn_allied_unit_names = [["b_b_armor_pl", "2nd Btl/4th Armored"], ["b_b_armor_pl", "1st Btl/4th Armored"], ["b_c_armor_pl", "1st Btl/1st Armored"], ["b_b_armor_pl", "DEU PzBtl 208"], ["b_b_mech_pl", "3rd Btl/1st Inf"], ["b_b_mech_pl", "2nd Btl/1st Inf"]];
+dyn_civ_vics = ["cwr3_c_gaz24", "cwr3_c_mini", "cwr3_c_rapid", "gm_ge_civ_typ1200", "gm_ge_civ_w123", "gm_ge_civ_w123", "gm_ge_civ_typ247"];
+dyn_civilian = "cwr3_c_civilian_random";
 
 
 // dyn_standart_squad = configfile >> "CfgGroups" >> "East" >> "rhs_faction_msv" >> "rhs_group_rus_msv_infantry_emr" >> "rhs_group_rus_msv_infantry_emr_squad";
 // dyn_standart_fire_team = configfile >> "CfgGroups" >> "East" >> "rhs_faction_vdv" >> "rhs_group_rus_vdv_infantry" >> "rhs_group_rus_vdv_infantry_fireteam";
 // dyn_standart_at_team = configfile >> "CfgGroups" >> "East" >> "rhs_faction_msv" >> "rhs_group_rus_msv_infantry_emr" >> "rhs_group_rus_msv_infantry_emr_section_AT";
 // dyn_standart_recon_team = configfile >> "CfgGroups" >> "East" >> "rhs_faction_vdv" >> "rhs_group_rus_vdv_infantry_recon" >> "rhs_group_rus_vdv_infantry_recon_MANEUVER";
-// dyn_standart_soldier = "rhs_vmf_emr_rifleman";;
+// dyn_standart_soldier = "rhs_vmf_emr_rifleman";
+// dyn_standart_sniper = "rhs_vmf_emr_rifleman";
 // dyn_standart_mg = "rhs_vmf_emr_machinegunner";
 // dyn_standart_at_soldier = "rhs_vmf_emr_LAT";
 // dyn_standart_trasnport_vehicles = ["rhs_kamaz5350_vmf", "rhs_kamaz5350_open_vmf"];

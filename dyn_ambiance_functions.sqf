@@ -1,5 +1,4 @@
-dyn_civ_vics = ["cwr3_c_gaz24", "cwr3_c_mini", "cwr3_c_rapid", "gm_ge_civ_typ1200"];
-dyn_civilian = "cwr3_c_civilian_random";
+
 // dyn_ambient_sound_mod attachTo [player, [0,0,0]];
 
 dyn_random_weather = {
@@ -255,30 +254,32 @@ dyn_allied_heli_flyby = {
 };
 
 
+
+
 pl_random_allied_air_support = {
   
-    while {alive player} do {
+    // while {alive player} do {
 
-        sleep ([800, 1600] call BIS_fnc_randomInt);
+    //     sleep ([800, 1600] call BIS_fnc_randomInt);
 
-        _targetPos = getPos dyn_current_location;
+    //     _targetPos = getPos dyn_current_location;
 
-        if !(isNull dyn_next_location) then {
-            _targetPos = (getPos dyn_current_location) getpos [500, (getPos dyn_current_location) getdir (getPos dyn_next_location)]; 
-        };
+    //     if !(isNull dyn_next_location) then {
+    //         _targetPos = (getPos dyn_current_location) getpos [500, (getPos dyn_current_location) getdir (getPos dyn_next_location)]; 
+    //     };
 
-        if !((count (allGroups select {(hcLeader _x )== player and (leader _x) distance2D _targetPos < 500})) > 0) then {  
+    //     if !((count (allGroups select {(hcLeader _x )== player and (leader _x) distance2D _targetPos < 500})) > 0) then {  
 
-            if (pl_enable_beep_sound) then {playSound "radioina"};
-            [playerSide, "HQ"] sideChat "Allied Air Strike in your Sector incoming!";
+    //         if (pl_enable_beep_sound) then {playSound "radioina"};
+    //         [playerSide, "HQ"] sideChat "Allied Air Strike in your Sector incoming!";
 
-            if ((random 1) > 0.25) then {
-                [_targetPos] spawn dyn_allied_plane_flyby;
-            } else {
-                [_targetPos] spawn dyn_allied_heli_flyby;
-            }
-        };
-    };
+    //         if ((random 1) > 0.25) then {
+    //             [_targetPos] spawn dyn_allied_plane_flyby;
+    //         } else {
+    //             [_targetPos] spawn dyn_allied_heli_flyby;
+    //         }
+    //     };
+    // };
 };
 
 [] spawn pl_random_allied_air_support;
@@ -292,7 +293,7 @@ dyn_msr_desolation = {
     for "_i" from 30 to (count _msr) - 1 step ([20, 30] call BIS_fnc_randomInt) do {
 
         if ((random 1) > 0.5) then {
-            _spawnPos = (getPos (_msr#_i)) getpos [25, (getdir (_msr#_i)) + (selectRandom [90, -90])];
+            _spawnPos = (getPos (_msr#_i)) getpos [50, (getdir (_msr#_i)) + (selectRandom [90, -90])];
 
             [_spawnPos, 0, _trg, 0, true] spawn dyn_destroyed_cars;
 
@@ -311,7 +312,7 @@ dyn_destroyed_mil_vic = {
     private _spawnPos = _centerPos;
 
     for "_l" from 0 to _amount do {
-        _vic = createVehicle [selectRandom _vicTypes, _spawnPos, [], 15, "NONE"];
+        _vic = createVehicle [selectRandom _vicTypes, _spawnPos, [], 800, "NONE"];
         _vic setDir ([0, 359] call BIS_fnc_randomInt);
         _vic setDamage [1, false];
         _vic setVariable ["dyn_dont_delete", true];
@@ -370,22 +371,24 @@ dyn_destroyed_cars = {
                 _spawnPos = (getPos _road) getPos [[5, 15] call BIS_fnc_randomInt, _roadDir + 90];
             };
         };
-        _vic = createVehicle [selectRandom dyn_civ_vics, _spawnPos, [], 15, "NONE"];
+        _vic = createVehicle [selectRandom (dyn_civ_vics + dyn_standart_combat_vehicles), _spawnPos, [], 15, "NONE"];
         _vic setDir ([0, 359] call BIS_fnc_randomInt);
         _vic setDamage [1, false];
         _vic setVariable ["dyn_dont_delete", true];
-        _smoke = _smokeGroup createUnit ["ModuleEffectsSmoke_F", getPosATLVisual _vic, [],0 , ""];
-        _fire = _smokeGroup createUnit ["ModuleEffectsFire_F", getPosATLVisual _vic, [],0 , ""];
+        // _smoke = _smokeGroup createUnit ["ModuleEffectsSmoke_F", getPosATLVisual _vic, [],0 , ""];
+        // _fire = _smokeGroup createUnit ["ModuleEffectsFire_F", getPosATLVisual _vic, [],0 , ""];
+        _smoke = objNull;
+        _fire = objNull;
 
         [_vic, _smoke, _fire] spawn {
             params ["_vic", "_smoke", "_fire"];
             sleep 15;
-            _vic setPosATL (getPosATLVisual _smoke);
+            // _vic setPosATL (getPosATLVisual _smoke);
             _vic enableSimulation false;
             // sleep 20;
         };
         for "_j" from 0 to ([1, 2] call BIS_fnc_randomInt) do {
-            _civ = createAgent [dyn_civilian, getPos _vic, [], 8, "NONE"];
+            _civ = createAgent [selectRandom [dyn_civilian, dyn_standart_soldier], getPos _vic, [], 8, "NONE"];
             _allCivs pushBack _civ;
             _civ setVariable ["dyn_dont_delete", true];
             _civ setDamage 1;
@@ -433,10 +436,10 @@ dyn_destroyed_buildings = {
         // _support setVariable ["type", "ModuleOrdnanceMortar_F_ammo"];
 
         for "_j" from 0 to ([1, 2] call BIS_fnc_randomInt) do {
-            _civ = createAgent [dyn_civilian, getPos _house, [], 8, "NONE"];
+            _civ = createAgent [selectRandom [dyn_civilian], getPos _house, [], 8, "NONE"];
             _allCivs pushBack _civ;
             _civ setVariable ["dyn_dont_delete", true];
-            _civ setDamage 1;
+            _civ setDamage [1, false];
             [_civ] spawn {
                 params ["_civ"];
                 _civ setDir ([0, 359] call BIS_fnc_randomInt);
@@ -477,7 +480,7 @@ dyn_random_dead = {
         // _m setMarkerType "mil_dot";
 
          for "_j" from 0 to ([0, 2] call BIS_fnc_randomInt) do {
-            _civ = createAgent [dyn_civilian, _spawnPos, [], 8, "NONE"];
+            _civ = createAgent [selectRandom [dyn_civilian], _spawnPos, [], 8, "NONE"];
             _allCivs pushBack _civ;
             _civ setVariable ["dyn_dont_delete", true];
             _civ setDamage 1;
@@ -489,6 +492,40 @@ dyn_random_dead = {
             };
         };
     };
+};
+
+dyn_spawn_furniture = {
+    params ["_furPos"];
+
+    // _furModuleGroup = createGroup [east, true];
+    // _furModule = _furModuleGroup createUnit ["gm_moduleFurniture", _furPos, [],0 , ""];
+    // _furModule setVariable ["objectarea", [500, 500, 20,false,0]];
+
+    private _houses = nearestTerrainObjects [_furPos, ["HOUSE", "BUILDING"], 500, false, true];
+    private _garages = _houses select {(typeof _x) == "land_gm_euro_misc_garage_01_01" or (typeOf _x) == "land_gm_euro_misc_garage_01_02"};
+
+    {
+        _house = _x;
+        _vpos = (getPos _house) getpOs [10, (getDir _house) - 180];
+        if !(isOnRoad _vPos) then {
+            _vic = createVehicle [selectRandom dyn_civ_vics, _vPos, [], 0, "NONE"];
+            _vic setDir ((getDir _house) - 180);
+            _vic enableSimulation false;
+
+            // _m = createMarker [str (random 1), _vPos];
+            // _m setMarkerType "mil_dot";
+            // _m setMarkerColor "colorRED";
+        };
+    } forEach _garages;
+
+    // [_furModule] spawn {
+    //     params ["_furModule"];
+
+    //     sleep 10;
+
+    //     deleteVehicle _furModule;
+    // };
+
 };
 
 dyn_civilian_presence = {
@@ -557,10 +594,13 @@ dyn_ambiance_execute = {
 
     // if (true) exitwith {};
 
-    [_centerPos, _dir, _trg, ([1, 2] call BIS_fnc_randomInt)] spawn dyn_destroyed_cars;
-    [_centerPos, _dir, _trg, ([1, 2] call BIS_fnc_randomInt)] spawn dyn_destroyed_buildings;
-    [_centerPos, _dir, _trg, ([6, 10] call BIS_fnc_randomInt)] spawn dyn_random_dead;
-    if (_isFriendly) then {[_centerPos, _dir, _trg] spawn dyn_civilian_presence};
+    [_centerPos, _dir, _trg, ([2, 3] call BIS_fnc_randomInt)] spawn dyn_destroyed_cars;
+    // [_centerPos, _dir, _trg, ([1, 2] call BIS_fnc_randomInt)] spawn dyn_destroyed_buildings;
+    [_centerPos, _dir, _trg, ([15, 25] call BIS_fnc_randomInt)] spawn dyn_random_dead;
+    // if (_isFriendly) then {[_centerPos, _dir, _trg] spawn dyn_civilian_presence};
+    [_centerPos, _trg] spawn dyn_msr_desolation;
+
+    [_centerPos getPos [500, _dir], _dir, _trg, [3, 7] call BIS_fnc_randomInt] spawn dyn_destroyed_mil_vic;
 };
 
 

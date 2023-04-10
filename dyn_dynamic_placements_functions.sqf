@@ -502,13 +502,14 @@ dyn_spawn_atk_simple = {
         };
     };
 
-    [] spawn {
+    [_atkPos] spawn {
+        params ["_atkPos"];
         sleep 120;
-        _fireSupport = selectRandom [1,1,1,2,2,2,3];
+        [20, "heavy", true, _atkPos] spawn dyn_arty;
+        _fireSupport = selectRandom [1,1,1,1,3];
             switch (_fireSupport) do {
             case 0 : {[10, "light"] spawn dyn_arty};
             case 1 : {[8, "rocket"] spawn dyn_arty}; 
-            case 2 : {[10] spawn dyn_arty};
             case 3 : {[10, "rocketffe"] spawn dyn_arty};
             default {}; 
          };
@@ -713,7 +714,8 @@ dyn_spawn_atk_complex = {
 
         // [_rearPos, _allGrps, objNull, 400] spawn dyn_spawn_delay_action;
 
-        _fireSupport = selectRandom [1,2,5];
+        [20, "heavy", true, _atkPos] spawn dyn_arty;
+        _fireSupport = selectRandom [1,1,1,5];
         switch (_fireSupport) do { 
             case 1 : {[8, "rocket"] spawn dyn_arty}; 
             case 2 : {[8] spawn dyn_arty};

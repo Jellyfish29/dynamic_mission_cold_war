@@ -238,7 +238,7 @@ dyn_continous_counterattack = {
         // sleep ([20, 80] call BIS_fnc_randomInt);
     };
 
-    sleep ([240, 600] call BIS_fnc_randomInt);
+    sleep ([600, 1200] call BIS_fnc_randomInt);
 
     while {!triggerActivated _endTrg} do {
 
@@ -289,7 +289,7 @@ dyn_continous_counterattack = {
             default {}; 
          }; 
 
-        sleep ([1000, 1500] call BIS_fnc_randomInt);
+        sleep ([1800, 2800] call BIS_fnc_randomInt);
     };
 };
 
@@ -325,6 +325,13 @@ dyn_spawn_mine_field = {
         if ((random 1) > 0.25) then {
             [_startPos getPos [[200, 400] call BIS_fnc_randomInt, _dir - 180], _dir] spawn dyn_spawn_screen;
         };
+        if ((random 1) > 0.25) then {
+            0 = [_startPos getPos [[-400, 400] call BIS_fnc_randomInt, _dir + 90], _dir] call dyn_spawn_trench_strong_point;
+        };
+
+        if (_revealMines) then {
+            [_startPos, [900, 1200] call BIS_fnc_randomInt, _dir, 20] call dyn_draw_mil_symbol_fortification_line;
+        };
     };
 
     [_allMines, _startPos, _dir, _length, _isObj, _revealMines] spawn {
@@ -343,7 +350,7 @@ dyn_spawn_mine_field = {
 
         if (_isObj) then {
             [8, "rocket"] spawn dyn_arty;
-            [6, "heavy", true, _startPos] spawn dyn_arty;
+            [20, "heavy", true, _startPos] spawn dyn_arty;
 
             _rearPos = _startPos getPos [1000, _dir - 180];
             // _westUnits = allUnits select {side _x == west};
@@ -356,13 +363,16 @@ dyn_spawn_mine_field = {
             switch (_fireSupport) do { 
                 case 1 : {[8, "rocket"] spawn dyn_arty}; 
                 case 2 : {[8] spawn dyn_arty};
-                case 3 : {[_reconPos, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack; [_reconPos getPos [100, 0], _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
-                case 4 : {[_reconPos, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
+                case 3 : {[_startPos, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack; [_startPos getPos [100, 0], _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
+                case 4 : {[_startPos, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
                 case 5 : {[8, "rocketffe"] spawn dyn_arty};
                 default {}; 
              };
 
-            [objNull, _startPos getPos [100, _dir - 180], _rearPos, [2, 3] call BIS_fnc_randomInt, [1, 2] call BIS_fnc_randomInt] spawn dyn_spawn_atk_simple;
+            if ((random 1) > 0.5) then {
+                sleep ([100, 200] call BIS_fnc_randomInt);
+                [objNull, _startPos getPos [100, _dir - 180], _rearPos, [3, 4] call BIS_fnc_randomInt, [2, 3] call BIS_fnc_randomInt] spawn dyn_spawn_atk_simple;
+            };
         };
     };
 

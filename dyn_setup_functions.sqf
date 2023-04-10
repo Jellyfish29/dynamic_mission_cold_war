@@ -191,9 +191,11 @@ dyn_place_player = {
 dyn_customice_playerside = {
 
     {
-        // _x addGoggles (selectRandom ["gm_headgear_foliage_summer_forest_01", "gm_headgear_foliage_summer_forest_02", "gm_headgear_foliage_summer_forest_03", "gm_headgear_foliage_summer_forest_04"]);
+        _x addGoggles (selectRandom ["gm_headgear_foliage_summer_forest_01", "gm_headgear_foliage_summer_forest_02", "gm_headgear_foliage_summer_forest_03", "gm_headgear_foliage_summer_forest_04"]);
         _faceunit = (face _x + (selectRandom ["_cfaces_BWTarn", "_cfaces_BWStripes"]));
         _x setVariable ["JgKp_Face", _faceunit, true];
+        _x addItem "gm_handgrenade_frag_dm51a1";
+        _x addItem "gm_handgrenade_frag_dm51a1";
     } forEach (allUnits select {side _x == playerSide});
 
 };
@@ -699,11 +701,11 @@ dyn_main_setup = {
                 };
             };
             
-            // [getPos _loc, _dir, _endTrg] spawn dyn_ambiance_execute;
+            [getPos _loc, _dir, _endTrg] spawn dyn_ambiance_execute;
 
-            // _friendlyLocs = nearestLocations [getPos player, ["NameVillage", "NameCity", "NameCityCapital"], 1500];
+            // _friendlyLocs = nearestLocations [getPos player, ["NameVillage", "NameCity", "NameCityCapital"], 2000];
             // {
-            //     // [objNull, (getPos _x) getPos [150, 0], "n_installation", "CIV", "ColorCivilian", 0.6] call dyn_spawn_intel_markers;
+            //     [objNull, (getPos _x) getPos [150, 0], "n_installation", "CIV", "ColorCivilian", 0.6] call dyn_spawn_intel_markers;
             //     [getPos _x, 0, _endTrg] spawn dyn_civilian_presence;
             // } forEach _friendlyLocs;
 
@@ -725,18 +727,18 @@ dyn_main_setup = {
 
                     sleep 10;
 
-                    playSound "radioina";
-                    [playerSide, "HQ"] sideChat format ["INTRO TEXT BOTTOM TEXT"];
+                    // playSound "radioina";
+                    // [playerSide, "HQ"] sideChat format ["INTRO TEXT BOTTOM TEXT"];
 
 
-                    _alliedSupport = selectRandom [1,2,3];
+                    // _alliedSupport = selectRandom [1,1,1];
 
-                    switch (_alliedSupport) do { 
-                        case 1 : {[_ambiantPos getPos [350, _campaignDir - 180], 10, 300] spawn dyn_allied_arty;}; 
-                        case 2 : {[getPos _loc] spawn dyn_allied_plane_flyby;};
-                        case 3:  {[(getPos _loc) getPos [800, _campaignDir]] spawn dyn_allied_heli_flyby;};
-                        default {  /*...code...*/ }; 
-                    };
+                    // switch (_alliedSupport) do { 
+                    //     case 1 : {[_ambiantPos getPos [350, _campaignDir - 180], 10, 300] spawn dyn_allied_arty;}; 
+                    //     case 2 : {[getPos _loc] spawn dyn_allied_plane_flyby;};
+                    //     case 3:  {[(getPos _loc) getPos [800, _campaignDir]] spawn dyn_allied_heli_flyby;};
+                    //     default {  /*...code...*/ }; 
+                    // };
 
                     // [getPos _loc, false] spawn dyn_allied_plane_flyby;
 
@@ -815,21 +817,28 @@ dyn_main_setup = {
 
                 if (_outerDefenses) then {
 
-                    _defenseType = selectRandom ["minefield","minefield", "empty", "catk", "supply", "recon", "road", "road", "recon_convoy", "ambush", "trench", "trench", "trench", "Road"];
+                    private _defenseType = selectRandom ["minefield", "minefield", "empty", "catk", "supply", "recon", "road", "road", "recon_convoy", "ambush", "ambush", "trench", "trench", "trench", "road"];
+
+
+
+                    _reveal = false;
+                    if (_i == 0) then {
+                        _reveal = true;
+                        _defenseType =  selectRandom ["trench", "trench", "minefield", "road", "road", "minefield", "recon"];
+                    };
 
                     // debug
-                    // _defenseType = "trench";
-
+                    _defenseType = "trench";
                     // hint _defenseType;
 
                     switch (_defenseType) do {
                         case "catk" : {[objNull, getPos player, (getPos _loc) getPos [800, _campaignDir] , [2, 4] call BIS_fnc_randomInt, [2, 3] call BIS_fnc_randomInt, true] spawn dyn_spawn_atk_simple;};
-                        case "road" : {[getPos _loc, _trg, _dir] spawn dyn_road_blocK};
+                        case "road" : {[getPos _loc, _trg, _dir, false, _reveal] spawn dyn_road_blocK};
                         case "supply" : {[objNull, (getPos player) getPos [600, _campaignDir - 180], ([3, 5] call BIS_fnc_randomInt)] spawn dyn_spawn_supply_convoy};
-                        case "recon" : {[getPos _loc, _trg, _dir] spawn dyn_forward_recon_element};
+                        case "recon" : {[getPos _loc, _trg, _dir, _reveal] spawn dyn_forward_recon_element};
                         case "ambush" : {[getPos _loc, _trg, _dir] spawn dyn_ambush};
-                        case "trench" : {[getPos _loc, _trg, _dir] spawn dyn_trench_line_large};
-                        case "minefield" : {[(getPos _loc) getPos [[1300, 1600] call BIS_fnc_randomInt, _dir], 2500, _dir, true, 20, [3,4] call BIS_fnc_randomInt, false, [30, 90] call BIS_fnc_randomInt] spawn dyn_spawn_mine_field};
+                        case "trench" : {[getPos _loc, _trg, _dir, _reveal] spawn dyn_trench_line_large};
+                        case "minefield" : {[(getPos _loc) getPos [[1300, 1600] call BIS_fnc_randomInt, _dir], 2500, _dir, true, 20, [3,4] call BIS_fnc_randomInt, _reveal, [30, 90] call BIS_fnc_randomInt] spawn dyn_spawn_mine_field};
                         case "recon_convoy" : {[objNull, (getPos player) getPos [600, _campaignDir - 180], ([3, 5] call BIS_fnc_randomInt), dyn_standart_light_amored_vics + dyn_standart_trasnport_vehicles] spawn dyn_spawn_supply_convoy};
                         case "empty" : {};
                         default {}; 
@@ -837,6 +846,8 @@ dyn_main_setup = {
                 };
 
                 sleep 5; 
+
+                [getPos _trg] call dyn_spawn_furniture;
 
                 _townDefenseGrps = [_trg, _endTrg, _dir] call dyn_town_defense;
 
