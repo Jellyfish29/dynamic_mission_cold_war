@@ -3,10 +3,10 @@
 
 dyn_random_weather = {
     skipTime -24;
-    _overcast = selectRandom [0, 0.1, 0.3, 0.5, 0.8, 0.9, 1];
+    _overcast = selectRandom [0, 0.1, 0.2, 0.3, 0.5, 0.8, 0.9, 1];
     // _overcast = 1;
     86400 setOvercast _overcast;
-    86400 setFog [selectRandom [0, 0, 0.1, 0.3, 0.5], 0.01, 250];
+    86400 setFog [selectRandom [0, 0, 0.1, 0.2, 0.3, 0.5], 0.01, 250];
 
     skipTime 24;
 

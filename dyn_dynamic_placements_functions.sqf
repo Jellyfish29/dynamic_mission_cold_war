@@ -277,7 +277,7 @@ dyn_spawn_def_waves = {
             sleep 5;
             _grp leaveVehicle _tVic;
             [objNull, [_grp]] spawn dyn_attack_nearest_enemy;
-            sleep ([300, 600] call BIS_fnc_randomInt);
+            sleep ([600, 1200] call BIS_fnc_randomInt);
         };
     };                                                                                                                                                                                                                                                                                                       
 };
@@ -402,7 +402,7 @@ dyn_spawn_qrf_patrol = {
 };
 
 dyn_spawn_atk_simple = {
-    params ["_trg", "_atkPos", "_rearPos", "_inf", "_tank", ["_mech", false], ["_mechVics", dyn_standart_mechs], ["_tankVics", dyn_standart_tanks], ["_static", false], ["_offsetStep", 75]];
+    params ["_trg", "_atkPos", "_rearPos", "_inf", "_tank", ["_mech", false], ["_mechVics", dyn_standart_mechs], ["_tankVics", dyn_standart_tanks], ["_static", false], ["_offsetStep", 50]];
     private ["_spawnPos", "_spawnPosFinal"];
 
     if !(isNull _trg) then {
@@ -430,7 +430,8 @@ dyn_spawn_atk_simple = {
         
 
         if (_mech and !([_spawnPosFinal] call dyn_is_forest)) then {
-            _vic = _mechType createVehicle _spawnPosFinal;
+            // _vic = _mechType createVehicle _spawnPosFinal;
+            _vic = createVehicle [_mechType, _spawnPosFinal, [], 0, "NONE"];
             _vic setDir _atkDir;
             _mechGrp = createVehicleCrew _vic;
             _infGrps pushBack _mechGrp;
@@ -452,7 +453,7 @@ dyn_spawn_atk_simple = {
                     _wpPos = _wpPos getpos [_step, _atkDir];
                     if (!([_wpPos] call dyn_is_forest) and !([_wpPos] call dyn_is_town) or _j == 3) then {
                         _gWp = _mechGrp addWaypoint [_wpPos, 0];
-                        if (_j == 3) then {_gWp setWaypointType "SAD"};
+                        // if (_j == 3) then {_gWp setWaypointType "SAD"};
                     };
                 };
             };
@@ -465,7 +466,7 @@ dyn_spawn_atk_simple = {
                 for "_j" from 1 to 3 do {
                     _wpPos = _wpPos getpos [_step, _atkDir];
                     _gWp = _infGrp addWaypoint [_wpPos, 0];
-                    if (_j == 3) then {_gWp setWaypointType "SAD"};
+                    // if (_j == 3) then {_gWp setWaypointType "SAD"};
                 };
             };
         };
@@ -482,7 +483,8 @@ dyn_spawn_atk_simple = {
         _offset = _offset + _offsetStep;
         _spawnPosFinal = [_spawnPos, 0, 90, 0, 0, 0, 0, [], [_spawnPos, []]] call BIS_fnc_findSafePos;
         if !([_spawnPosFinal] call dyn_is_forest) then {
-            _vic = _tankType createVehicle _spawnPosFinal;
+            // _vic = _tankType createVehicle _spawnPosFinal;
+            _vic = createVehicle [_tankType, _spawnPosFinal, [], 0, "NONE"];
             _vic setDir _atkDir;
             _tankGrp = createVehicleCrew _vic;
             _tankGrps pushBack _tankGrp;
@@ -495,7 +497,7 @@ dyn_spawn_atk_simple = {
                     _wpPos = _wpPos getpos [_step, _atkDir];
                     if (!([_wpPos] call dyn_is_forest) and !([_wpPos] call dyn_is_town) or _j == 3) then {
                         _gWp = _tankGrp addWaypoint [_wpPos, 0];
-                        if (_j == 3) then {_gWp setWaypointType "SAD"};
+                        // if (_j == 3) then {_gWp setWaypointType "SAD"};
                     };
                 };
             };
@@ -505,7 +507,7 @@ dyn_spawn_atk_simple = {
     [_atkPos] spawn {
         params ["_atkPos"];
         sleep 120;
-        [20, "heavy", true, _atkPos] spawn dyn_arty;
+        if ((random 1) > 0.5) then {[20, "heavy", true, _atkPos] spawn dyn_arty};
         _fireSupport = selectRandom [1,1,1,1,3];
             switch (_fireSupport) do {
             case 0 : {[10, "light"] spawn dyn_arty};

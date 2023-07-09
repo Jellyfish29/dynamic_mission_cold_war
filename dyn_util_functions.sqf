@@ -134,15 +134,15 @@ dyn_get_cardinal = {
     _compass  
 };
 
-dyn_is_forest = {
-    params ["_pos", ["_radius", 50]];
+dyn_pop_random = {
+    params ["_array"];
 
-    _trees = nearestTerrainObjects [_pos, ["Tree"], _radius, false, true];
-
-    if (count _trees > 25) exitWith {true};
-
-    false
+    private _r = selectRandom _array;
+    _array deleteAt (_array find _r);
+    _r
 };
+
+
 
 
 dyn_opfor_change_uniform = {
@@ -169,12 +169,25 @@ dyn_opfor_change_uniform_grp = {
     } forEach (units _grp);
 };
 
+dyn_is_forest = {
+    params ["_pos", ["_radius", 50]];
+
+    _trees = nearestTerrainObjects [_pos, ["Tree"], _radius, false, true];
+
+    if (count _trees > 25) exitWith {true};
+
+    false
+};
+
 dyn_is_town = {
     params ["_pos"];
     _buildings = nearestTerrainObjects [_pos, ["House"], 100, false, true];
+
+
     if (count _buildings >= 3) exitWith {true};
     false
 };
+
 dyn_is_water = {
     params ["_pos"];
     private ["_isWater"];
@@ -183,8 +196,29 @@ dyn_is_water = {
         if (surfaceIsWater (_pos getPos [35, _x])) exitWith {true};
         false
     } forEach [0, 90, 180, 270]; 
+
     if (surfaceIsWater _pos) then {_isWater = true};
     _isWater 
+};
+
+dyn_is_field = {
+    params ["_pos", ["_radius", 50]];
+
+    _objects = nearestTerrainObjects [_pos, [], _radius, false, true];
+
+    if (count _objects <= 0) exitWith {true};
+
+    false
+};
+
+dyn_is_empty = {
+    params ["_pos"];
+
+    _objects = nearestTerrainObjects [_pos, [], 300, false, true];
+
+    if (count _objects <= 0) exitWith {true};
+
+    false
 };
 
 dyn_hide_group_icon = {
@@ -300,13 +334,13 @@ dyn_terrain_scan = {
     private _townAmount = 0;
     private _waterAmount = 0;
 
-    for "_i" from 0 to _accuracy do {
+    for "_x" from 0 to _accuracy do {
         private _xPos = _scanStart getPos [_xOffset, _scanDir + 90];
 
         private _ySet = [];
         private _yOffset = 0;
 
-        for "_j" from 0 to _accuracy do {
+        for "_y" from 0 to _accuracy do {
             _yPos = _xPos getPos [_yOffset, _scanDir - 180];
             _yOffsetStep = _ySize / _accuracy;
             _yOffset = _yOffset + _yOffsetStep;
@@ -336,14 +370,146 @@ dyn_terrain_scan = {
             // _m setMarkerType "mil_dot";
             // _m setMarkerSize [0.2, 0.2];
             // _m setMarkerColor _markerColor;
+
+            // if (_y == 0) then {
+            //     _m setMarkerText ("x" + (str _x));
+            // };
+            // if (_x == 0) then {
+            //     _m setMarkerText ("y" + (str _y));
+            // }
         };
 
         _xOffset = _xOffset + _xOffsetStep;
         _terrain pushBack _ySet;
     };
 
+    // _m = createMarker [str (random 4), ((_terrain#30)#70)#0];
+    // _m setMarkerType "mil_marker";
+    // _m setMarkerSize [0.7, 0.7];
+    // _m setMarkerColor "colorYellow";
+
+
     [_forestAmount, _townAmount, _waterAmount, _terrain];
 };
+
+pl_ai_terrain_reading = {
+
+    // Returns 3 len Array
+    // 1. Clearing Array [[clearing1 Pos1, clearing1 PosN], [clearing2 Pos1, clearing2 PosN]]
+    // 2. Position on Edge of Forest Array [Pos1, Posn];
+    // 2. Position inside Forest Array [Pos1, Posn];
+
+    private _terrain = +dyn_terrain;
+    private _terrainGrid = _terrain#3; 
+
+    _accuracy = 100;
+    private _positionAmount = round (_accuracy * 0.5);
+    private _offsetStep = round (_accuracy / _positionAmount);
+
+    private _forestPosEdge = [];
+    private _forestPosCenter = [];
+    private _clearings = [];
+    private _clearingTemp = [];
+    private _clearingsFinal = [];
+
+    private _yStart = [30, 40] call BIS_fnc_randomInt;
+    private _ylimit = [65, 75] call BIS_fnc_randomInt;
+    private _y = _yStart;
+    private _forestYPos = _yStart;
+
+    for "_xx" from 0 to _accuracy step _offsetStep do {
+
+        if ((((_terrainGrid#_xx)#_yStart)#1) != "forest") then {
+            _y = _yStart;
+            while {_y < _ylimit} do {
+
+                _checkPos = (_terrainGrid#_xx)#_y;
+                if ((_checkPos#1) == "forest") exitWith {
+
+                    // _m = createMarker [str (random 4), _checkPos#0];
+                    // _m setMarkerType "mil_marker";
+                    // _m setMarkerColor "colorRed";
+
+                    _forestPosEdge pushBack (_checkPos#0);
+
+                    _forestYPos = _y;
+
+                    if !(_clearingTemp isEqualTo []) then {
+
+                        {
+                            if ((_x#1) == _yStart) then {
+                                _x set [1, _forestYPos];
+                            };
+                        } forEach _clearingTemp;
+
+                        _clearings pushback _clearingTemp;
+                        _clearingTemp = [];
+                    };
+
+                };
+                _y = _y + 1;
+            };
+
+            if (_y == _ylimit) then {
+                // _clearingTemp pushback ((_terrainGrid#_xx)#_forestYPos);
+                _clearingTemp pushback [_xx, _forestYPos];
+            };
+
+        } else {
+
+            // _m = createMarker [str (random 4), ((_terrainGrid#_xx)#_yStart)#0];
+            // _m setMarkerType "mil_marker";
+            // _m setMarkerColor "colorBlue";
+
+            _forestPosCenter pushBack (((_terrainGrid#_xx)#_yStart)#0);
+            _forestYPos = _yStart;
+
+            if !(_clearingTemp isEqualTo []) then {
+
+                {
+                    if ((_x#1) == _yStart) then {
+                        _x set [1, _forestYPos];
+                    };
+                } forEach _clearingTemp;
+
+                _clearings pushback _clearingTemp;
+                _clearingTemp = [];
+            };
+        };
+    };
+
+    if !(_clearingTemp isEqualTo []) then {
+
+        {
+            if ((_x#1) == _yStart) then {
+                _x set [1, _forestYPos];
+            };
+        } forEach _clearingTemp;
+        _clearings pushback _clearingTemp;
+    };
+
+    {
+        _c = _x;
+        _clearingsFinal pushBack (_c apply {((_terrainGrid#(_x#0))#(_x#1))#0});
+        
+    } forEach _clearings;
+
+
+    private _clearingID = 1;
+    {
+        _cc = _x;
+        {
+            // _m = createMarker [str (random 4), _x];
+            // _m setMarkerType "mil_marker";
+            // _m setMarkerColor "colorYellow";
+            // _m setMarkerText (str _clearingID);
+        } forEach _cc;
+        _clearingID = _clearingID + 1;
+    } forEach _clearingsFinal;
+
+    [_clearingsFinal, _forestPosEdge, _forestPosCenter]
+};
+
 
 dyn_find_centroid_of_groups = {
     params ["_groups"];
@@ -367,6 +533,22 @@ dyn_find_centroid_of_groups = {
     [_sumX / _len, _sumY / _len, 0] 
 };
 
+dyn_find_centroid_of_points = {
+    params ["_points"];
+
+    private _sumX = 0;
+    private _sumY = 0;
+    private _len = count _points;
+
+    {
+        _sumX = _sumX + _X#0;
+        _sumY = _sumY + _x#1;
+
+    } forEach _points;
+
+    [_sumX / _len, _sumY / _len, 0]
+};
+
 dyn_hide_fences = {
     params ["_pos", "_radius"];
  
@@ -377,24 +559,6 @@ dyn_hide_fences = {
             hideObject (_fences#_i);
         };
     };
-};
-
-dyn_lowerTerrain = {
-    params ["_start", "_a", "_b", "_h"];
-    private _newPositions = [];
-    _startHeight = _start#2;
-
-    for "_xStep" from -(_a / 2) to (_a / 2) do
-    {
-        for "_yStep" from -(_b / 2) to (_b / 2) do
-        {
-            private _newHeight = _start vectorAdd [_xStep, _yStep, 0];
-            _newHeight set [2, _startHeight - _h];
-            _newPositions pushBack _newHeight;
-        };
-    };
-
-    setTerrainHeight [_newPositions, true];
 };
 
 // [getpos player, 0] spawn dyn_terrain_scan;
@@ -758,8 +922,8 @@ dyn_draw_frontline = {
     private _pathLeft = [];
     private _pathRight = [];
 
-    _centerPositionsLeft = (_objPos getpos [[1800, 2200] call BIS_fnc_randomInt, _campaignDir + 90]);
-    _centerPositionsRight = (_objPos getpos [[1800, 2200] call BIS_fnc_randomInt, _campaignDir - 90]);
+    _centerPositionsLeft = (_objPos getpos [1800, _campaignDir + 90]);
+    _centerPositionsRight = (_objPos getpos [1800, _campaignDir - 90]);
 
     _xLength = 15000;
 
@@ -767,6 +931,7 @@ dyn_draw_frontline = {
     private _steps = round (_xLength / _spacing);
 
     private _loaLinePath = [];
+    private _unitNames = +dyn_allied_unit_names;
 
     // main Frontline
     {
@@ -783,7 +948,7 @@ dyn_draw_frontline = {
             private _frontDirFix = _campaignDir + (_x#1);
             private _frontDir = _campaignDir + (_x#1);
             private _alliedLineInterval = round (_steps / 2);
-
+            
             private _n = 0;
             for "_i" from 0 to _steps do {
                 _pos1 = _startPos getPos [_spacing * _n, _frontDir];
@@ -824,17 +989,18 @@ dyn_draw_frontline = {
 
                 // Unit diverdier Lines
                 if (_i % _alliedLineInterval == 0) then {
-                    _mFEBA = createMarker [str (random 4), _pos2];
+                    // _mFEBA = createMarker [str (random 4), _pos2];
+                    _mFEBA = createMarker [str (random 4), _pos2 getPos [1500, _frontDir + (_x#1)]];
                     _mFEBA setMarkerType "mil_objective";
                     _mFEBA setMarkerText "FEBA";
                     _mFEBA setMarkerSize [0.5, 0.5];
                     dyn_intel_markers pushBack _mFEBA;
 
-                    _mFLOT = createMarker [str (random 4), _pos2 getPos [1500, _frontDir + (_x#1)]];
-                    _mFLOT setMarkerType "mil_dot";
-                    _mFLOT setMarkerText "FLOT";
-                    _mFLOT setMarkerSize [0.7, 0.7];
-                    dyn_intel_markers pushBack _mFLOT;
+                    // _mFLOT = createMarker [str (random 4), _pos2 getPos [1500, _frontDir + (_x#1)]];
+                    // _mFLOT setMarkerType "mil_dot";
+                    // _mFLOT setMarkerText "FLOT";
+                    // _mFLOT setMarkerSize [0.7, 0.7];
+                    // dyn_intel_markers pushBack _mFLOT;
 
                     private _dividerLinePath = [];
                     _dPos = _pos2;
@@ -870,7 +1036,9 @@ dyn_draw_frontline = {
                         // Btl Markers
                         if (_j == 2) then {
 
-                            [objNull, _dPos getPos [3500, _frontDir], (dyn_allied_unit_names#(_i / _alliedLineInterval))#0, (dyn_allied_unit_names#(_i / _alliedLineInterval))#1, "", 1] spawn dyn_spawn_intel_markers;
+                            _unitName = _unitNames#0;
+                            [objNull, _dPos getPos [3500, _frontDir], _unitName#0, _unitName#1, "", 1] spawn dyn_spawn_intel_markers;
+                            _unitNames deleteAt 0;
                             {
                                 _p1p1 = _dPos getPos [_x, _frontDir];
                                 _p1p2 = _p1p1 getpos [120, _frontDir + 90];
@@ -946,11 +1114,11 @@ dyn_draw_frontline = {
                 _path pushBack (_pos2Array#_i)#1;
             };
 
-            _lineMarker = createMarker [str (random 3), [0,0,0]];
-            _lineMarker setMarkerShape "POLYLINE";
-            _lineMarker setMarkerPolyline _path;
-            _lineMarker setMarkerColor "colorBLACK";
-            _lineMarker setMarkerAlpha 0.7;
+            // _lineMarker = createMarker [str (random 3), [0,0,0]];
+            // _lineMarker setMarkerShape "POLYLINE";
+            // _lineMarker setMarkerPolyline _path;
+            // _lineMarker setMarkerColor "colorBLACK";
+            // _lineMarker setMarkerAlpha 0.7;
 
             _flotLineMarker = createMarker [str (random 3), [0,0,0]];
             _flotLineMarker setMarkerShape "POLYLINE";
@@ -959,7 +1127,7 @@ dyn_draw_frontline = {
             _flotLineMarker setMarkerAlpha 0.7;
 
             dyn_intel_markers pushBack _flotLineMarker;
-            dyn_intel_markers pushBack _lineMarker;
+            // dyn_intel_markers pushBack _lineMarker;
         } forEach [[_startPos1, 90], [_startPos2, -90]];
     } forEach [[[_centerPositionsLeft, _centerPositionsRight], "colorOPFOR"]];//, [[_bluLineStartLeft, _bluLineStartRight], "colorBLUFOR"]];
 
@@ -971,3 +1139,91 @@ dyn_draw_frontline = {
 
     dyn_intel_markers pushBack _loaLineMarker;
 };
+
+// dyn_draw_frontline = {
+//     params ["_locPos", "_campaigndir"];
+
+//     // private _locPos = getPos _loc;
+//     private _allLocs = +dyn_all_towns;
+//     // _allLocs = _allLocs - [_loc];
+//     private _steps = 20;
+//     private _interval = (worldSize / _steps) / 2 ;
+
+
+//     {
+//         private _alliedLocs = [];
+//         private _drawPathL = [];
+//         private _drawPathR = []; 
+//         for "_i" from 0 to _steps do {
+
+//             _checkPos1 = _locPos getPos [_interval * _i, _campaigndir + _x];
+
+//             if ([_checkPos1] call dyn_is_water) exitWith {_alliedLocs pushBackUnique _checkPos1};
+
+//             // _m = createMarker [str (random 5), _checkPos1];
+//             // _m setMarkerType "mil_circle";
+
+//             private _locs = nearestLocations [_checkPos1, ["NameCity", "NameVillage", "NameCityCapital"], _interval];
+//             if !(_locs isEqualTo []) then {
+//                 if (!((_locs#0) in _alliedLocs) and ((getpos (_locs#0)) distance2D _locPos) > 1600) then {
+//                     _unitMarker = createMarker [str (random 5), getPos (_locs#0)];
+//                     _unitMarker setMarkerType (selectRandom ["b_p_inf_pl", "b_c_inf_pl", "b_p_mech_pl"]);
+//                     // _unitMarker setMarkerColor "colorBLUFOR";
+
+//                     _unitMarker = createMarker [str (random 5), (getPos (_locs#0)) getpos [800, _campaigndir - 180]];
+//                     _unitMarker setMarkerType (selectRandom ["o_c_inf_pl", "o_p_mech_pl"]);
+//                 };
+//                 _alliedLocs pushBackUnique (getPos (_locs#0));
+//             } else {
+//                 if ((random 1) > 0.6 and (_checkPos1 distance2D _locPos) > 2000) then {
+//                     _unitMarker = createMarker [str (random 5), _checkPos1];
+//                     _unitMarker setMarkerType "b_f_s_recon_pl";
+//                     _unitMarker setMarkerSize [0.5, 0.5];
+
+//                     if ((random 1) > 0.6) then {
+//                         _unitMarker = createMarker [str (random 5), _checkPos1 getpos [800, _campaigndir - 180]];
+//                         _unitMarker setMarkerType (selectRandom ["o_c_inf_pl", "o_p_mech_pl"]);
+//                     };
+//                 };
+//                 _alliedLocs pushBackUnique _checkPos1;
+//             };
+//         };
+
+//         _alliedLocs deleteAt 0;
+
+//         {
+//             _dP1 = _x getPos [[300, 450] call BIS_fnc_randomInt, _campaigndir - 180];
+//             _dP2 = _dp1 getPos [[150, 200] call BIS_fnc_randomInt, _campaigndir];
+//             _drawPathL pushBack _dP1#0;
+//             _drawPathL pushBack _dP1#1;
+
+//             _drawPathR pushBack _dP2#0;
+//             _drawPathR pushBack _dP2#1;
+
+//         } forEach _alliedLocs;
+
+
+//         if ((count _drawPathL) > 2) then { 
+//             _lineLMarker = createMarker [str (random 3), [0,0,0]];
+//             _lineLMarker setMarkerShape "POLYLINE";
+//             _lineLMarker setMarkerPolyline _drawPathL;
+//             _lineLMarker setMarkerColor "colorOPFOR";
+//          };
+
+//         // _lineLMarker = createMarker [str (random 3), [0,0,0]];
+//         // _lineLMarker setMarkerShape "POLYLINE";
+//         // _lineLMarker setMarkerPolyline _drawPathR;
+//         // _lineLMarker setMarkerColor "colorBLUFOR";
+
+//         _textPos = (_alliedLocs#((count _alliedLocs) - 1)) getPos [400, _campaigndir - 180];
+
+//         _textMarker = createMarker [str (random 5), _textPos];
+//         _textMarker setMarkerType "mil_marker";
+//         _textMarker setMarkerText "CONTACT LINE";
+//         _textMarker setMarkerSize [0,0];
+//         _textMarker setMarkerColor "colorOPFOR"
+
+
+
+//     } forEach [90, -90];
+// };

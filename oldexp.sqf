@@ -1747,3 +1747,128 @@ dyn_garrison_lines = {
 {
     deleteVehicle _x;
 } forEach allMines;
+
+
+dyn_spawn_covered_trench = {
+    params ["_pos", "_dir", ["_infType", dyn_standart_squad]];
+
+    if (_pos isEqualTo []) exitWith {grpNull};
+
+    private _grp = grpNull; 
+    _grp = [_pos, east, _infType] call BIS_fnc_spawnGroup;
+    _grp setVariable ["onTask", true];
+
+    [_grp, _pos, _dir] spawn {
+        params ["_grp", "_pos", "_dir"];
+        _grp setFormation "LINE";
+        _grp setFormDir _dir;
+        (leader _grp) setDir _dir;
+
+        [_grp] call dyn_arty_dmg_reduction;
+        [_grp, _dir, round ((count (units _grp)) / 30), false] call dyn_line_form_cover;
+
+        sleep 1;
+
+        private _fortPos = getPosATLVisual (leader _grp);
+
+        [_fortPos, _dir] call dyn_dig_trench;
+
+        _t = createVehicle ["Land_vn_b_trench_tee_01", _fortPos, [], 0, "CAN_COLLIDE"];
+        _t setDir ((getDir (leader _grp)) - 180);
+        [_grp, (getDir _t) - 180, round ((count (units _grp)) / 30), false, [], 0, false,( getPosASLVisual _t) getPos [0.75, (getDir _t) - 180]] call dyn_line_form_cover;
+        {
+            _tPos = [13 * (sin (_dir + _x)), 13 * (cos (_dir + _x)), 0] vectorAdd _fortPos;
+            _t = createVehicle ["Land_vn_b_trench_45_01", _tPos, [], 0, "CAN_COLLIDE"];
+            if (_x > 0 ) then {_t setDir ((getDir (leader _grp)) + 225)} else {_t setDir ((getDir (leader _grp)) + 180)};
+            
+        } forEach [90, -90];
+
+        _tPos = [5 * (sin _dir), 5 * (cos _dir), 0] vectorAdd _fortPos;
+        _tPos = [18 * (sin (_dir - 90)), 18 * (cos (_dir - 90)), 0] vectorAdd _tpos;
+
+
+        if (random 1) > 0.5 then {
+            _offset = 0;
+            for "_i" from 0 to 3 do {
+                _trenchPos = [_offset * (sin (_dir + 90)), _offset * (cos (_dir + 90)), 0] vectorAdd _tPos;
+                _offset = _offset + 10;
+                _wPos = [1.1 * (sin _dir), 1.1 * (cos _dir ), 0] vectorAdd _trenchPos;
+                _w = createVehicle [selectRandom dyn_bushes, _wPos, [], 3, "CAN_COLLIDE"];
+                _w setDir (_dir - 180);
+            };
+        };
+
+        {
+            _x setUnitPos "AUTO";
+            _x setUnitPosWeak "UP";
+        } forEach (units _grp);
+
+        [_grp, _fortPos, _dir] spawn {
+            params ["_grp", "_pos", "_dir"];
+
+            _callsign = groupId _grp;
+            waitUntil {sleep 5; _callsign in pl_marta_dic};
+            [_pos, 45, _dir, 2] call dyn_draw_mil_symbol_fortification_line;
+        };
+    };
+    _grp enableDynamicSimulation true;
+    _grp
+};
+
+            //////////////////////// CUP Trench ////////////////////////
+
+            // _tPos = [4.5 * (sin _dir), 4.5 * (cos _dir), 0] vectorAdd _fortPos;
+            // _tPos = [18 * (sin (_dir - 90)), 18 * (cos (_dir - 90)), 0] vectorAdd _tpos;
+
+            // // {
+            // //     [getPosASL _x, 4, 4, 2] spawn dyn_lowerTerrain;
+            // // } forEach (units _grp);
+
+            // _offset = 0;
+            // for "_i" from 0 to (count (units _grp)) / 2 - 1 do {
+            //     _trenchPos = [_offset * (sin (_dir + 90)), _offset * (cos (_dir + 90)), 0] vectorAdd _tPos;
+
+            //     // _tCover = createVehicle ["land_fort_rampart", _trenchPos, [], 0, "CAN_COLLIDE"];
+            //     _comp = selectRandom ["land_fort_rampart"];
+            //     // _tCover =  _comp createVehicle _trenchPos;
+            //     _tCover = createVehicle [_comp, _trenchPos, [], 0, "CAN_COLLIDE"];
+            //     _tCover setDir (_dir - 180);
+            //     _tCover setPos ([0,0, -0.5] vectorAdd (getPos _tCover));
+            //     // [getPosASL _tCover, 2, 2, 1] spawn dyn_lowerTerrain;
+            //     _tPosASL = getPosASL _tCover;
+            //     _offset = _offset + 9;
+            //     // _wPos = [3 * (sin _dir), 3 * (cos _dir ), 0] vectorAdd _trenchPos;
+            //     // // _w = createVehicle ["Land_Razorwire_F", _wPos, [], 0, "CAN_COLLIDE"];
+            //     // _w = "Land_Razorwire_F" createVehicle _wPos;
+            //     // _w setDir (_dir - 180);
+
+            //     // _tNetPos = _trenchPos getPos [6, _dir];
+            //     // _tNet = "land_gm_camonet_01_nato" createVehicle _tNetPos;
+            //     // _tNet allowDamage false;
+            //     // _tNet setDir (_dir - 90);
+            //     // _tNet setPos ((getPos _tNet) vectorAdd [0,0,-2.8]);
+
+            //     if (_bushes) then {
+            //         for "_j" from 0 to 1 do {
+            //             _bush = (selectRandom dyn_bushes) createVehicle _trenchPos;
+            //             _bush setDir ([0, 360] call BIS_fnc_randomInt);
+            //             _bush setPos (_trenchPos getPos [[3, 6] call BIS_fnc_randomInt, _dir]);
+            //         };
+            //     };
+            // };
+
+            // _tPos2 = [4.5 * (sin (_dir - 180)), 4.5 * (cos (_dir - 180)), 0] vectorAdd _fortPos;
+            // _tPos2 = [18 * (sin (_dir - 90)), 18 * (cos (_dir - 90)), 0] vectorAdd _tpos2;
+
+            // _offset2 = 0;
+            // for "_i" from 0 to (count (units _grp)) / 2 - 1 do {
+            //     _trenchPos2 = [_offset2 * (sin (_dir + 90)), _offset2 * (cos (_dir + 90)), 0] vectorAdd _tPos2;
+            //     // _tCover = createVehicle ["land_fort_rampart", _trenchPos2, [], 0, "CAN_COLLIDE"];
+            //     _comp = selectRandom ["land_fort_rampart"];
+            //     // _tCover =  _comp createVehicle _trenchPos2;
+            //     _tCover = createVehicle [_comp, _trenchPos2, [], 0, "CAN_COLLIDE"];
+            //     _tCover setDir _dir;
+            //     _tCover setPos ([0,0, -0.5] vectorAdd (getPos _tCover));
+            //     // [getPosASL _tCover, 2, 2, 1] spawn dyn_lowerTerrain;
+            //     _offset2 = _offset2 + 9;
+            // };

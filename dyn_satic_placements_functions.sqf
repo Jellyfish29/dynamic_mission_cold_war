@@ -77,7 +77,7 @@ dyn_spawn_mg_team_garrisons = {
 };
 
 dyn_spawn_covered_vehicle = {
-    params ["_pos", "_vicType", "_dir", ["_netOn", true], ["_dismounted", false]];
+    params ["_pos", "_vicType", "_dir", ["_netOn", true], ["_dismounted", false], ["_trench", false]];
     private ["_dismountGrp", "_diPos"];
     _grp = grpNull;
     _pos = _pos findEmptyPosition [0, 100, _vicType];
@@ -91,10 +91,10 @@ dyn_spawn_covered_vehicle = {
             _x disableAI "PATH";
         } forEach (units _grp);
         // _grp setBehaviour "SAFE";
-        for "_i" from 0 to 3 do {
-            _camoPos = [6 * (sin ((getDir _vic) + ([-10, 10] call BIS_fnc_randomInt))), 6 * (cos ((getDir _vic) + ([-10, 10] call BIS_fnc_randomInt))), 0] vectorAdd (getPos _vic);
-            (selectRandom dyn_bushes) createVehicle _camoPos;
-        };
+        // for "_i" from 0 to 3 do {
+        //     _camoPos = [6 * (sin ((getDir _vic) + ([-10, 10] call BIS_fnc_randomInt))), 6 * (cos ((getDir _vic) + ([-10, 10] call BIS_fnc_randomInt))), 0] vectorAdd (getPos _vic);
+        //     (selectRandom dyn_bushes) createVehicle _camoPos;
+        // };
         // _net =  createVehicle (getPos _vic);
 
         if (_netOn) then {
@@ -119,6 +119,9 @@ dyn_spawn_covered_vehicle = {
                 } forEach (units _dismountGrp);
 
             };
+        };
+        if (_trench) then {
+            [getPosASLVisual _vic, getDir _vic] call dyn_dig_vehicle_trench;
         };
         _grp enableDynamicSimulation true;
     };
@@ -161,21 +164,189 @@ dyn_spawn_parked_vehicle = {
     _r
 };
 
+dyn_dig_trench = {
+    params ["_startPos", "_dir"];
+
+    _newHeightArray = [];
+    _dirtType = selectRandom ["Land_DirtPatch_05_F"];//, "Land_DirtPatch_04_F", "Land_DirtPatch_03_F", "Land_DirtPatch_02_F"];
+    _startPos = _startPos getPos [20, _dir - 90];
+
+    for "_i" from 0 to 9 do {
+        _centerPos = _startPos getPos [4 * _i, _dir + 90];
+        if !([_centerPos] call dyn_is_water) then {
+            _dirt =  createVehicle [_dirtType, _centerPos, [], 2, "CAN_COLLIDE"];
+            _dirt setDir ([0, 360] call BIS_fnc_randomInt);
+
+            if (_i % 2 == 0) then {
+                _cutter =  createVehicle ["Land_ClutterCutter_large_F", _centerPos, [], 0, "CAN_COLLIDE"];
+                _cutter setDir _dir;
+            };
+            for "_x" from -1.5 to 1.5 step 0.5 do {
+                for "_y" from -1.5 to 1.5 step 0.5 do {
+
+                    _newPos = _centerPos vectorAdd [_x, _y, ((ATLtoASL _centerPos)#2) -1.2];
+                    _newHeightArray pushBack _newPos;
+                };
+            };
+        };
+
+
+    };
+    setTerrainHeight [_newHeightArray, true];
+};
+
+
+dyn_dig_trench_raw = {
+    params ["_startPos", "_dir"];
+
+    private _newHeightArray = [];
+    private _dirtType = selectRandom ["Land_DirtPatch_05_F"];//, "Land_DirtPatch_04_F", "Land_DirtPatch_03_F", "Land_DirtPatch_02_F"];
+    private _startPos = _startPos getPos [20, _dir - 90];
+    private _clutter = [];
+
+    for "_i" from 0 to 9 do {
+        _centerPos = _startPos getPos [4 * _i, _dir + 90];
+
+        if !([_centerPos] call dyn_is_water) then {
+            _dirt =  createVehicle [_dirtType, _centerPos, [], 2, "CAN_COLLIDE"];
+            _dirt setDir ([0, 360] call BIS_fnc_randomInt);
+
+            if (_i % 2 == 0) then {
+                _cutter =  createVehicle ["Land_ClutterCutter_large_F", _centerPos, [], 0, "CAN_COLLIDE"];
+                _cutter setDir _dir;
+            };
+
+            if ((random 1) > 0.5) then {
+                _box =  createVehicle [selectRandom ["rhs_7ya37_1_single", "gm_AmmoBox_2160Rnd_545x39mm_b_7N6_ak74", "gm_AmmoBox_880Rnd_762x39mm_b_T_m43_ak47", "gm_AmmoBox_880Rnd_762x54mmR_api_7bz3_pk"], _centerPos, [], 5, "CAN_COLLIDE"];
+                _box setDir ([0, 360] call BIS_fnc_randomInt);
+                _clutter pushback _box;
+            };
+
+            _sb =  createVehicle ["land_gm_sandbags_01_single_01", _centerPos, [], 5, "CAN_COLLIDE"];
+            _sb setDir ([0, 360] call BIS_fnc_randomInt);
+            _clutter pushback _sb;
+
+            for "_x" from 0 to 1 step 1 do {
+                for "_y" from 0 to 1 step 1 do {
+
+                    _newPos = _centerPos vectorAdd [_x, _y, ((ATLtoASL _centerPos)#2) -1.5];
+                    _newHeightArray pushBack _newPos;
+                };
+            };
+        };
+
+
+    };
+
+    [_clutter] spawn {
+        sleep 5;
+
+        {
+            _x enableSimulation false;
+        } forEach (_this#0);
+    };
+
+    setTerrainHeight [_newHeightArray, true];
+};
+
+dyn_dig_free_trench_raw = {
+    params ["_startPos", "_dir", "_trenchPath"];
+
+    private _newHeightArray = [];
+    private _dirtType = selectRandom ["Land_DirtPatch_05_F"];//, "Land_DirtPatch_04_F", "Land_DirtPatch_03_F", "Land_DirtPatch_02_F"];
+    private _tDir = 0;
+
+    private _i = 0;
+    {
+        _centerPos = _x;
+        if !([_centerPos] call dyn_is_water) then {
+            _dirt =  createVehicle [_dirtType, _centerPos, [], 2, "CAN_COLLIDE"];
+            _dirt setDir ([0, 360] call BIS_fnc_randomInt);
+
+            if (_i % 3 == 0) then {
+                _cutter =  createVehicle ["Land_ClutterCutter_large_F", _centerPos, [], 0, "CAN_COLLIDE"];
+                _cutter setDir _dir;
+                [_cutter] spawn {
+                    sleep 5;
+                    (_this#0) enableSimulation false;
+                };
+            };
+
+            if (_i > 1) then {_tdir = (_centerPos getdir _trenchPath#(_i - 2))} else {_tdir = (_centerPos getdir _trenchPath#(_i + 2))};
+
+            _tPos = _centerPos;
+            _t = createVehicle ["Land_ManurePile_01_F", _tPos getpos [2.5, _tDir + 90], [], 0, "CAN_COLLIDE"];
+            _t setPosATL [(getPos _t)#0, (getPos _t)#1, -0.8];
+            _t setDir _tDir;
+            _t = createVehicle ["Land_ManurePile_01_F", _tPos getpos [-2.5, _tDir + 90], [], 0, "CAN_COLLIDE"];
+            _t setPosATL [(getPos _t)#0, (getPos _t)#1, -0.8];
+            _t setDir _tDir - 180;
+
+            _i = _i + 1;
+
+            for "_x" from 0 to 1 step 1 do {
+                for "_y" from 0 to 1 step 1 do {
+
+                    _newPos = _centerPos vectorAdd [_x, _y, ((ATLtoASL _centerPos)#2) -1.2];
+                    _newHeightArray pushBack _newPos;
+                };
+            };
+        };
+
+        // _m = createMarker [str (random 1), _centerPos];
+        // _m setMarkerType "mil_dot";
+        // _m setMarkerText (str _i);
+
+    } forEach _trenchPath;
+
+    setTerrainHeight [_newHeightArray, true];
+};
+
+dyn_dig_vehicle_trench = {
+    params ["_startPos", "_dir"];
+
+    _newHeightArray = [];
+    _dirtType = selectRandom ["Land_DirtPatch_05_F"];//, "Land_DirtPatch_04_F", "Land_DirtPatch_03_F", "Land_DirtPatch_02_F"];
+    _cutter =  createVehicle ["Land_ClutterCutter_large_F", ASLtoATL _startPos, [], 0, "CAN_COLLIDE"];
+    _cutter setDir _dir;
+
+    _dirt = createVehicle [_dirtType, ASLtoATL _startPos, [], 2, "CAN_COLLIDE"];
+    _dirt setDir ([0, 360] call BIS_fnc_randomInt);
+
+    for "_x" from -4 to 4 step 1 do {
+        for "_y" from -4 to 4 step 1 do {
+
+            _newPos = _startPos vectorAdd [_x, _y, - 1];
+            _newHeightArray pushBack _newPos;
+        };
+    };
+
+    pl_test = _newHeightArray;
+
+    setTerrainHeight [_newHeightArray, true];
+};
+// [getPosASL player, 0] call dyn_dig_vehicle_trench;
+
 dyn_spawn_covered_inf = {
-    params ["_pos", "_dir", ["_tree", false], ["_net", false], ["_sandBag", false], ["_bushes", false], ["_trench", false], ["_infType", dyn_standart_squad], ["_covers", []]];
+    params ["_pos", "_dir", ["_tree", false], ["_net", false], ["_sandBag", false], ["_bushes", false], ["_trench", false], ["_infType", dyn_standart_squad], ["_covers", []], ["_raw", false]];
+
+    if ([_pos] call dyn_is_water) exitWith {grpNull};
+
     if (_tree) then {
-        _trees = nearestTerrainObjects [_pos, ["TREE", "FOREST BORDER", "FOREST TRIANGLE", "FOREST SQUARE", "FOREST"], 80, true, true];
+        _trees = nearestTerrainObjects [_pos, ["TREE"], 80, true, true];
+
         if ((count _trees) > 0) then {
             _pos = getPos (_trees#0);
         };
     };
+    if (isNil "_pos") exitWith {grpNull};
     if (_pos isEqualTo []) exitWith {grpNull};
     private _grp = grpNull; 
     _grp = [_pos, east, _infType] call BIS_fnc_spawnGroup;
     _grp setVariable ["onTask", true];
 
-    [_grp, _pos, _dir, _net, _sandBag, _bushes, _trench, _covers] spawn {
-        params ["_grp", "_pos", "_dir", "_net", "_sandBag", "_bushes", "_trench", "_covers"];
+    [_grp, _pos, _dir, _net, _sandBag, _bushes, _trench, _covers, _raw] spawn {
+        params ["_grp", "_pos", "_dir", "_net", "_sandBag", "_bushes", "_trench", "_covers", "_raw"];
         _grp setFormation "LINE";
         _grp setFormDir _dir;
         (leader _grp) setDir _dir;
@@ -188,69 +359,11 @@ dyn_spawn_covered_inf = {
         if (_trench) then {
 
             [_grp] call dyn_arty_dmg_reduction;
-            [_grp, _dir, 3, false] call dyn_line_form_cover;
+            [_grp, _dir, 4, false] call dyn_line_form_cover;
 
             sleep 1;
 
             private _fortPos = getPosATLVisual (leader _grp);
-            //////////////////////// CUP Trench ////////////////////////
-
-            // _tPos = [4.5 * (sin _dir), 4.5 * (cos _dir), 0] vectorAdd _fortPos;
-            // _tPos = [18 * (sin (_dir - 90)), 18 * (cos (_dir - 90)), 0] vectorAdd _tpos;
-
-            // // {
-            // //     [getPosASL _x, 4, 4, 2] spawn dyn_lowerTerrain;
-            // // } forEach (units _grp);
-
-            // _offset = 0;
-            // for "_i" from 0 to (count (units _grp)) / 2 - 1 do {
-            //     _trenchPos = [_offset * (sin (_dir + 90)), _offset * (cos (_dir + 90)), 0] vectorAdd _tPos;
-
-            //     // _tCover = createVehicle ["land_fort_rampart", _trenchPos, [], 0, "CAN_COLLIDE"];
-            //     _comp = selectRandom ["land_fort_rampart"];
-            //     // _tCover =  _comp createVehicle _trenchPos;
-            //     _tCover = createVehicle [_comp, _trenchPos, [], 0, "CAN_COLLIDE"];
-            //     _tCover setDir (_dir - 180);
-            //     _tCover setPos ([0,0, -0.5] vectorAdd (getPos _tCover));
-            //     // [getPosASL _tCover, 2, 2, 1] spawn dyn_lowerTerrain;
-            //     _tPosASL = getPosASL _tCover;
-            //     _offset = _offset + 9;
-            //     // _wPos = [3 * (sin _dir), 3 * (cos _dir ), 0] vectorAdd _trenchPos;
-            //     // // _w = createVehicle ["Land_Razorwire_F", _wPos, [], 0, "CAN_COLLIDE"];
-            //     // _w = "Land_Razorwire_F" createVehicle _wPos;
-            //     // _w setDir (_dir - 180);
-
-            //     // _tNetPos = _trenchPos getPos [6, _dir];
-            //     // _tNet = "land_gm_camonet_01_nato" createVehicle _tNetPos;
-            //     // _tNet allowDamage false;
-            //     // _tNet setDir (_dir - 90);
-            //     // _tNet setPos ((getPos _tNet) vectorAdd [0,0,-2.8]);
-
-            //     if (_bushes) then {
-            //         for "_j" from 0 to 1 do {
-            //             _bush = (selectRandom dyn_bushes) createVehicle _trenchPos;
-            //             _bush setDir ([0, 360] call BIS_fnc_randomInt);
-            //             _bush setPos (_trenchPos getPos [[3, 6] call BIS_fnc_randomInt, _dir]);
-            //         };
-            //     };
-            // };
-
-            // _tPos2 = [4.5 * (sin (_dir - 180)), 4.5 * (cos (_dir - 180)), 0] vectorAdd _fortPos;
-            // _tPos2 = [18 * (sin (_dir - 90)), 18 * (cos (_dir - 90)), 0] vectorAdd _tpos2;
-
-            // _offset2 = 0;
-            // for "_i" from 0 to (count (units _grp)) / 2 - 1 do {
-            //     _trenchPos2 = [_offset2 * (sin (_dir + 90)), _offset2 * (cos (_dir + 90)), 0] vectorAdd _tPos2;
-            //     // _tCover = createVehicle ["land_fort_rampart", _trenchPos2, [], 0, "CAN_COLLIDE"];
-            //     _comp = selectRandom ["land_fort_rampart"];
-            //     // _tCover =  _comp createVehicle _trenchPos2;
-            //     _tCover = createVehicle [_comp, _trenchPos2, [], 0, "CAN_COLLIDE"];
-            //     _tCover setDir _dir;
-            //     _tCover setPos ([0,0, -0.5] vectorAdd (getPos _tCover));
-            //     // [getPosASL _tCover, 2, 2, 1] spawn dyn_lowerTerrain;
-            //     _offset2 = _offset2 + 9;
-            // };
-
 
             //////////////////////// SOG PF Trench ////////////////////////
             // {
@@ -259,49 +372,68 @@ dyn_spawn_covered_inf = {
             //     _t setDir (getDir (leader _grp));
             // } forEach [90, -90];
 
-            _t = createVehicle ["Land_vn_b_trench_tee_01", _fortPos, [], 0, "CAN_COLLIDE"];
-            _t setDir ((getDir (leader _grp)) - 180);
-            // _t setPos ((getPos _t) vectorAdd [0,0,-0.3]);
-            {
-                _tPos = [13 * (sin (_dir + _x)), 13 * (cos (_dir + _x)), 0] vectorAdd _fortPos;
-                _t = createVehicle ["Land_vn_b_trench_45_01", _tPos, [], 0, "CAN_COLLIDE"];
-                if (_x > 0 ) then {_t setDir ((getDir (leader _grp)) + 225)} else {_t setDir ((getDir (leader _grp)) + 180)};
-                // _t setPos ((getPos _t) vectorAdd [0,0,-0.3]);
-                
-            } forEach [90, -90];
+            // Land_Trench_01_grass_F
+            // Land_ManurePile_01_F
+
+            // if !(_raw) then {
+                [_fortPos, _dir] call dyn_dig_trench;
+
+                // _t = createVehicle ["Land_vn_b_trench_tee_01", _fortPos, [], 0, "CAN_COLLIDE"];
+                // _t setDir ((getDir (leader _grp)) - 180);
+                // // (leader _grp) setPosASL ((getPosASLVisual _t) getPos [0.75, (getDir _t) - 180]);
+                // [_grp, (getDir _t) - 180, 3, false, [], 0, false,( getPosASLVisual _t) getPos [0.75, (getDir _t) - 180]] call dyn_line_form_cover;
+                // // _t setPos ((getPos _t) vectorAdd [0,0,-0.3]);
+                // {
+                //     _tPos = [13 * (sin (_dir + _x)), 13 * (cos (_dir + _x)), 0] vectorAdd _fortPos;
+                //     _t = createVehicle ["Land_vn_b_trench_45_01", _tPos, [], 0, "CAN_COLLIDE"];
+                //     if (_x > 0 ) then {_t setDir ((getDir (leader _grp)) + 225)} else {_t setDir ((getDir (leader _grp)) + 180)};
+                //     // _t setPos ((getPos _t) vectorAdd [0,0,-0.3]);
+                    
+                // } forEach [90, -90];
+
+                for "_i" from -6 to 6 do {
+                    _tPos = _fortPos getPos [3.5 * _i + (random 2), _dir + 90];
+                    _t = createVehicle ["Land_ManurePile_01_F", _tPos getpos [3.2, _dir], [], 0, "CAN_COLLIDE"];
+                    _t setPosATL [(getPos _t)#0, (getPos _t)#1, -0.6];
+                    _t setDir _dir + 90 + (selectRandom [-180, 180]) + ([-8, 8] call BIS_fnc_randomInt);
+                    _t = createVehicle ["Land_ManurePile_01_F", _tPos getpos [-3.2, _dir], [], 0, "CAN_COLLIDE"];
+                    _t setPosATL [(getPos _t)#0, (getPos _t)#1, -0.6];
+                    _t setDir _dir - 90 + (selectRandom [-180, 180]) + ([-8, 8] call BIS_fnc_randomInt);
+                };
+
+            // } else {
+
+            //     [_fortPos, _dir] call dyn_dig_trench_raw;
+            // };
 
             _tPos = [5 * (sin _dir), 5 * (cos _dir), 0] vectorAdd _fortPos;
             _tPos = [18 * (sin (_dir - 90)), 18 * (cos (_dir - 90)), 0] vectorAdd _tpos;
 
-            _offset = 0;
-            for "_i" from 0 to 3 do {
-                _trenchPos = [_offset * (sin (_dir + 90)), _offset * (cos (_dir + 90)), 0] vectorAdd _tPos;
-                _offset = _offset + 10;
-                _wPos = [1.1 * (sin _dir), 1.1 * (cos _dir ), 0] vectorAdd _trenchPos;
-                // _w = createVehicle ["Land_Razorwire_F", _wPos, [], 3, "CAN_COLLIDE"];
-                _w = createVehicle [selectRandom dyn_bushes, _wPos, [], 3, "CAN_COLLIDE"];
-                _w setDir (_dir - 180);
+            
 
-                // _tNetPos = [15 * (sin (_dir + 90)), 15 * (cos (_dir + 90)), 0] vectorAdd _trenchPos;
-                // _tNet = "land_gm_camonet_01_nato" createVehicle _tNetPos;
-                // _tNet allowDamage false;
-                // _tNet setDir (_dir - 90);
-                // _tNet setPos ((getPos _tNet) vectorAdd [0,0,-2.3]);
+            // _offset = 0;
+            // for "_i" from 0 to 3 do {
+            //     _trenchPos = [_offset * (sin (_dir + 90)), _offset * (cos (_dir + 90)), 0] vectorAdd _tPos;
+            //     _offset = _offset + 10;
+            //     _wPos = [1.1 * (sin _dir), 1.1 * (cos _dir ), 0] vectorAdd _trenchPos;
+            //     // _w = createVehicle ["Land_Razorwire_F", _wPos, [], 3, "CAN_COLLIDE"];
+            //     _w = createVehicle [selectRandom dyn_bushes, _wPos, [], 3, "CAN_COLLIDE"];
+            //     _w setDir (_dir - 180);
 
-                if (_bushes) then {
-                    for "_j" from 0 to 1 do {
-                        // _bush = (selectRandom dyn_bushes) createVehicle _wPos;
-                        _bush = createVehicle [selectRandom dyn_bushes, _wPos getpos [1.5, _dir + (90 * _i)], [], 3, "CAN_COLLIDE"];
-                        _bush setDir ([0, 360] call BIS_fnc_randomInt);
-                        _bush setPos ([0,0, -0.3] vectorAdd (getPos _bush));
-                        _bush enableSimulation false;
-                    };
-                };
-            };
+            //     if (_bushes) then {
+            //         for "_j" from 0 to 1 do {
+            //             // _bush = (selectRandom dyn_bushes) createVehicle _wPos;
+            //             _bush = createVehicle [selectRandom dyn_bushes, _wPos getpos [1.5, _dir + (90 * _i)], [], 3, "CAN_COLLIDE"];
+            //             _bush setDir ([0, 360] call BIS_fnc_randomInt);
+            //             _bush setPos ([0,0, -0.3] vectorAdd (getPos _bush));
+            //             _bush enableSimulation false;
+            //         };
+            //     };
+            // };
 
             {
-                _x setUnitPos "AUTO";
-                _x setUnitPosWeak "UP";
+                // _x setUnitPos "AUTO";
+                _x setUnitPosWeak "MIDDLE";
             } forEach (units _grp);
 
             [_grp, _fortPos, _dir] spawn {
@@ -309,7 +441,8 @@ dyn_spawn_covered_inf = {
 
                 _callsign = groupId _grp;
                 waitUntil {sleep 5; _callsign in pl_marta_dic};
-                [objNull, _pos, "marker_position", "", "colorOpfor", 0.8, 1, _dir, false] spawn dyn_spawn_intel_markers;
+                // [objNull, _pos, "marker_position", "", "colorOpfor", 0.8, 1, _dir, false] spawn dyn_spawn_intel_markers;
+                [_pos, 45, _dir, 2] call dyn_draw_mil_symbol_fortification_line;
             };
         };
 
@@ -336,24 +469,54 @@ dyn_spawn_covered_inf = {
     _grp
 };
 
+dyn_spawn_forest_edge_trench = {
+    params ["_centerPos", "_forestEdges", "_maxAmount", ["_maxDistance", 1500]];
+    
+    private _rGrps = [];
+    private _rndForestEdges = +_forestEdges;
+    _rndForestEdges = (_rndForestEdges) call BIS_fnc_arrayShuffle;
+    private _edgeLimit = 0;
+    private _setDir = 0;
+
+    if ((count _forestEdges) > 1) then {
+        {
+            if ((_x distance2D _centerPos) <= _maxDistance and ((random 1) > 0.5) and _edgeLimit < _maxAmount) then {
+                if ((_forestEdges find _x) > 0) then {
+                    _setDir = (_forestEdges#(_forestEdges find _x)) getdir (_forestEdges#((_forestEdges find _x) - 1));
+                } else {
+                    _setDir = (_forestEdges#(_forestEdges find _x)) getdir (_forestEdges#((_forestEdges find _x) + 1));
+                };
+
+                _rGrps pushBack ([_x getPos [[50, 100] call BIS_fnc_randomInt, _setDir - 90], _setDir + 90, false, false, false, true, true, selectRandom [dyn_standart_squad, dyn_standart_at_team, dyn_standart_fire_team], [], true] call dyn_spawn_covered_inf);
+                _edgeLimit = _edgeLimit + 1;
+            };
+        } forEach _rndForestEdges;
+    };
+    _rGrps
+};
+
 dyn_spawn_trench_strong_point = {
     params ["_Strongpos", "_dir"];
 
     private _allGrps = [];
 
     _vicType = selectRandom dyn_standart_mechs;
+    _raw = selectRandom [true, false];
 
-    _allGrps pushBack ([_Strongpos, _dir, false, false, false, true, true] call dyn_spawn_covered_inf);
-    _allGrps pushBack ([_Strongpos getpos [45, _dir + 110], _dir + 35, false, false, false, true, true] call dyn_spawn_covered_inf);
-    _allGrps pushBack ([_Strongpos getpos [45, _dir - 110], _dir - 35, false, false, false, true, true] call dyn_spawn_covered_inf);
-    _allGrps pushBack ([_Strongpos getpos [45, _dir - 180], _dir, false, false, false, true, true] call dyn_spawn_covered_inf);
-    _allGrps pushBack ([(_Strongpos getpos [45, _dir - 180]) getPos [30, _dir + 90], _vicType, _dir + 35, true, false] call dyn_spawn_covered_vehicle);
-    _allGrps pushBack  ([(_Strongpos getpos [45, _dir - 180]) getPos [30, _dir - 90], _vicType, _dir - 35, true, false] call dyn_spawn_covered_vehicle);
+    _allGrps pushBack ([_Strongpos, _dir, false, false, false, true, true, dyn_standart_squad, [], _raw] call dyn_spawn_covered_inf);
+    if ((random 1) > 0.35) then {_allGrps pushBack ([_Strongpos getpos [45, _dir + 110], _dir + 35, false, false, false, true, true, dyn_standart_squad, [], _raw] call dyn_spawn_covered_inf)};
+    if ((random 1) > 0.35) then {_allGrps pushBack ([_Strongpos getpos [45, _dir - 110], _dir - 35, false, false, false, true, true, dyn_standart_squad, [], _raw] call dyn_spawn_covered_inf)};
+    if ((random 1) > 0.5) then {_allGrps pushBack ([_Strongpos getpos [60, _dir - 180], _dir, false, false, false, true, true, dyn_standart_squad, [], _raw] call dyn_spawn_covered_inf)};
+    if ((random 1) > 0.75) then {_allGrps pushBack ([(_Strongpos getpos [60, _dir - 180]) getPos [30, _dir + 90], _vicType, _dir + ([30, 40] call BIS_fnc_randomInt), true, false, true] call dyn_spawn_covered_vehicle)};
+    if ((random 1) > 0.8) then {_allGrps pushBack  ([(_Strongpos getpos [60, _dir - 180]) getPos [30, _dir - 90], _vicType, _dir - ([30, 40] call BIS_fnc_randomInt), true, false, true] call dyn_spawn_covered_vehicle)};
+
+    if ((random 1) > 0.4) then {_allGrps pushBack ([_Strongpos getpos [25, _dir + 90], _dir, true, true, selectRandom (dyn_standart_statics_atgm + dyn_standart_statics_atgun + dyn_standart_statics_low) , false] call dyn_spawn_static_weapon)};
+    if ((random 1) > 0.4) then {_allGrps pushBack ([_Strongpos getpos [25, _dir - 90], _dir, true, true, selectRandom (dyn_standart_statics_atgm + dyn_standart_statics_atgun + dyn_standart_statics_low) , false] call dyn_spawn_static_weapon)};
 
     _allGrps
 };
 
-// [[400, 400, 0], 0] spawn dyn_spawn_trench_strong_point;
+// 0 = [[400, 400, 0], 0] spawn dyn_spawn_trench_strong_point;
 
 dyn_spawn_dimounted_inf = {
     params ["_pos", "_area", ["_barrier", false], ["_armed", false]];
@@ -557,7 +720,7 @@ dyn_spawn_static_weapon = {
     // _static = _weapon createVehicle _swPos;
 
     _vGrp = grpNull;
-    _static = createVehicle [_weapon, _pos, [], 20, "NONE"];
+    _static = createVehicle [_weapon, _pos, [], 0, "NONE"];
     if !(isNull _static) then {
         _static setDir _dir;
         // _vGrp = createVehicleCrew _static;
@@ -635,11 +798,25 @@ dyn_spawn_patrol = {
         _startPos = selectRandom _patrolPos;
         // _patrolPos = _patrolPos - [_startPos]
     };
-    _grp = [_startPos, east, dyn_standart_at_team] call BIS_fnc_spawnGroup;
+
+    if (_patrolPos isEqualTo []) then {
+        _patrolPos = [_startPos];
+        _patrolPos pushback ([[[_startPos, 300]], [[_startPos, 100]]] call BIS_fnc_randomPos);
+        _patrolPos pushback ([[[_startPos, 300]], [[_startPos, 100]]] call BIS_fnc_randomPos);
+    };
+
+    _grp = [_startPos, east, selectRandom [dyn_standart_at_team, dyn_standart_fire_team]] call BIS_fnc_spawnGroup;
     _grp setBehaviour "SAFE";
-    _grp setVariable ["pl_not_recon_able", true];
+    // _grp setVariable ["pl_not_recon_able", true];
+
+
     {
         _grp addWaypoint [_x, 20];
+
+        // _m = createMarker [str (random 4), _x];
+        // _m setMarkerType "mil_dot";
+
+
     } forEach _patrollPos;
     _wp = _grp addWaypoint [_startPos, 20];
     _wp setWaypointType "CYCLE";
@@ -866,7 +1043,7 @@ dyn_town_entry_checkpoints = {
 
     private _n = 0;
     {
-        if ((random 1) > 0.5) then {
+        if ((random 1) > 0.65) then {
             _n = _n + 1;
             if (_n > _limit) exitWith {};
 
@@ -1018,72 +1195,93 @@ dyn_spawn_screen = {
 dyn_forest_defence_edge = {
     params ["_lineCenter", "_dir", ["_amount", 2], ["_lineWidth", 2000], ["_lineHeight", 1500], ["_accuracy", 100]];
 
-    private _watchPos = _lineCenter getPos [3000, _dir];
-    private _terrain = [_lineCenter, _dir, _lineWidth,_lineHeight, _accuracy] call dyn_terrain_scan;
-    
-    dyn_terrain = _terrain;
-    // forest
-    // if ((_terrain#0) < (_accuracy * _accuracy) * 0.15) exitWith {hint "cancel"};
+    // // forest
+    // // if ((_terrain#0) < (_accuracy * _accuracy) * 0.15) exitWith {hint "cancel"};
+    // private _terrain = +dyn_terrain;
 
-    private _lineStartPos = _lineCenter getPos [_lineWidth / 2, _dir - 90];
-    private _positionAmount = round (_accuracy * 0.2);
-    private _offsetStep = round (_accuracy / _positionAmount);
-    private _offset = 0;
+    // private _lineStartPos = _lineCenter getPos [_lineWidth / 2, _dir - 90];
+    // private _positionAmount = round (_accuracy * 0.2);
+    // private _offsetStep = round (_accuracy / _positionAmount);
+    // private _offset = 0;
 
-    private _terrainGrid = _terrain#3; 
+    // private _terrainGrid = _terrain#3; 
 
-    private _forestPosEdge = [];
-    private _forestPosCenter = [];
-    private _ii = 0;
-    for "_i" from 1 to _positionAmount do {
-        _checkGridLine = _terrainGrid#_offset;
+    // private _forestPosEdge = [];
+    // private _forestPosCenter = [];
+    // private _yStart = 25;
+    // private _ylimit = 65;
+    // private _y = _yStart;
+    // private _forestYPos = _yStart;
+    // private _schneisen = [];
+    // private _schneiseTemp = [];
 
-        if (((_checkGridLine#0)#1) != "forest") then {
-            _ii = 0;
-            while {_ii < _accuracy - 1} do {
+    // for "_x" from 0 to _accuracy step _offsetStep do {
 
-                _checkPos = _checkGridLine#_ii;
-                if ((_checkPos#1) == "forest") exitWith {
+    //     if ((((_terrainGrid#_x)#_yStart)#1) != "forest" and (((_terrainGrid#_x)#_yStart)#1) != "town") then {
+    //         _y = _yStart;
+    //         while {_y < _ylimit} do {
 
-                    // _m = createMarker [str (random 4), _checkPos#0];
-                    // _m setMarkerType "mil_marker";
-                    // _m setMarkerColor "colorRed";
+    //             _checkPos = (_terrainGrid#_x)#_y;
+    //             if ((_checkPos#1) == "forest") exitWith {
 
-                    _forestPosEdge pushBack [_checkPos#0, "edge"];
-                };
-                _ii = _ii + 1;
-            };
-        } else {
-            // _m = createMarker [str (random 4), (_checkGridLine#0)#0];
-            // _m setMarkerType "mil_marker";
-            // _m setMarkerColor "colorBlue";
-            _forestPosCenter pushBack [(_checkGridLine#0)#0, "center"];
-        };
-        _offset = _offset + _offsetStep;
-    };
+    //                 _m = createMarker [str (random 4), _checkPos#0];
+    //                 _m setMarkerType "mil_marker";
+    //                 _m setMarkerColor "colorRed";
 
-    if (count _forestPosEdge <= 0 or _amount <= 0) exitWith {};
+    //                 _forestPosEdge pushBack [_checkPos#0, "edge"];
+
+    //                 _forestYPos = _y;
+    //             };
+    //             if ((_checkPos#1) == "town") exitWith {
+
+    //                 _m = createMarker [str (random 4), _checkPos#0];
+    //                 _m setMarkerType "mil_marker";
+    //                 _m setMarkerColor "colorCivilian";
+
+    //                 _forestPosEdge pushBack [_checkPos#0, "edge"];
+
+    //                 _forestYPos = _y;
+    //             };
+    //             _y = _y + 1;
+    //         };
+
+    //         if (_y == _ylimit) then {
+    //             _m = createMarker [str (random 4), ((_terrainGrid#_x)#_forestYPos)#0];
+    //             _m setMarkerType "mil_marker";
+    //             _m setMarkerColor "colorYellow";
+    //         };
+
+    //     } else {
+    //         _m = createMarker [str (random 4), ((_terrainGrid#_x)#_yStart)#0];
+    //         _m setMarkerType "mil_marker";
+    //         _m setMarkerColor "colorBlue";
+    //         _forestPosCenter pushBack [((_terrainGrid#_x)#_yStart)#0, "center"];
+    //         _forestYPos = _y;
+    //     };
+    //     _offset = _offset + _offsetStep;
+    // };
+
+    // if (count _forestPosEdge <= 0 or _amount <= 0) exitWith {};
 
 
-    _forestPosEdge = [_forestPosEdge, [], {(_x#0) distance2D ((_terrainGrid#(round (_accuracy / 2)))#(round (_accuracy / 2)))#0}, "ASCEND"] call BIS_fnc_sortBy;
+    // _forestPosEdge = [_forestPosEdge, [], {(_x#0) distance2D ((_terrainGrid#(round (_accuracy / 2)))#(round (_accuracy / 2)))#0}, "ASCEND"] call BIS_fnc_sortBy;
 
-    if ((count _forestPosEdge) > _amount) then {_forestPosEdge resize _amount};
+    // if ((count _forestPosEdge) > _amount) then {_forestPosEdge resize _amount};
 
-    for "_j" from 0 to (count _forestPosEdge) - 1 do {
+    // for "_j" from 0 to (count _forestPosEdge) - 1 do {
 
-        _spawnPos = (_forestPosEdge#_j)#0;
-        _spawnPos = _spawnPos getpos [30, _dir - 180];
+    //     _spawnPos = (_forestPosEdge#_j)#0;
+    //     _spawnPos = _spawnPos getpos [30, _dir - 180];
 
-        // _grp = [_spawnPos, east, dyn_standart_squad] call BIS_fnc_spawnGroup;
-        // _grp setFormDir _dir;
-        // (leader _grp) setDir _dir;
-        _grp = [_spawnPos, _dir + ([-10, 10] call BIS_fnc_randomInt), false, false, false, true, true] call dyn_spawn_covered_inf;
-        // _grp enableDynamicSimulation true;
+    //     // _grp = [_spawnPos, east, dyn_standart_squad] call BIS_fnc_spawnGroup;
+    //     // _grp setFormDir _dir;
+    //     // (leader _grp) setDir _dir;
+    //     _grp = [_spawnPos, _dir + ([-10, 10] call BIS_fnc_randomInt), false, false, false, true, true, dyn_standart_squad, [], true] call dyn_spawn_covered_inf;
+    //     // _grp enableDynamicSimulation true;
 
-        if ((random 1) > 0.5) then {
-            [_spawnPos getPos [30, _dir + 90], _dir, true, true, selectRandom dyn_standart_statics_atgm] call dyn_spawn_static_weapon;
-        };
-    };
+    //     if ((random 1) > 0.5) then {
+    //         [_spawnPos getPos [30, _dir + 90], _dir, true, true, selectRandom dyn_standart_statics_atgm] call dyn_spawn_static_weapon;
+    //     };
+    // };
 };
-
 

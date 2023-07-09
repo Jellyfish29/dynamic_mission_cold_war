@@ -248,7 +248,7 @@ dyn_continous_counterattack = {
         private _rearDir = (getpos dyn_current_location) getdir (getPos dyn_next_location);
         private _rearPos = (getPos _endTrg) getPos [2500, _rearDir + (selectRandom [10, -10])];
 
-        _atkType = selectRandom [-1,-1,0,0,0,1,1,1,1,1,1,1,2,2,2,2,2,3,3,4];
+        _atkType = selectRandom [-1,-1,-1,-1,0,0,0,0,0,0,0,1,1,1,1,1,1,1,2,2,2,2,2,3,3,4];
         _atkType = 4;
         switch (_atkType) do {
             case -1 : {}; 
@@ -294,11 +294,28 @@ dyn_continous_counterattack = {
 };
 
 dyn_spawn_mine_field = {
-    params ["_startPos", "_length", "_dir", ["_isObj", false], ["_mineSpacing", 20], ["_mineRows", 3], ["_revealMines", true], ["_rowSpacing", 20]];
-
+    params ["_startPos", "_length", "_dir", ["_isObj", false], ["_mineSpacing", 20], ["_mineRows", 3], ["_revealMines", true], ["_rowSpacing", 20], ["_readTerrain", []]];
 
     private _allMines = [];
-    _startPos = _startPos getPos [20, _dir - 180];
+    if (_readTerrain isEqualTo []) then {
+        _startPos = _startPos getPos [20, _dir - 180];
+    } else {
+            _clearings = _readTerrain#0;
+        if !(_clearings isEqualTo []) then {
+            private _lagestClearing = [];
+            private _limit = 0;
+            {
+                if ((count _x) > _limit) then {
+                    _lagestClearing = _x;
+                    _limit = count _x;
+                };
+            } forEach _clearings;
+
+            _startPos = [_lagestClearing] call dyn_find_centroid_of_points;
+            _startPos = _startPos getPos [_rowSpacing * _mineRows / 2, _dir];
+        };
+    };
+
     for "_j" from 0 to _mineRows - 1 do {
         _minesAmount = round (_length / _mineSpacing);
         _offset = 0;
@@ -316,6 +333,7 @@ dyn_spawn_mine_field = {
             // debug
             // _m = createMarker [str (random 5), _minePos];
             // _m setMarkerType "mil_dot";
+            // _m setMarkerSize [0.5, 0.5];
         };
         _mineSpacing = _mineSpacing * 0.66;
         _startPos = _startPos getPos [_rowSpacing, _dir - 180];
@@ -325,13 +343,40 @@ dyn_spawn_mine_field = {
         if ((random 1) > 0.25) then {
             [_startPos getPos [[200, 400] call BIS_fnc_randomInt, _dir - 180], _dir] spawn dyn_spawn_screen;
         };
+
         if ((random 1) > 0.25) then {
-            0 = [_startPos getPos [[-400, 400] call BIS_fnc_randomInt, _dir + 90], _dir] call dyn_spawn_trench_strong_point;
+            _reservePos = _startPos getpos [[200, 400] call BIS_fnc_randomInt, _dir -90];
+            0 = [_reservePos getPos [[300, 600] call BIS_fnc_randomInt, _dir + 90], _dir, false, false, false, true, true, selectRandom [dyn_standart_squad, dyn_standart_at_team, dyn_standart_fire_team], [], true] call dyn_spawn_covered_inf;
+            if ((random 1) > 0.25) then {
+                0 = [_reservePos getPos [[300, 600] call BIS_fnc_randomInt, _dir - 90], _dir, false, false, false, true, true, selectRandom [dyn_standart_squad, dyn_standart_at_team, dyn_standart_fire_team], [], true] call dyn_spawn_covered_inf;
+            };
+        };
+
+        if ((random 1) > 0.2) then {
+            _strongPos1 = _startPos getPos [[-400, 400] call BIS_fnc_randomInt, _dir + (90 + ([-10, 10] call BIS_fnc_randomInt))];
+            0 = [_strongPos1, _dir] call dyn_spawn_trench_strong_point;
+            if ((random 1) > 0.35) then {
+                0 = [_strongPos1 getPos [[300, 600] call BIS_fnc_randomInt, _dir + 90], _dir, false, false, false, true, true, selectRandom [dyn_standart_squad, dyn_standart_at_team, dyn_standart_fire_team], [], true] call dyn_spawn_covered_inf;
+                0 = [_strongPos1 getPos [[300, 600] call BIS_fnc_randomInt, _dir - 90], _dir, false, false, false, true, true, selectRandom [dyn_standart_squad, dyn_standart_at_team, dyn_standart_fire_team], [], true] call dyn_spawn_covered_inf;
+            };
         };
 
         if (_revealMines) then {
             [_startPos, [900, 1200] call BIS_fnc_randomInt, _dir, 20] call dyn_draw_mil_symbol_fortification_line;
         };
+
+        _forestEdges = _readTerrain#1;
+        0 = ([_startPos, _forestEdges, 4, 1500] call dyn_spawn_forest_edge_trench);
+
+        _forestCenters = _readTerrain#2;
+
+        if ((count _forestCenters) > 2) then {
+
+            0 = [[_forestCenters] call dyn_pop_random, _dir, false, false, false, true, true, selectRandom [dyn_standart_squad, dyn_standart_at_team, dyn_standart_fire_team], [], true] call dyn_spawn_covered_inf;
+            0 = [[_forestCenters] call dyn_pop_random, _dir, false, false, false, true, true, selectRandom [dyn_standart_squad, dyn_standart_at_team, dyn_standart_fire_team], [], true] call dyn_spawn_covered_inf;
+        };
+
+        [objNull, getPos dyn_current_location, 800, _startPos, 2] spawn dyn_spawn_side_town_guards;
     };
 
     [_allMines, _startPos, _dir, _length, _isObj, _revealMines] spawn {
@@ -349,29 +394,20 @@ dyn_spawn_mine_field = {
         // [objNull, _startPos, "hd_warning", "Mine Field", "colorRED"] call dyn_spawn_intel_markers;
 
         if (_isObj) then {
-            [8, "rocket"] spawn dyn_arty;
-            [20, "heavy", true, _startPos] spawn dyn_arty;
+
+            sleep ([20, 240] call BIS_fnc_randomInt);
+
+            [[5, 10] call BIS_fnc_randomInt, "rocket"] spawn dyn_arty;
+            [[5, 10] call BIS_fnc_randomInt, "heavy"] spawn dyn_arty;
 
             _rearPos = _startPos getPos [1000, _dir - 180];
-            // _westUnits = allUnits select {side _x == west};
-            // _westUnits = [_westUnits, [], {_x distance2D (getPos _endTrg)}, "ASCEND"] call BIS_fnc_sortBy;
-            // _atkPos = getPos (_westUnits#0);
-
-            // [objNull, _startPos getPos [100, _dir - 180], _rearPos, 5, 2, 0, true, [dyn_standart_MBT], 0, [false, 100], true, false] spawn dyn_spawn_counter_attack
-            _fireSupport = selectRandom [2,2,2,2,3,3,3,4,4,4,4,4,4,4,4,4,4,5];
-            // _fireSupport = 3;
-            switch (_fireSupport) do { 
-                case 1 : {[8, "rocket"] spawn dyn_arty}; 
-                case 2 : {[8] spawn dyn_arty};
-                case 3 : {[_startPos, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack; [_startPos getPos [100, 0], _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
-                case 4 : {[_startPos, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
-                case 5 : {[8, "rocketffe"] spawn dyn_arty};
-                default {}; 
-             };
-
-            if ((random 1) > 0.5) then {
-                sleep ([100, 200] call BIS_fnc_randomInt);
+            if ((random 1) > 0.35) then {
+                sleep ([180, 200] call BIS_fnc_randomInt);
                 [objNull, _startPos getPos [100, _dir - 180], _rearPos, [3, 4] call BIS_fnc_randomInt, [2, 3] call BIS_fnc_randomInt] spawn dyn_spawn_atk_simple;
+            } else {
+                sleep ([240, 600] call BIS_fnc_randomInt);
+                [[5, 10] call BIS_fnc_randomInt, "heavy"] spawn dyn_arty;
+                [8, "rocketffe"] spawn dyn_arty
             };
         };
     };
