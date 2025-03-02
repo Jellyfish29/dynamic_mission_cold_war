@@ -1,63 +1,90 @@
 dyn_ambush = {
-    params ["_pos", "_endTrg", "_dir"];
+    params ["_pos", "_endTrg", "_dir", ["_reveal", false], ["_readTerrain", []]];
+    private ["_ambushPos"];
 
-    _ambushPos = _pos getPos [[1000, 1500] call BIS_fnc_randomInt, _dir];
+    if (_readTerrain isEqualTo []) exitWith {};
+
+    private _clearings = _readTerrain#0;
+    private _lagestClearing = [];
+
+    if !(_clearings isEqualTo []) then {
+        private _limit = 0;
+        {
+            if ((count _x) > _limit) then {
+                _lagestClearing = _x;
+                _limit = count _x;
+            };
+        } forEach _clearings;
+
+        _ambushPos = [_lagestClearing] call dyn_find_centroid_of_points;
+
+    } else {
+        _ambushPos = [_readTerrain#2] call dyn_find_centroid_of_points;
+    };
+
+    // _ambushPos = _pos getPos [[600, 900] call BIS_fnc_randomInt, _dir];
+    private _allGrps = [];
 
     if (isNil "_ambushPos") exitWith {};
 
-    private _ambushTrg = createTrigger ["EmptyDetector", _ambushPos getpos [500, _dir], true];
+    private _ambushTrg = createTrigger ["EmptyDetector", _ambushPos getpos [[500, 700] call BIS_fnc_randomInt, _dir], true];
     _ambushTrg setTriggerActivation ["WEST", "PRESENT", false];
     _ambushTrg setTriggerStatements ["this", " ", " "];
-    _ambushTrg setTriggerArea [4000, 30, _dir, true, 10];
+    _ambushTrg setTriggerArea [5000, 200, _dir, true, 10];
 
-    // _m  = createMarker [str (random 1), getPos _ambushTrg];
-    // _m setMarkerType "mil_dot";
-
-    _amount = [4, 6] call BIS_fnc_randomInt;
-    private _allGrps = [];
     private _patrollPos = [];
+    private _maxAmount = [4, 6] call BIS_fnc_randomInt;
+    private _amount = 0;
+    private _breath = round ((count _lagestClearing) / 2);
+    if (_breath >= 9) then {_breath = 8};
 
-    for "_i" from 0 to _amount do {
-        _spawnPos = _ambushPos getpos [150 * _i, _dir + (selectRandom [90, -90])];
+    for "_i" from -_breath to _breath do {
+        _spawnPos = _ambushPos getpos [150 * _i, _dir + 90];
 
-        _trees = nearestTerrainObjects [_spawnPos, ["TREE", "FOREST BORDER", "FOREST TRIANGLE", "FOREST SQUARE", "FOREST"], 80, true, true];
+        _trees = nearestTerrainObjects [_spawnPos, ["TREE"], 150, true, true];
 
-        if ((count _trees) > 0) then {
+        if ((count _trees) > 0 and _amount < _maxAmount and (random 1) >= 0.4) then {
             _spawnPos = getPos (_trees#0);
-           _grp = [_spawnPos, _dir, true, false, false, true, false, dyn_standart_at_team] call dyn_spawn_covered_inf;
-           _grp setVariable ["pl_not_recon_able", true];
-           _allGrps pushBack _grp;
 
-           [_spawnPos getPos [200, _dir], 100, _dir + ([-10, 10] call BIS_fnc_randomInt), false, 10, 2, false] call dyn_spawn_mine_field;
-        } else {
-            if ((random 1) > 0.25) then {
+            if ((random 1) >= 0.5) then {
+               _grp = [_spawnPos, _dir, true, false, false, true, false, dyn_standart_at_team] call dyn_spawn_covered_inf;
+               _grp setVariable ["pl_not_recon_able", true];
+               _allGrps pushBack _grp;
+            } else {
                 _spawnPos getPos [[-50, 50] call BIS_fnc_randomInt, _dir];
-                _grp = [_spawnPos, _dir, false, true, selectRandom (dyn_standart_statics_atgm + dyn_standart_statics_atgun), false] call dyn_spawn_static_weapon;
+                _grp = [_spawnPos, _dir, false, true, selectRandom dyn_standart_statics_atgm, false] call dyn_spawn_static_weapon;
                 _grp setVariable ["pl_not_recon_able", true];
                 _allGrps pushBack _grp;
-
-                [_spawnPos getPos [200, _dir], 100, _dir + ([-10, 10] call BIS_fnc_randomInt), false, 10, 2, false] call dyn_spawn_mine_field;
             };
-        };
 
-        _patrollPos pushBack _spawnPos;
+           [_spawnPos getPos [200, _dir], 100, _dir + ([-10, 10] call BIS_fnc_randomInt), false, 10, 2, false] call dyn_spawn_mine_field;
+           _amount = _amount + 1;
+           _patrollPos pushBack _spawnPos;
+        };     
     };
 
-    [_ambushPos, _dir, 1, 800, 200, 100] spawn dyn_forest_defence_edge;
+    _forestEdges = _readTerrain#1;
+    _edgeLimit = 0;
+
+    _allGrps = _allGrps + ([_ambushPos, _forestEdges, 6, 1000, 0.5] call dyn_spawn_forest_edge_trench);
+
+    _forestCenters = _readTerrain#2;
+
+    if ((count _forestCenters) > 3) then {
+
+        _allGrps pushBack ([[_forestCenters] call dyn_pop_random, _dir, false, false, false, true, true, selectRandom [dyn_standart_squad, dyn_standart_at_team, dyn_standart_fire_team], [], true] call dyn_spawn_covered_inf);
+        if ((random 1) > 0.25) then {
+            _allGrps pushBack ([[_forestCenters] call dyn_pop_random, _dir, false, false, false, true, true, selectRandom [dyn_standart_squad, dyn_standart_at_team, dyn_standart_fire_team], [], true] call dyn_spawn_covered_inf);
+        };
+    };
 
     _allGrps pushBack ([_patrollPos, _patrollPos#0] call dyn_spawn_patrol);
 
-    // [_ambushPos, 800, 1, _endTrg, _dir] spawn dyn_spawn_forest_patrol;
+    [_ambushPos, 1500, [1,2] call BIS_fnc_randomInt, _endTrg, _dir] spawn dyn_spawn_forest_patrol;
 
-    [_allGrps, east, "inf"] spawn dyn_spawn_unit_intel_markers;
+    [_endTrg, _pos, 800, _ambushPos, 2] spawn dyn_spawn_side_town_guards;
 
-    [_allGrps, _ambushPos, _dir] spawn {
-        params ["_allGrps", "_pos", "_dir"];
-
-        waitUntil {sleep 5; ({(groupId _x) in pl_marta_dic} count _allGrps) > 0};
-
-        [_pos, _dir] call dyn_draw_mil_symbol_screen;
-    };
+    [_ambushPos getPos [50, _dir], [900, 1200] call BIS_fnc_randomInt, _dir, 20] call dyn_draw_mil_symbol_fortification_line;
 
     waitUntil {sleep 2; triggerActivated _ambushTrg};
 
@@ -68,11 +95,11 @@ dyn_ambush = {
         } forEach (allGroups select {(side _x) == playerSide});
     } forEach _allGrps;
 
-    _fireSupport = selectRandom [2,2,2,2,3,3,3,4,4,4,4,4,4,4,4,4,4,5];
+    _fireSupport = selectRandom [2,2,2,2,3,3,3,4,4,4,4,4,4,4,4,4,4,5,5,5,5,5];
     // _fireSupport = 3;
     switch (_fireSupport) do { 
-        case 1 : {[8, "rocket"] spawn dyn_arty}; 
-        case 2 : {[8] spawn dyn_arty};
+        case 1 : {[16, "rocket"] spawn dyn_arty}; 
+        case 2 : {[16] spawn dyn_arty};
         case 3 : {[_ambushPos, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack; [_ambushPos getPos [100, 0], _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
         case 4 : {[_ambushPos, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
         case 5 : {[8, "rocketffe"] spawn dyn_arty};
@@ -102,7 +129,7 @@ dyn_ambush = {
 };
 
 
-dyn_road_blocK = {
+dyn_road_block = {
     params ["_aoPos", "_endTrg", "_dir", ["_exactPos", false], ["_reveal", false]];
     // MSR
     _msr = [[getPos player, 800] call dyn_nearestRoad, [_aoPos, 200] call dyn_nearestRoad] call dyn_convoy_parth_find;
@@ -571,7 +598,7 @@ dyn_trench_line_large = {
     _forestEdges = _readTerrain#1;
     _edgeLimit = 0;
 
-    _allGrps = _allGrps + ([_forwardPos, _forestEdges, 4] call dyn_spawn_forest_edge_trench);
+    _allGrps = _allGrps + ([_forwardPos, _forestEdges, 4, 1000] call dyn_spawn_forest_edge_trench);
 
     _forestCenters = _readTerrain#2;
 
@@ -625,6 +652,51 @@ dyn_trench_line_large = {
     sleep ([20, 60] call BIS_fnc_randomInt);
 
     [objNull, _pos, _allGrps, false] spawn dyn_retreat;
+};
+
+dyn_anti_tank_ditch = {
+    params ["_pos", "_endTrg", "_dir", ["_reveal", false], ["_readTerrain", []]];
+    private ["_forwardPos"];
+
+    if (_readTerrain isEqualTo []) exitWith {};
+
+    _clearings = _readTerrain#0;
+    private _lagestClearing = [];
+
+    if !(_clearings isEqualTo []) then {
+        private _limit = 0;
+        {
+            if ((count _x) > _limit) then {
+                _lagestClearing = _x;
+                _limit = count _x;
+            };
+        } forEach _clearings;
+
+        _forwardPos = [_lagestClearing] call dyn_find_centroid_of_points;
+
+    } else {
+        _forwardPos = [_readTerrain#2] call dyn_find_centroid_of_points;
+    };
+
+    private _allGrps = [];
+
+    _trenchPath = [];
+
+    private _width = [500, 750] call BIS_fnc_randomInt;
+    // private _width = (count _lagestClearing) * 25;
+    private _breath = round (_width / 3);
+    // if (_breath >= 15) then {_breath = 14};
+
+    for "_i" from -_breath to _breath do {
+        _startPos = _forwardPos getpos [3 * _i, _dir + 90];
+        _trenchPath pushBack _startPos;
+    };
+
+    [_forwardPos, _dir, _trenchPath] spawn dyn_dig_vehicle_trench;
+
+
+
+
 };
 
 
@@ -755,22 +827,22 @@ dyn_town_defense = {
 
     // create Tank/APC
     private _vGrps = [];
-    private _vicAmount = (round ((count _solitaryBuildings) / 10) - 1);
+    private _vicAmount = (round ((count _solitaryBuildings) / 6) - 1);
     if (_vicAmount > 1) then {_vicAmount = 1};
     [getPos _aoPos, 400, _vicAmount] spawn dyn_crossroad_position;
 
     // Random Log Vehicles
-    // private _vicAmount = (round ((count _validBuildings) / 15) - 1);
-    // if (_vicAmount > 2) then {_vicAmount = 2};
-    // for "_i" from 0 to _vicAmount do {
-    //     _pPos = [[[getPos _aoPos, 300]], ["water"]] call BIS_fnc_randomPos;
-    //     _pPos findEmptyPosition [0, 100, "cwr3_o_ural_open"];
+    private _vicAmount = (round ((count _validBuildings) / 10) - 1);
+    if (_vicAmount > 2) then {_vicAmount = 2};
+    for "_i" from 0 to _vicAmount do {
+        _pPos = [[[getPos _aoPos, 300]], ["water"]] call BIS_fnc_randomPos;
+        _pPos findEmptyPosition [0, 100, "cwr3_o_ural_open"];
 
-    //     0 = [getPos _aoPos, 250, dyn_standart_supply_vics + dyn_standart_trasnport_vehicles, 0, true] call dyn_spawn_parked_vehicle;
-    // };
+        0 = [getPos _aoPos, 250, dyn_standart_supply_vics + dyn_standart_trasnport_vehicles, 0, true] call dyn_spawn_parked_vehicle;
+    };
 
     // Random Garrison
-    private _garAmount = (round ((count _validBuildings) / 10) - 1);
+    private _garAmount = (round ((count _validBuildings) / 5) - 1);
     if (_garAmount > 2) then {_garAmount = 2};
     if (_garAmount < 1) then {_garAmount = 1};
     // [_validBuildings, _garAmount, _dir] call dyn_spawn_random_garrison;
@@ -781,7 +853,7 @@ dyn_town_defense = {
     };
 
     // Strongpoint
-    private _SPamount = (round (_buildingCount / 10)) - 1;
+    private _SPamount = (round (_buildingCount / 8)) - 1;
     if (_SPamount > 1) then {_SPamount = 1};
     for "_i" from 0 to _SPamount do {
         _infB = selectRandom _solitaryBuildings;
@@ -823,7 +895,7 @@ dyn_town_defense = {
     };
 
     // create Razor Wire
-    if ((random 1) > 0.5) then {
+    if ((random 1) > 0.25) then {
         _wireStart = (_forwardPos getPos [20, _dir]) getpos [100, _dir + 90];
         for "_i" from 0 to 10 do {
             _rPos = _wireStart getPos [30 * _i, _dir - 90];
@@ -832,7 +904,7 @@ dyn_town_defense = {
     };
 
     // mines
-    if ((random 1) > 0.5) then {
+    if ((random 1) > 0.25) then {
 
         _mineStart = (_forwardPos getPos [150, _dir]) getpos [500, _dir + 90];
         for "_i" from 0 to 20 do {
@@ -849,21 +921,23 @@ dyn_town_defense = {
     };
 
     // Forest Patrols
-    [getPos _aoPos, 2000, [0,2] call BIS_fnc_randomInt, _aoPos, _dir] spawn dyn_spawn_forest_patrol;
+    {
+        [(getPos _aoPos) getpos [600, _dir + _x], 700, [1,2] call BIS_fnc_randomInt, _aoPos, _dir] spawn dyn_spawn_forest_patrol;
+    } forEach [0, 90, -90];
 
     // Forest Position
-    // if ((random 1) > 0.5) then {
-        // [(getPos _aoPos) getPos [500, _dir], _dir, [1, 2] call BIS_fnc_randomInt] spawn dyn_forest_defence_edge;
-    // };
+    if ((random 1) > 0.25) then {
+        [(getPos _aoPos) getPos [500, _dir], _dir, [1, 2] call BIS_fnc_randomInt] spawn dyn_forest_defence_edge;
+    };
 
     //Bridges
 
     [(getPos _aoPos), 1500, 500, (getPos _aoPos) getpos [500, _dir]] spawn dyn_spawn_bridge_defense;
 
     // side Screens
-    // if ((random 1) > 0.5) then {
-    //     [getPos _aoPos, _dir] spawn dyn_spawn_screen;
-    // };
+    if ((random 1) > 0.5) then {
+        [getPos _aoPos, _dir] spawn dyn_spawn_screen;
+    };
 
 
     // Unit Symbol

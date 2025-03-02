@@ -1,242 +1,244 @@
 dyn_retreat = {
     params ["_trg", "_dest", "_grps", ["_arty", true]];
 
-    if !(isNull _trg) then {
-        waitUntil {sleep 1; triggerActivated _trg};
-    };
+    if (true) exitWith {};
 
-    if ((count _grps) > 2) then {
-        _centroid = [_grps] call dyn_find_centroid_of_groups;
-        _markerPos = _centroid getpos [(_centroid distance2D _dest) * 0.05, _centroid getDir _dest];
+    // if !(isNull _trg) then {
+    //     waitUntil {sleep 1; triggerActivated _trg};
+    // };
 
-        [objNull, _markerPos, "marker_withdraw", "", "colorOpfor", 1, 1, _centroid getDir _dest, false] spawn dyn_spawn_intel_markers;
-    };
+    // if ((count _grps) > 2) then {
+    //     _centroid = [_grps] call dyn_find_centroid_of_groups;
+    //     _markerPos = _centroid getpos [(_centroid distance2D _dest) * 0.05, _centroid getDir _dest];
 
-
-    if (((random 1) > 0.4) and _arty) then {[6, "heavy", true] spawn dyn_arty};
-    if (((random 1) > 0.4) and _arty) then {[8] spawn dyn_arty};
-
-    private _allUnits = [];
-
-    _i = 0;
-    _distance = 40;
-    {
-
-        _grp = _x;
-
-        _grp setVariable ["dyn_is_retreating", true];
-        _grp setVariable ["pl_opfor_retreat", true];
-        _grp setVariable ["pl_not_recon_able", false];
-        _grp enableDynamicSimulation false;
-
-        {
-            if ((([vehicle _x] call BIS_fnc_objectType)#1) == "StaticWeapon") then {
-                _grp leaveVehicle (vehicle _x);
-                moveOut _x;
-            };
-
-            if ((vehicle _x) != _x) then {
-                (group _x) addVehicle (vehicle _x);
-                (group _x) setVariable ["dyn_assigned_vic", vehicle _x];
-            };
-
-        } forEach (units _grp);
-
-        {
-            _x enableAI "PATH";
-            _x doFollow (leader _grp);
-            _x disableAI "AUTOCOMBAT";
-            _x setUnitPos "UP";
-            _x setUnitPos "AUTO";
-            _x disableAI "TARGET";
-            _x disableAI "AUTOTARGET";
-            _x disableAI "SUPPRESSION";
-            _x setCombatBehaviour "AWARE";
-            _allUnits pushBack _x;
-
-            _vic = (group _x) getVariable ["dyn_assigned_vic", objNull];
-            if (!(isNull _vic) and (vehicle _x) == _x) then {
-                _x assignAsCargo _vic;
-                [_x] allowGetIn true;
-                [_x] orderGetIn true;
-            };
-        } forEach (units _grp);
+    //     [objNull, _markerPos, "marker_withdraw", "", "colorOpfor", 1, 1, _centroid getDir _dest, false] spawn dyn_spawn_intel_markers;
+    // };
 
 
-        // [_grp] call dyn_spawn_smoke;
-        [_grp, (currentWaypoint _grp)] setWaypointType "MOVE";
-        [_grp, (currentWaypoint _grp)] setWaypointPosition [getPosASL (leader _grp), -1];
-        sleep 0.1;
-        deleteWaypoint [_grp, (currentWaypoint _grp)];
-        for "_i" from count waypoints _grp - 1 to 0 step -1 do {
-            deleteWaypoint [_grp, _i];
-        };
+    // if (((random 1) > 0.4) and _arty) then {[6, "heavy", true] spawn dyn_arty};
+    // if (((random 1) > 0.4) and _arty) then {[8] spawn dyn_arty};
 
-        _retreatPos = [[[_dest, 300]], ["water"]] call BIS_fnc_randomPos;
+    // _i = 0;
+    // _distance = 40;
+    // {
 
-        // if ((Leader _grp) distance2D _retreatPos > 4000) exitWith {[_grp] spawn dyn_opfor_surrender};
+    //     [_x, _dest] spawn {
+    //         params ["_grp", "_dest"];
 
-        _grp addWaypoint [_retreatPos, 100];
+    //         [_grp] call dyn_opfor_reset;
 
-        {
-            _x doMove (_retreatPos findEmptyPosition [0, 200, typeOf (vehicle _x)]);
-        } forEach (units _grp);
-        (vehicle (leader _grp)) doMove _retreatPos;
+    //         _grp setVariable ["dyn_is_retreating", true];
+    //         _grp setVariable ["pl_opfor_retreat", true];
+    //         _grp setVariable ["pl_not_recon_able", false];
+    //         _grp enableDynamicSimulation false;
 
-        [_grp, _retreatPos] spawn {
-            params ["_grp", "_retreatPos"];
+    //         {
+    //             if ((([vehicle _x] call BIS_fnc_objectType)#1) == "StaticWeapon") then {
+    //                 _grp leaveVehicle (vehicle _x);
+    //                 moveOut _x;
+    //             };
 
-            waitUntil { sleep 10; [units _grp] call dyn_forget_targets; (leader _grp) distance2D _retreatPos < 100 or ({alive _x} count (units _grp)) <= 0};
-            _grp setVariable ["pl_opfor_retreat", false];
+    //             if ((vehicle _x) != _x) then {
+    //                 (group _x) addVehicle (vehicle _x);
+    //                 (group _x) setVariable ["dyn_assigned_vic", vehicle _x];
+    //             };
 
-            [_grp] call dyn_opfor_reset;
+    //         } forEach (units _grp);
 
-        };
+    //         {
+    //             _x enableAI "PATH";
+    //             _x doFollow (leader _grp);
+    //             _x disableAI "AUTOCOMBAT";
+    //             _x setUnitPos "UP";
+    //             _x setUnitPos "AUTO";
+    //             _x disableAI "TARGET";
+    //             _x disableAI "AUTOTARGET";
+    //             _x disableAI "SUPPRESSION";
+    //             _x setCombatBehaviour "AWARE";
 
-        if ((count (units _grp) < 2 and (vehicle (leader _grp)) == (leader _grp)) or (random 1) > 0.8) then {
-            // _joined = [_grp, side _grp] call dyn_opfor_join_grp;
-            // if !(_joined) then {
-                [_grp] spawn dyn_opfor_surrender;
-                // continue;
-            // };
-        };
+    //             _vic = (group _x) getVariable ["dyn_assigned_vic", objNull];
+    //             if (!(isNull _vic) and (vehicle _x) == _x) then {
+    //                 _x assignAsCargo _vic;
+    //                 [_x] allowGetIn true;
+    //                 [_x] orderGetIn true;
+    //             };
+    //         } forEach (units _grp);
 
 
-        if (vehicle (leader _grp) != leader _grp) then {
-            vehicle (leader _grp) setFuel 1;
+    //         // [_grp] call dyn_spawn_smoke;
 
-            if (damage (vehicle (leader _grp)) > 0.5 or !(canMove (vehicle (leader _grp)))) then {
-                [_grp] spawn dyn_opfor_surrender;
-                // continue;
-            };
+    //         sleep 0.5;
 
-            
-            // [vehicle (leader _grp), "SmokeLauncher"] call BIS_fnc_fire;
-        };
+    //         _retreatPos = [[[_dest, 300]], ["water"]] call BIS_fnc_randomPos;
 
-    } forEach _grps;
+    //         // if ((Leader _grp) distance2D _retreatPos > 4000) exitWith {[_grp] spawn dyn_opfor_surrender};
+
+    //         _grp addWaypoint [_retreatPos, 100];
+
+    //         {
+    //             _x doMove (_retreatPos findEmptyPosition [0, 200, typeOf (vehicle _x)]);
+    //         } forEach (units _grp);
+    //         (vehicle (leader _grp)) doMove _retreatPos;
+
+    //         // [_grp, _retreatPos] spawn {
+    //         //     params ["_grp", "_retreatPos"];
+
+    //         //     waitUntil { sleep 10; [units _grp] call dyn_forget_targets; (leader _grp) distance2D _retreatPos < 100 or ({alive _x} count (units _grp)) <= 0};
+    //         //     _grp setVariable ["pl_opfor_retreat", false];
+
+    //         //     [_grp] call dyn_opfor_reset;
+
+    //         // };
+
+    //         if ((count (units _grp) < 2 and (vehicle (leader _grp)) == (leader _grp)) or (random 1) > 0.8) then {
+    //             // _joined = [_grp, side _grp] call dyn_opfor_join_grp;
+    //             // if !(_joined) then {
+    //                 [_grp] spawn dyn_opfor_surrender;
+    //                 // continue;
+    //             // };
+    //         };
+
+
+    //         if (vehicle (leader _grp) != leader _grp) then {
+    //             vehicle (leader _grp) setFuel 1;
+
+    //             if (damage (vehicle (leader _grp)) > 0.5 or !(canMove (vehicle (leader _grp)))) then {
+    //                 [_grp] spawn dyn_opfor_surrender;
+    //                 // continue;
+    //             };
+
+                
+    //             // [vehicle (leader _grp), "SmokeLauncher"] call BIS_fnc_fire;
+    //         };
+    //     };
+
+    // } forEach _grps;
 };
 
 dyn_get_retreat_in_def = {
     params ["_pos", "_dir", "_radius"];
 
-    _retreatGroups = allGroups select {side (leader _x) == east and (((leader _x) distance2D _pos) < _radius)};
+    if (true) exitwith {};
 
-    _retreatGroups = _retreatGroups - dyn_opfor_grps;
+   //  _retreatGroups = allGroups select {side (leader _x) == east and (((leader _x) distance2D _pos) < _radius)};
 
-    _retreatGroups arrayIntersect _retreatGroups;
+   //  _retreatGroups = _retreatGroups - dyn_opfor_grps;
 
-   private _posOffset = 0;
-   private _dirOffset = 90;
+   //  _retreatGroups arrayIntersect _retreatGroups;
 
-    for "_i" from 0 to (count _retreatGroups) - 1 do {
+   // private _posOffset = 0;
+   // private _dirOffset = 90;
 
-        _grp = _retreatGroups#_i;
+   //  for "_i" from 0 to (count _retreatGroups) - 1 do {
 
-        if (_i % 2 == 0) then {_dirOffset = 90} else {_dirOffset = -90};
+   //      _grp = _retreatGroups#_i;
 
-        _movePos = _pos getpos [_posOffset, _dir + _dirOffset];
-        _posOffset = _posOffset + ([80, 150] call BIS_fnc_randomInt);
+   //      if (_i % 2 == 0) then {_dirOffset = 90} else {_dirOffset = -90};
+
+   //      _movePos = _pos getpos [_posOffset, _dir + _dirOffset];
+   //      _posOffset = _posOffset + ([80, 150] call BIS_fnc_randomInt);
         
-        [_grp, (currentWaypoint _grp)] setWaypointType "MOVE";
-        [_grp, (currentWaypoint _grp)] setWaypointPosition [getPosASL (leader _grp), -1];
-        sleep 0.1;
-        deleteWaypoint [_grp, (currentWaypoint _grp)];
-        for "_i" from count waypoints _grp - 1 to 0 step -1 do {
-            deleteWaypoint [_grp, _i];
-        };
+   //      [_grp, (currentWaypoint _grp)] setWaypointType "MOVE";
+   //      [_grp, (currentWaypoint _grp)] setWaypointPosition [getPosASL (leader _grp), -1];
+   //      sleep 0.1;
+   //      deleteWaypoint [_grp, (currentWaypoint _grp)];
+   //      for "_i" from count waypoints _grp - 1 to 0 step -1 do {
+   //          deleteWaypoint [_grp, _i];
+   //      };
 
-        _wp = _grp addWaypoint [_movepos, 100];
-        {
-            (vehicle _x) doMove (_movePos findEmptyPosition [0, 1000, typeOf (vehicle _x)]);
-        } forEach (units _grp);
-        (vehicle (leader _grp)) doMove _movePos;
-    }; 
+   //      _wp = _grp addWaypoint [_movepos, 100];
+   //      {
+   //          (vehicle _x) doMove (_movePos findEmptyPosition [0, 1000, typeOf (vehicle _x)]);
+   //      } forEach (units _grp);
+   //      (vehicle (leader _grp)) doMove _movePos;
+   //  }; 
 };
 
 
 dyn_spawn_delay_action = {
     params ["_defPos", "_allGrps", ["_trg", objNull], ["_distance", 400]];
 
-    if !(isNull _trg) then {
-        waitUntil { sleep 1; triggerActivated _trg };
-    };
+    if (true) exitwith {};
 
-    // [4, "heavy", true] spawn dyn_arty;
+    // if !(isNull _trg) then {
+    //     waitUntil { sleep 1; triggerActivated _trg };
+    // };
 
-    {
-        private _grp = _x;
-        private _dir = _defPos getDir (leader _grp);
-        private _atkPos = getPos (leader _grp);
-        private _retreatPos = _atkPos getPos [_distance, (_dir - 180) + ([-20, 20] call BIS_fnc_randomInt)];
+    // // [4, "heavy", true] spawn dyn_arty;
 
-        [_grp] call dyn_spawn_smoke;
-        [_grp, (currentWaypoint _grp)] setWaypointType "MOVE";
-        [_grp, (currentWaypoint _grp)] setWaypointPosition [getPosASL (leader _grp), -1];
-        sleep 0.1;
-        deleteWaypoint [_grp, (currentWaypoint _grp)];
-        for "_i" from count waypoints _grp - 1 to 0 step -1 do {
-            deleteWaypoint [_grp, _i];
-        };
+    // {
+    //     private _grp = _x;
+    //     private _dir = _defPos getDir (leader _grp);
+    //     private _atkPos = getPos (leader _grp);
+    //     private _retreatPos = _atkPos getPos [_distance, (_dir - 180) + ([-20, 20] call BIS_fnc_randomInt)];
+
+    //     [_grp] call dyn_spawn_smoke;
+    //     [_grp, (currentWaypoint _grp)] setWaypointType "MOVE";
+    //     [_grp, (currentWaypoint _grp)] setWaypointPosition [getPosASL (leader _grp), -1];
+    //     sleep 0.1;
+    //     deleteWaypoint [_grp, (currentWaypoint _grp)];
+    //     for "_i" from count waypoints _grp - 1 to 0 step -1 do {
+    //         deleteWaypoint [_grp, _i];
+    //     };
 
 
-        _grp setVariable ["dyn_is_retreating", true];
-        _grp setVariable ["pl_opfor_retreat", true];
+    //     _grp setVariable ["dyn_is_retreating", true];
+    //     _grp setVariable ["pl_opfor_retreat", true];
 
-        {
-            _x disableAI "AUTOCOMBAT";
-            // _x disableAI "FSM";
-            _x disableAI "AUTOTARGET";
-            _x disableAI "TARGET";
-            _x enableAI "PATH";
-            _x doFollow (leader _grp);
-            _x setUnitPos "Auto";
-            _x setCombatBehaviour "AWARE";
-        } forEach (units _grp);
-        // _grp setBehaviour "AWARE";
-        if (vehicle (leader _grp) != (leader _grp)) then {
-            _vic = vehicle (leader _grp);
-            _vic setFuel 1;
-            [_vic, "SmokeLauncher"] call BIS_fnc_fire;
-            _grp setBehaviour "COMBAT";
-        };
+    //     {
+    //         _x disableAI "AUTOCOMBAT";
+    //         // _x disableAI "FSM";
+    //         _x disableAI "AUTOTARGET";
+    //         _x disableAI "TARGET";
+    //         _x enableAI "PATH";
+    //         _x doFollow (leader _grp);
+    //         _x setUnitPos "Auto";
+    //         _x setCombatBehaviour "AWARE";
+    //     } forEach (units _grp);
+    //     // _grp setBehaviour "AWARE";
+    //     if (vehicle (leader _grp) != (leader _grp)) then {
+    //         _vic = vehicle (leader _grp);
+    //         _vic setFuel 1;
+    //         [_vic, "SmokeLauncher"] call BIS_fnc_fire;
+    //         _grp setBehaviour "COMBAT";
+    //     };
 
-        _wp = _grp addWaypoint [_retreatPos, 0];
-        vehicle (leader _grp) doMove _retreatPos;
-        [_grp, _atkPos, _wp, _dir] spawn {
-            params ["_grp", "_atkPos", "_wp", "_atkDir"];
+    //     _wp = _grp addWaypoint [_retreatPos, 0];
+    //     vehicle (leader _grp) doMove _retreatPos;
+    //     [_grp, _atkPos, _wp, _dir] spawn {
+    //         params ["_grp", "_atkPos", "_wp", "_atkDir"];
 
-            waitUntil {sleep 1; ({alive _x} count (units _grp)) <= 0 or ((leader _grp) distance2D (waypointPosition _wp)) <= 70};
-            [_grp, (currentWaypoint _grp)] setWaypointType "MOVE";
-            [_grp, (currentWaypoint _grp)] setWaypointPosition [getPosASL (leader _grp), -1];
-            sleep 0.1;
-            deleteWaypoint [_grp, (currentWaypoint _grp)];
-            for "_i" from count waypoints _grp - 1 to 0 step -1 do {
-                deleteWaypoint [_grp, _i];
-            };
-            {
-                _x doFollow (leader _grp);
-                _x setUnitPos "AUTO";
-                _x enableAI "AUTOCOMBAT";
-                _x enableAI "TARGET";
-                _x enableAI "AUTOTARGET";
-                _x enableAI "SUPPRESSION";
-            } forEach (units _grp);
+    //         waitUntil {sleep 1; ({alive _x} count (units _grp)) <= 0 or ((leader _grp) distance2D (waypointPosition _wp)) <= 70};
+    //         [_grp, (currentWaypoint _grp)] setWaypointType "MOVE";
+    //         [_grp, (currentWaypoint _grp)] setWaypointPosition [getPosASL (leader _grp), -1];
+    //         sleep 0.1;
+    //         deleteWaypoint [_grp, (currentWaypoint _grp)];
+    //         for "_i" from count waypoints _grp - 1 to 0 step -1 do {
+    //             deleteWaypoint [_grp, _i];
+    //         };
+    //         {
+    //             _x doFollow (leader _grp);
+    //             _x setUnitPos "AUTO";
+    //             _x enableAI "AUTOCOMBAT";
+    //             _x enableAI "TARGET";
+    //             _x enableAI "AUTOTARGET";
+    //             _x enableAI "SUPPRESSION";
+    //         } forEach (units _grp);
 
-            sleep 1;
+    //         sleep 1;
 
-            if (vehicle (leader _grp) != leader _grp) then {
-                _movepos = [vehicle (leader _grp), _atkDir] call dyn_get_turn_vehicle;
-                (vehicle (leader _grp)) doMove _movePos;
-            } else {
-                _grp setFormDir _atkDir;
-            };
-            // _aWp setWaypointType "SAD";
-            _grp setVariable ["dyn_is_retreating", false];
+    //         if (vehicle (leader _grp) != leader _grp) then {
+    //             _movepos = [vehicle (leader _grp), _atkDir] call dyn_get_turn_vehicle;
+    //             (vehicle (leader _grp)) doMove _movePos;
+    //         } else {
+    //             _grp setFormDir _atkDir;
+    //         };
+    //         // _aWp setWaypointType "SAD";
+    //         _grp setVariable ["dyn_is_retreating", false];
             
-        };
+    //     };
 
-    } forEach _allGrps;
+    // } forEach _allGrps;
 
     // [5, "rocket"] spawn dyn_arty;
 };
@@ -587,22 +589,22 @@ dyn_spawn_atk_complex = {
 
             waitUntil {sleep 1; ({alive (leader _x)} count _reconGrps) < (count _reconGrps) or ({(leader _x) distance2D (getpos _targetRoad) < 300} count _reconGrps) > 0};
 
-            {
-                _x leaveVehicle (vehicle (leader _x));
-                [_x] spawn pl_opfor_flanking_move;
-            } forEach _reconInfGrp;
+            // {
+            //     _x leaveVehicle (vehicle (leader _x));
+            //     [_x] spawn pl_opfor_flanking_move;
+            // } forEach _reconInfGrp;
 
-            {
-                _vic = vehicle (leader _x);
-                _x setVariable ["dyn_in_convoy", false];
-                _x setBehaviourStrong "COMBAT";
+            // {
+            //     _vic = vehicle (leader _x);
+            //     _x setVariable ["dyn_in_convoy", false];
+            //     _x setBehaviourStrong "COMBAT";
 
-                if ((random 1) > 0.25) then {
-                    [_x] spawn pl_opfor_attack_closest_enemy;
-                } else {
-                    [_x] spawn pl_opfor_flanking_move;
-                }; 
-            } forEach _reconGrps;
+            //     if ((random 1) > 0.25) then {
+            //         [_x] spawn pl_opfor_attack_closest_enemy;
+            //     } else {
+            //         [_x] spawn pl_opfor_flanking_move;
+            //     }; 
+            // } forEach _reconGrps;
 
             _targetRoad = [getPos (leader (((_reconGrps) select {alive (leader _x)})#0)), 1000] call BIS_fnc_nearestRoad;
 
@@ -672,45 +674,46 @@ dyn_spawn_atk_complex = {
             } forEach (units _infGrp);
             [_infGrp] call dyn_opfor_change_uniform_grp;
         };
+        
         [_atkColumn, getpos _targetRoad] spawn dyn_convoy;
 
         sleep 10;
 
-        private _atkLeader = leader (([_atkColumn, [], {(leader _x) distance2D _atkPos}, "DESCEND"] call BIS_fnc_sortBy)#0);
+        // private _atkLeader = leader (([_atkColumn, [], {(leader _x) distance2D _atkPos}, "DESCEND"] call BIS_fnc_sortBy)#0);
 
-        waitUntil {sleep 1; ({alive (leader _x)} count _atkColumn) < (count _atkColumn) or ({(leader _x) distance2D (getpos _targetRoad) < 100} count _atkColumn) > 0};
+        // waitUntil {sleep 1; ({alive (leader _x)} count _atkColumn) < (count _atkColumn) or ({(leader _x) distance2D (getpos _targetRoad) < 100} count _atkColumn) > 0};
 
-        private _atkDir = _atkLeader getDir _atkPos;
+        // private _atkDir = _atkLeader getDir _atkPos;
 
-        {
-           _tank = _x;
-            group (driver _tank) setVariable ["dyn_in_convoy", false];
-            group (driver _tank) setBehaviourStrong "COMBAT";
+        // {
+        //    _tank = _x;
+        //     group (driver _tank) setVariable ["dyn_in_convoy", false];
+        //     group (driver _tank) setBehaviourStrong "COMBAT";
 
-            if ((random 1) > 0.5) then {
-                [group (driver _tank)] spawn pl_opfor_attack_closest_enemy;
-            } else {
-                [group (driver _tank)] spawn pl_opfor_flanking_move;
-            }; 
-        } forEach _atkTanks;
+        //     if ((random 1) > 0.5) then {
+        //         [group (driver _tank)] spawn pl_opfor_attack_closest_enemy;
+        //     } else {
+        //         [group (driver _tank)] spawn pl_opfor_flanking_move;
+        //     }; 
+        // } forEach _atkTanks;
 
-        sleep 1;
+        // sleep 1;
 
-        {
-           _mech = _x;
-            group (driver _mech) setVariable ["dyn_in_convoy", false];
-            group (driver _mech) setBehaviourStrong "COMBAT";
+        // {
+        //    _mech = _x;
+        //     group (driver _mech) setVariable ["dyn_in_convoy", false];
+        //     group (driver _mech) setBehaviourStrong "COMBAT";
 
-            if ((random 1) > 0.25) then {
-                [group (driver _mech)] spawn pl_opfor_attack_closest_enemy;
-            } else {
-                [group (driver _mech)] spawn pl_opfor_flanking_move;
-            }; 
-        } forEach _atkMech;
+        //     if ((random 1) > 0.25) then {
+        //         [group (driver _mech)] spawn pl_opfor_attack_closest_enemy;
+        //     } else {
+        //         [group (driver _mech)] spawn pl_opfor_flanking_move;
+        //     }; 
+        // } forEach _atkMech;
 
-        _allGrps = _allGrps + _atkColumn;
+        // _allGrps = _allGrps + _atkColumn;
 
-        [_allGrps, east, selectRandom ["armor", "mech"], true] spawn dyn_spawn_unit_intel_markers;
+        // [_allGrps, east, selectRandom ["armor", "mech"], true] spawn dyn_spawn_unit_intel_markers;
 
         waitUntil {sleep 1; ({alive (leader _x)} count _atkColumn) < (round ((count _atkColumn) * 0.33))};
 

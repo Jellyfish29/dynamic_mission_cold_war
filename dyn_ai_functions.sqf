@@ -511,12 +511,12 @@ dyn_convoy_parth_find = {
                 _allRoads pushBackUnique _parent;
                 _parent = _dummyGroup getVariable ("NF_neighborParent_" + str _parent);
                 if (dyn_debug) then {
-                    private _marker = createMarker [str _parent, getPos _parent];
-                    _marker setMarkerShape "ICON";
-                    _marker setMarkerColor "colorBLUFOR";
-                    _marker setMarkerType "MIL_DOT";
-                    _marker setMarkerSize [0.3, 0.3];
-                    dyn_convoy_path_marker pushBack _marker;
+                    // private _marker = createMarker [str (random 5), getPos _parent];
+                    // _marker setMarkerShape "ICON";
+                    // _marker setMarkerColor "colorBLUFOR";
+                    // _marker setMarkerType "MIL_DOT";
+                    // _marker setMarkerSize [0.3, 0.3];
+                    // dyn_convoy_path_marker pushBack _marker;
                 };
             };
         };

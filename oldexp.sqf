@@ -1872,3 +1872,138 @@ dyn_spawn_covered_trench = {
             //     // [getPosASL _tCover, 2, 2, 1] spawn dyn_lowerTerrain;
             //     _offset2 = _offset2 + 9;
             // };
+
+
+            dyn_ambush = {
+    params ["_pos", "_endTrg", "_dir"];
+
+    _ambushPos = _pos getPos [[1000, 1500] call BIS_fnc_randomInt, _dir];
+
+    if (isNil "_ambushPos") exitWith {};
+
+    private _ambushTrg = createTrigger ["EmptyDetector", _ambushPos getpos [500, _dir], true];
+    _ambushTrg setTriggerActivation ["WEST", "PRESENT", false];
+    _ambushTrg setTriggerStatements ["this", " ", " "];
+    _ambushTrg setTriggerArea [4000, 30, _dir, true, 10];
+
+    // _m  = createMarker [str (random 1), getPos _ambushTrg];
+    // _m setMarkerType "mil_dot";
+
+    _amount = [4, 6] call BIS_fnc_randomInt;
+    private _allGrps = [];
+    private _patrollPos = [];
+
+    for "_i" from 0 to _amount do {
+        _spawnPos = _ambushPos getpos [150 * _i, _dir + (selectRandom [90, -90])];
+
+        _trees = nearestTerrainObjects [_spawnPos, ["TREE", "FOREST BORDER", "FOREST TRIANGLE", "FOREST SQUARE", "FOREST"], 80, true, true];
+
+        if ((count _trees) > 0) then {
+            _spawnPos = getPos (_trees#0);
+           _grp = [_spawnPos, _dir, true, false, false, true, false, dyn_standart_at_team] call dyn_spawn_covered_inf;
+           _grp setVariable ["pl_not_recon_able", true];
+           _allGrps pushBack _grp;
+
+           [_spawnPos getPos [200, _dir], 100, _dir + ([-10, 10] call BIS_fnc_randomInt), false, 10, 2, false] call dyn_spawn_mine_field;
+        } else {
+            if ((random 1) > 0.25) then {
+                _spawnPos getPos [[-50, 50] call BIS_fnc_randomInt, _dir];
+                _grp = [_spawnPos, _dir, false, true, selectRandom (dyn_standart_statics_atgm + dyn_standart_statics_atgun), false] call dyn_spawn_static_weapon;
+                _grp setVariable ["pl_not_recon_able", true];
+                _allGrps pushBack _grp;
+
+                [_spawnPos getPos [200, _dir], 100, _dir + ([-10, 10] call BIS_fnc_randomInt), false, 10, 2, false] call dyn_spawn_mine_field;
+            };
+        };
+
+        _patrollPos pushBack _spawnPos;
+    };
+
+    [_ambushPos, _dir, 1, 800, 200, 100] spawn dyn_forest_defence_edge;
+
+    _allGrps pushBack ([_patrollPos, _patrollPos#0] call dyn_spawn_patrol);
+
+    // [_ambushPos, 800, 1, _endTrg, _dir] spawn dyn_spawn_forest_patrol;
+
+    [_allGrps, east, "inf"] spawn dyn_spawn_unit_intel_markers;
+
+    [_allGrps, _ambushPos, _dir] spawn {
+        params ["_allGrps", "_pos", "_dir"];
+
+        waitUntil {sleep 5; ({(groupId _x) in pl_marta_dic} count _allGrps) > 0};
+
+        [_pos, _dir] call dyn_draw_mil_symbol_screen;
+    };
+
+    waitUntil {sleep 2; triggerActivated _ambushTrg};
+
+    {
+        _grp = _x;
+        {
+            (leader _grp) reveal [(leader _x), 3];
+        } forEach (allGroups select {(side _x) == playerSide});
+    } forEach _allGrps;
+
+    _fireSupport = selectRandom [2,2,2,2,3,3,3,4,4,4,4,4,4,4,4,4,4,5];
+    // _fireSupport = 3;
+    switch (_fireSupport) do { 
+        case 1 : {[8, "rocket"] spawn dyn_arty}; 
+        case 2 : {[8] spawn dyn_arty};
+        case 3 : {[_ambushPos, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack; [_ambushPos getPos [100, 0], _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
+        case 4 : {[_ambushPos, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
+        case 5 : {[8, "rocketffe"] spawn dyn_arty};
+        default {}; 
+     };
+
+    waitUntil {sleep 2; ((_allGrps select {({alive _x} count (units _x)) > 0}) isNotEqualTo _allGrps) or triggerActivated _endTrg};
+
+    _fireSupport = selectRandom [2,2,2,2,3,3,3,4,4,4,4,4,4,4,4,4,4,5];
+    // _fireSupport = 3;
+    switch (_fireSupport) do { 
+        case 1 : {[8, "rocket"] spawn dyn_arty}; 
+        case 2 : {[8] spawn dyn_arty};
+        case 3 : {[_ambushPos, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack; [_ambushPos getPos [100, 0], _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
+        case 4 : {[_ambushPos, _dir, objNull, dyn_attack_plane] spawn dyn_air_attack};
+        case 5 : {[8, "rocketffe"] spawn dyn_arty};
+        default {}; 
+     };
+
+    if (!(triggerActivated _endTrg) and ((random 1) > 0.5)) then {
+        [objNull, _ambushPos, _pos, [3, 4] call BIS_fnc_randomInt, [1, 2] call BIS_fnc_randomInt] spawn dyn_spawn_atk_simple;
+    };
+
+    sleep ([180, 500] call BIS_fnc_randomInt);
+
+    [objNull, _pos, _allGrps, false] spawn dyn_retreat; 
+};
+
+
+dyn_spawn_oplp = {
+    params ["_pos", "_dir"];
+
+    _opGrp = createGroup [east, true];
+    _opGrp setVariable ["pl_not_recon_able", true];
+    _opGrp enableDynamicSimulation true;
+
+    if ((random 1) > 0.5) then {
+        dyn_standart_mg createUnit [_pos, _opGrp];
+        dyn_standart_soldier createUnit [_pos, _opGrp];
+    } else {
+        if ((random 1) > 0.5 ) then {
+            dyn_standart_soldier createUnit [_pos, _opGrp];
+            dyn_standart_sniper createUnit [_pos, _opGrp];
+        } else {
+            dyn_standart_soldier createUnit [_pos, _opGrp];
+            dyn_standart_at_soldier createUnit [_pos, _opGrp];
+        };
+    };
+
+    [_opGrp, _dir, 4, false] call dyn_line_form_cover;
+
+    {
+        // _x setUnitPos "AUTO";
+        _x setUnitPosWeak "MIDDLE";
+    } forEach (units _opGrp);
+
+
+};

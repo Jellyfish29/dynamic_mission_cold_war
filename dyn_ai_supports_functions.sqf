@@ -289,7 +289,7 @@ dyn_continous_counterattack = {
             default {}; 
          }; 
 
-        sleep ([1800, 2800] call BIS_fnc_randomInt);
+        sleep ([1000, 1800] call BIS_fnc_randomInt);
     };
 };
 
@@ -366,7 +366,7 @@ dyn_spawn_mine_field = {
         };
 
         _forestEdges = _readTerrain#1;
-        0 = ([_startPos, _forestEdges, 4, 1500] call dyn_spawn_forest_edge_trench);
+        0 = ([_startPos, _forestEdges, 4, 1000] call dyn_spawn_forest_edge_trench);
 
         _forestCenters = _readTerrain#2;
 

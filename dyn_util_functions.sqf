@@ -76,10 +76,12 @@ dyn_garbage_clear = {
 dyn_garbage_loop = {
   
    while {true} do {
-        sleep 900;
         [true] spawn dyn_garbage_clear;
+        sleep 900;
    };
 };
+
+[] spawn dyn_garbage_clear;
 
 dyn_clear_obstacles = {
     params ["_pos", "_radius"];
@@ -147,6 +149,7 @@ dyn_pop_random = {
 
 dyn_opfor_change_uniform = {
     params ["_comp"];
+    if !(dyn_uniform_change) exitwith {};
     _uniformType = dyn_uniforms_dic get _comp;
     {
         _unit = _x;
@@ -160,6 +163,7 @@ dyn_opfor_change_uniform = {
 
 dyn_opfor_change_uniform_grp = {
     params ["_grp"];
+    if !(dyn_uniform_change) exitwith {};
     _uniformType = dyn_uniforms_dic get (dyn_en_comp#0);
     {    
         _unit = _x;
