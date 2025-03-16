@@ -436,7 +436,7 @@ dyn_spawn_atk_simple = {
             _vic = createVehicle [_mechType, _spawnPosFinal, [], 0, "NONE"];
             _vic setDir _atkDir;
             _mechGrp = createVehicleCrew _vic;
-            _infGrps pushBack _mechGrp;
+            // _infGrps pushBack _mechGrp;
             {
                 _x moveInCargo _vic;
             } forEach (units _infGrp);
@@ -528,7 +528,7 @@ dyn_spawn_atk_simple = {
     // [_rearPos, _allGrps, objNull, 400] spawn dyn_spawn_delay_action;
 };
 
-// [objNull, getMarkerPos "atk", getMarkerPos "rear", 4, 4] spawn dyn_spawn_atk_simple;
+// [objNull, getMarkerPos "atk", getMarkerPos "rear", 4, 4, true] spawn dyn_spawn_atk_simple;
 
 
 dyn_spawn_atk_complex = {
@@ -587,7 +587,7 @@ dyn_spawn_atk_complex = {
             };
             [_reconGrps, getpos _targetRoad] spawn dyn_convoy;
 
-            waitUntil {sleep 1; ({alive (leader _x)} count _reconGrps) < (count _reconGrps) or ({(leader _x) distance2D (getpos _targetRoad) < 300} count _reconGrps) > 0};
+            waitUntil {sleep 1; ({alive (leader _x)} count _reconGrps) < (count _reconGrps) or ({(leader _x) distance2D (getpos _targetRoad) < 500} count _reconGrps) > 0};
 
             // {
             //     _x leaveVehicle (vehicle (leader _x));
@@ -732,4 +732,5 @@ dyn_spawn_atk_complex = {
     };
 };
 
-// [getMarkerPos "target", getMarkerPos "rear", 4, 4] spawn dyn_spawn_atk_complex;
+// [getMarkerPos "atk", getMarkerPos "rear", 4, 4] spawn dyn_spawn_atk_complex;
+// [getMarkerPos "atk", getMarkerPos "rear", 4, 4,f false] spawn dyn_spawn_atk_complex;

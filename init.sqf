@@ -1,4 +1,4 @@
-
+dyn_strength = 2;
 
 // CWR 3 Soviets 85
 dyn_standart_squad = configFile >> "CfgGroups" >> "East" >> "CWR3_RUS" >> "Infantry" >> "cwr3_o_rifle_squad";

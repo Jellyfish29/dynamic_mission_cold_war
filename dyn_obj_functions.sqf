@@ -84,7 +84,9 @@ dyn_ambush = {
 
     [_endTrg, _pos, 800, _ambushPos, 2] spawn dyn_spawn_side_town_guards;
 
-    [_ambushPos getPos [50, _dir], [900, 1200] call BIS_fnc_randomInt, _dir, 20] call dyn_draw_mil_symbol_fortification_line;
+    if (_reveal) then {
+        [_ambushPos getPos [50, _dir], [900, 1200] call BIS_fnc_randomInt, _dir, 20] call dyn_draw_mil_symbol_fortification_line;
+    };
 
     waitUntil {sleep 2; triggerActivated _ambushTrg};
 
@@ -1114,7 +1116,7 @@ dyn_defense = {
     // water
     // if ((dyn_terrain#2) > (100 * 100) * 0.02) exitWith {dyn_defense_active = false};
     // town
-    // if ((dyn_terrain#1) > (100 * 100) * 0.07) then {_mainType = "complex"};
+    if ((dyn_terrain#1) > (100 * 100) * 0.07) then {_mainType = "complex"};
 
     [west, format ["defTask%1", _atkPos], ["Deffensive", "Defend against Counter Attack", ""], _atkPos, "ASSIGNED", 1, true, "defend", false] call BIS_fnc_taskCreate;
 
@@ -1174,7 +1176,7 @@ dyn_defense = {
         switch (_mainType) do { 
             case "simple" : {
                 [objNull, _atkPos, _spawnPos, 2 + _i, 2 + _i, true] spawn dyn_spawn_atk_simple;
-                // [_atkPos, _spawnPos, 1, 1, false] spawn dyn_spawn_atk_complex;
+                [_atkPos, _spawnPos, 1, 1, false] spawn dyn_spawn_atk_complex;
             }; 
             case "complex" : {
                 [objNull, _atkPos, _spawnPos, 2, 1, true] spawn dyn_spawn_atk_simple;

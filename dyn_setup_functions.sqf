@@ -610,7 +610,7 @@ dyn_main_setup = {
 
         // dyn_locations deleteAt 0;
         // deleteVehicle _dummy;
-        _playerStart = (getPos _startLoc) getPos [[2500, 3000] call BIS_fnc_randomInt, _campaignDir - (180 + ([-25, 25] call BIS_fnc_randomInt))];
+        _playerStart = (getPos _startLoc) getPos [[3500, 4000] call BIS_fnc_randomInt, _campaignDir - (180 + ([-10, 10] call BIS_fnc_randomInt))];
         _playerStart = ((selectBestPlaces [_playerStart, 500, "2*meadow", 95, 1])#0)#0;
 
         if (([_playerStart, 70] call dyn_is_forest) or ([_playerStart] call dyn_is_town) or ([_playerStart] call dyn_is_water) or [_playerStart] call dyn_is_empty) then {
@@ -678,6 +678,8 @@ dyn_main_setup = {
 
     [] call dyn_random_weather;
 
+    [] call dyn_random_day_time;
+
     [dyn_locations, _playerStart, _campaignDir - 180, _startRoad] spawn {
         params ["_locations", "_playerStart", "_campaignDir", "_startRoad"];
         private ["_midPoint"];
@@ -733,10 +735,10 @@ dyn_main_setup = {
                     _outerDefenses = true;
                 };
 
-                if (((getPos _loc) distance2D _playerStart) > 4000) then {
-                    _midDistance = ((getPos _loc) distance2D _playerStart) / 2;
-                    _midDefenses = true;
-                };
+                // if (((getPos _loc) distance2D _playerStart) > 4000) then {
+                //     _midDistance = ((getPos _loc) distance2D _playerStart) / 2;
+                //     _midDefenses = true;
+                // };
                 if (((getPos _loc) distance2D _playerStart) >= 3000) then {
                     _allowDefense = true;
                 };
@@ -859,32 +861,19 @@ dyn_main_setup = {
             if (_i == 0) then {
                 [_loc, _campaignDir, _trg] spawn {
                     params ["_loc", "_campaignDir", "_trg"];
-
-                    [getPos _loc, _trg] spawn dyn_msr_desolation;
-
+                    
                     _ambiantPos = (getPos player) getPos [750, _campaignDir - 180];
                     [getPos player, 700, "Assembly Area", "colorBlack"] call dyn_draw_mil_symbol_objectiv_free;
 
-                    for "_i" from 0 to ([2, 4] call BIS_fnc_randomInt) do {
-                        [[[[_ambiantPos, 400]], ["water"]] call BIS_fnc_randomPos, 0, _trg, [0, 1] call BIS_fnc_randomInt] spawn dyn_destroyed_mil_vic;
-                    };
+                    [getPos _loc, getPos player] call dyn_AO_destruction;
+
+                    [getPos _loc, getPos player] call dyn_random_fires;
 
                     sleep 10;
 
                     playSound "radioina";
                     [playerSide, "HQ"] sideChat format ["INTRO TEXT BOTTOM TEXT"];
 
-
-                    _alliedSupport = selectRandom [1,1,1];
-
-                    switch (_alliedSupport) do { 
-                        case 1 : {[_ambiantPos getPos [500, _campaignDir - 180], 10, 300] spawn dyn_allied_arty;}; 
-                        case 2 : {[getPos _loc] spawn dyn_allied_plane_flyby;};
-                        case 3:  {[(getPos _loc) getPos [800, _campaignDir]] spawn dyn_allied_heli_flyby;};
-                        default {  /*...code...*/ }; 
-                    };
-
-                    // [getPos _loc, false] spawn dyn_allied_plane_flyby;
 
 
                     dyn_opfor_pow_pos = getPos player;
@@ -899,10 +888,10 @@ dyn_main_setup = {
 
                 if (_midDefenses) then {
 
-                    _defenseType = selectRandom ["catk", "supply", "recon_convoy", "_road", "ambush"];
-
+                    _defenseType = selectRandom ["catk", "supply", "recon_convoy", "_road", "ambush", "minefield"];
                     // debug
                     // _defenseType = "catk";
+                    _reveal = false;
 
                     switch (_defenseType) do {
                         case "road" : {[_midPoint, _trg, _dir, true] spawn dyn_road_blocK};
@@ -968,9 +957,9 @@ dyn_main_setup = {
                     _reveal = false;
                     private _defenseType = "";
                     if (_i == 0) then {
-                        _reveal = true;
-                        _defenseType =  selectRandom ["minefield", "defense", "ambush", "ambush", "minefield", "supply", "recon_convoy"];
-                        // _defenseType =  selectRandom ["trench", "minefield"];
+                        _reveal = false;
+                        // _defenseType =  selectRandom ["minefield", "defense", "ambush", "minefield", "supply", "recon_convoy", "trench", "trench"];
+                        _defenseType =  selectRandom ["trench", "minefield", "ambush"];
                     } else {
                         _defenseType = selectRandom ["catk", "supply", "recon_convoy", "ambush", "recon", "trench", "minefield"];
                     };
@@ -978,6 +967,8 @@ dyn_main_setup = {
                     // debug
                     // _defenseType = "ambush";
                     // hint _defenseType;
+
+                    // systemChat _defenseType;
 
                     switch (_defenseType) do {
                         case "catk" : {[objNull, getPos player, (getPos _loc) getPos [800, _campaignDir] , [2, 4] call BIS_fnc_randomInt, [2, 3] call BIS_fnc_randomInt, true] spawn dyn_spawn_atk_simple;};
@@ -996,8 +987,6 @@ dyn_main_setup = {
                 };
 
                 sleep 5; 
-
-                [getPos _trg] call dyn_spawn_furniture;
 
                 _townDefenseGrps = [_trg, _endTrg, _dir] call dyn_town_defense;
 
